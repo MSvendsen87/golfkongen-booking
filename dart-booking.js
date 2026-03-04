@@ -1,13 +1,13 @@
 (function () {
 
-  console.log("[DART BOOKING v24] LOADED");
+  console.log("[DART BOOKING v25] LOADED");
 
   // Produkter
   var PRODUCT_A = "1316";
   var PRODUCT_B = "1317";
   var PRODUCT_SETS = "1318";
 
-  // Quickbutik "eventId" (samme som du har brukt før)
+  // Quickbutik eventId
   var EVENT_ID = "9847005";
 
   // Cart
@@ -28,12 +28,11 @@
   var daysEl = document.getElementById("gk-booking-days");
   if (!root || !status || !daysEl) return;
 
-  // Rydd
   status.innerHTML = "";
   daysEl.innerHTML = "";
 
   // -----------------------------
-  // UI TOPBAR (pilsett + handlekurv)
+  // UI TOPBAR
   // -----------------------------
   var topbar = document.getElementById("gk-booking-topbar");
   if (!topbar) {
@@ -66,7 +65,6 @@
   rightBox.style.alignItems = "center";
   topbar.appendChild(rightBox);
 
-  // Handlekurv-knapp
   var cartBtn = document.createElement("a");
   cartBtn.id = "gk-booking-cartbtn";
   cartBtn.href = CART_URL;
@@ -124,8 +122,8 @@
   // -----------------------------
   // STATE
   // -----------------------------
-  var setsQty = 0; // 0-8
-  var setsAddedDates = {}; // dateKey -> true (så vi ikke legger til pilsett flere ganger for samme dato)
+  var setsQty = 0;               // 0-8 (valg)
+  var setsCountByDate = {};      // { "YYYY-MM-DD": number } hvor mange som er lagt til for den datoen
 
   function getJSON(key, def) {
     try {
@@ -142,12 +140,12 @@
     } catch (e) { return def; }
   }
   function saveState() {
-    try { localStorage.setItem("gk_dart_sets_qty_v24", String(setsQty)); } catch (e) {}
-    try { localStorage.setItem("gk_dart_sets_added_dates_v24", JSON.stringify(setsAddedDates)); } catch (e2) {}
+    try { localStorage.setItem("gk_dart_sets_qty_v25", String(setsQty)); } catch (e) {}
+    try { localStorage.setItem("gk_dart_sets_count_by_date_v25", JSON.stringify(setsCountByDate)); } catch (e2) {}
   }
   function loadState() {
-    setsQty = getInt("gk_dart_sets_qty_v24", 0);
-    setsAddedDates = getJSON("gk_dart_sets_added_dates_v24", {});
+    setsQty = getInt("gk_dart_sets_qty_v25", 0);
+    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v25", {});
   }
   function updateSetsUI() {
     setsVal.textContent = String(setsQty);
@@ -169,10 +167,9 @@
   };
 
   // -----------------------------
-  // Helpers
+  // Cart helpers
   // -----------------------------
   function postAddForm(bodyStr) {
-    // Viktig: samme form som et vanlig produkt-kjøp
     return fetch("/cart/add", {
       method: "POST",
       headers: {
@@ -181,10 +178,7 @@
       },
       body: bodyStr,
       credentials: "same-origin"
-    }).then(function (r) {
-      // Quickbutik svarer ofte HTML (ikke JSON) selv om status=200
-      return r.text();
-    });
+    }).then(function (r) { return r.text(); });
   }
 
   function addVariantToCart(productId, variantId, cb) {
@@ -195,14 +189,10 @@
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
 
-    console.log("[DART] POST /cart/add body:", body);
+    console.log("[DART] POST /cart/add (variant) body:", body);
 
-    postAddForm(body).then(function () {
-      cb(true);
-    }).catch(function (e) {
-      console.log("[DART] addVariantToCart error:", e);
-      cb(false);
-    });
+    postAddForm(body).then(function () { cb(true); })
+      .catch(function (e) { console.log("[DART] addVariantToCart error:", e); cb(false); });
   }
 
   function addProductToCart(productId, qty, cb) {
@@ -217,14 +207,13 @@
 
     console.log("[DART] POST /cart/add (product) body:", body);
 
-    postAddForm(body).then(function () {
-      cb(true);
-    }).catch(function (e) {
-      console.log("[DART] addProductToCart error:", e);
-      cb(false);
-    });
+    postAddForm(body).then(function () { cb(true); })
+      .catch(function (e) { console.log("[DART] addProductToCart error:", e); cb(false); });
   }
 
+  // -----------------------------
+  // Variants parsing
+  // -----------------------------
   function parseDT(v) {
     var date = "", time = "";
     if (v && v.values) {
@@ -242,7 +231,6 @@
   function slotPassed(date, time) {
     if (!date || !time) return false;
     var start = String(time).split("-")[0] || "";
-    // NB: Lokal tid – bra nok for dette bruket
     var d = new Date(date + "T" + start + ":00");
     return d.getTime() < (new Date()).getTime();
   }
@@ -304,31 +292,38 @@
     return arr;
   }
 
-  // Pilsett pr dato: legg til "setsQty" én og én (for å unngå rare edge cases)
-  function addSetsForDate(dateKey, cb) {
+  // -----------------------------
+  // Pilsett per dato (riktig)
+  // - Hvis du har valgt 2 pilsett og booker 2 datoer => total 4
+  // - Vi legger bare til differansen hvis dato allerede har noe
+  // -----------------------------
+  function ensureSetsForDate(dateKey, cb) {
     if (setsQty <= 0) { cb(true); return; }
     if (!dateKey) { cb(true); return; }
-    if (setsAddedDates[dateKey]) { cb(true); return; }
 
-    status.innerHTML = "Legger til pilsett…";
+    var already = parseInt(setsCountByDate[dateKey] || 0, 10);
+    if (isNaN(already)) already = 0;
 
-    var left = setsQty;
+    var need = setsQty - already;
+    if (need <= 0) { cb(true); return; }
 
-    function one() {
-      if (left <= 0) {
-        setsAddedDates[dateKey] = true;
+    status.innerHTML = "Legger til pilsett… (" + need + " stk)";
+
+    function addOne() {
+      if (need <= 0) {
+        setsCountByDate[dateKey] = setsQty;
         saveState();
         cb(true);
         return;
       }
       addProductToCart(PRODUCT_SETS, 1, function (ok) {
         if (!ok) { cb(false); return; }
-        left -= 1;
-        one();
+        need -= 1;
+        addOne();
       });
     }
 
-    one();
+    addOne();
   }
 
   // -----------------------------
@@ -360,7 +355,6 @@
       return;
     }
 
-    // Listevisning (stabilt)
     for (var di = 0; di < dates.length; di++) {
       var date = dates[di];
 
@@ -407,17 +401,18 @@
             b.disabled = true;
             b.textContent = "Legger til…";
 
-            // 1) Pilsett pr dato (valgfritt)
-            addSetsForDate(slot.date, function (okSets) {
+            // 1) Sikre pilsett pr dato
+            ensureSetsForDate(slot.date, function (okSets) {
               if (!okSets) {
                 b.disabled = false;
                 b.textContent = label + " (feil – prøv igjen)";
                 return;
               }
 
-              // 2) Selve booking-varianten
+              // 2) Legg til booking-variant
               addVariantToCart(slot.product, slot.variant, function (okVar) {
                 if (okVar) {
+                  status.innerHTML = "";
                   b.textContent = "Lagt i handlekurv ✓";
                 } else {
                   b.disabled = false;
