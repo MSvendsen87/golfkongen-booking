@@ -1,6 +1,6 @@
 (function () {
 
-  console.log("[DART BOOKING v28] LOADED");
+  console.log("[DART BOOKING v29] LOADED");
 
   // Produkter
   var PRODUCT_A = "1316";
@@ -35,7 +35,7 @@
   // Styles (Mobile first - GK dark)
   // -----------------------------
   function injectCSS() {
-    if (document.getElementById("gk-dart-css-v28")) return;
+    if (document.getElementById("gk-dart-css-v29")) return;
 
     var css = ""
       + ":root{--gk-bg:#111;--gk-card:#171717;--gk-card2:#1c1c1c;--gk-line:rgba(255,255,255,.10);--gk-soft:rgba(255,255,255,.08);--gk-text:rgba(255,255,255,.92);--gk-muted:rgba(255,255,255,.72);--gk-ac:#2bd18b;--gk-ac2:#7dffb8}"
@@ -71,10 +71,10 @@
       + ".gk-navbtn{padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--gk-text);cursor:pointer;font-weight:900}"
       + ".gk-navbtn:active{transform:scale(.99)}"
 
-      // Chips
-      + ".gk-chips{display:flex;gap:10px;overflow:auto;padding:12px;border-bottom:1px solid var(--gk-line);scrollbar-width:none;touch-action:pan-y}"
+      // Chips (IMPORTANT: swipe scrolls DAYS, not week)
+      + ".gk-chips{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:12px;border-bottom:1px solid var(--gk-line);scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x}"
       + ".gk-chips::-webkit-scrollbar{display:none}"
-      + ".gk-chip{flex:0 0 auto;min-width:96px;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);cursor:pointer;color:var(--gk-text);text-align:left}"
+      + ".gk-chip{flex:0 0 auto;min-width:86px;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);cursor:pointer;color:var(--gk-text);text-align:left}"
       + ".gk-chip[data-active='1']{border-color:rgba(43,209,139,.75);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08))}"
       + ".gk-chip .gk-chip-top{font-weight:900;font-size:13px;line-height:1.05}"
       + ".gk-chip .gk-chip-sub{font-size:11px;color:var(--gk-muted);margin-top:4px}"
@@ -107,7 +107,7 @@
       ;
 
     var style = document.createElement("style");
-    style.id = "gk-dart-css-v28";
+    style.id = "gk-dart-css-v29";
     style.type = "text/css";
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
@@ -188,7 +188,7 @@
   root.insertBefore(topbar, root.firstChild);
 
   // -----------------------------
-  // State (includes booked dates)
+  // State
   // -----------------------------
   var setsQty = 0;               // 0-8
   var setsCountByDate = {};      // { "YYYY-MM-DD": number }
@@ -210,14 +210,14 @@
     } catch (e) { return def; }
   }
   function saveState() {
-    try { localStorage.setItem("gk_dart_sets_qty_v28", String(setsQty)); } catch (e) {}
-    try { localStorage.setItem("gk_dart_sets_count_by_date_v28", JSON.stringify(setsCountByDate)); } catch (e2) {}
-    try { localStorage.setItem("gk_dart_booked_dates_v28", JSON.stringify(bookedDates)); } catch (e3) {}
+    try { localStorage.setItem("gk_dart_sets_qty_v29", String(setsQty)); } catch (e) {}
+    try { localStorage.setItem("gk_dart_sets_count_by_date_v29", JSON.stringify(setsCountByDate)); } catch (e2) {}
+    try { localStorage.setItem("gk_dart_booked_dates_v29", JSON.stringify(bookedDates)); } catch (e3) {}
   }
   function loadState() {
-    setsQty = getInt("gk_dart_sets_qty_v28", 0);
-    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v28", {});
-    bookedDates = getJSON("gk_dart_booked_dates_v28", {});
+    setsQty = getInt("gk_dart_sets_qty_v29", 0);
+    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v29", {});
+    bookedDates = getJSON("gk_dart_booked_dates_v29", {});
   }
   function updateSetsUI() {
     setsVal.textContent = String(setsQty);
@@ -230,13 +230,13 @@
     if (setsQty <= 0) return;
     setsQty -= 1;
     updateSetsUI();
-    syncSetsForBookedDates(); // <-- viktig
+    syncSetsForBookedDates();
   };
   btnPlus.onclick = function () {
     if (setsQty >= 8) return;
     setsQty += 1;
     updateSetsUI();
-    syncSetsForBookedDates(); // <-- viktig
+    syncSetsForBookedDates();
   };
 
   // -----------------------------
@@ -428,15 +428,13 @@
       }
       var d = dates[idx++];
       if (status) status.innerHTML = "Synker pilsett for " + d + "…";
-      ensureSetsForDate(d, function () {
-        next();
-      });
+      ensureSetsForDate(d, function () { next(); });
     }
     next();
   }
 
   // -----------------------------
-  // Calendar UI (week view + swipe)
+  // Calendar UI (week view, NO swipe-week)
   // -----------------------------
   var cal = document.createElement("div");
   cal.className = "gk-cal";
@@ -477,7 +475,7 @@
 
   var note = document.createElement("div");
   note.className = "gk-note";
-  note.textContent = "Du kan legge flere tider (og flere datoer) i handlekurven før du går til kassa.";
+  note.textContent = "Tips: Swipe på dagene for å se hele uka. Bruk knappene for å bytte uke. Du kan legge flere tider/dager i handlekurven før du går til kassa.";
   cal.appendChild(note);
 
   // -----------------------------
@@ -488,7 +486,7 @@
   var ALL_SLOTS = null;
   var ALL_DATES = [];
   var ACTIVE_DATE = "";
-  var WEEK_START = 0; // index in ALL_DATES
+  var WEEK_START = 0;
   var WEEK_SIZE = 7;
 
   function idxOf(arr, v) {
@@ -502,6 +500,19 @@
     return i;
   }
 
+  function scrollActiveChipIntoView() {
+    try {
+      var nodes = chips.children;
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (el && el.getAttribute && el.getAttribute("data-date") === ACTIVE_DATE) {
+          if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+
   function setActiveDate(d) {
     ACTIVE_DATE = d;
     var kids = chips.children;
@@ -511,6 +522,7 @@
       el.setAttribute("data-active", el.getAttribute("data-date") === d ? "1" : "0");
     }
     renderDay(d);
+    scrollActiveChipIntoView();
   }
 
   function renderDay(dateStr) {
@@ -553,7 +565,6 @@
           b.disabled = true;
           b.textContent = "Legger til…";
 
-          // Først: sørg for riktig pilsett for datoen (med dagens setsQty)
           ensureSetsForDate(slot.date, function (okSets) {
             if (!okSets) {
               b.disabled = false;
@@ -561,12 +572,10 @@
               return;
             }
 
-            // Så: legg til selve booking-varianten
             addVariantToCart(slot.product, slot.variant, function (okVar) {
               if (okVar) {
                 if (status) status.innerHTML = "";
 
-                // Husk at denne datoen er booket (for senere synk)
                 bookedDates[slot.date] = true;
                 saveState();
 
@@ -618,20 +627,15 @@
         sub.textContent = isToday(d) ? "I dag" : f.sub;
         chip.appendChild(sub);
 
-        chip.onclick = function () {
-          setActiveDate(d);
-        };
+        chip.onclick = function () { setActiveDate(d); };
 
         chips.appendChild(chip);
       })();
     }
 
-    // Hvis aktiv dato ikke ligger i uka, velg første i uka
-    if (idxOf(slice, ACTIVE_DATE) === -1) {
-      setActiveDate(slice[0]);
-    } else {
-      setActiveDate(ACTIVE_DATE);
-    }
+    // Velg aktiv dato hvis den finnes i uka, ellers første
+    if (idxOf(slice, ACTIVE_DATE) === -1) setActiveDate(slice[0]);
+    else setActiveDate(ACTIVE_DATE);
   }
 
   function prevWeek() {
@@ -644,33 +648,6 @@
   }
   prevBtn.onclick = prevWeek;
   nextBtn.onclick = nextWeek;
-
-  // Swipe på chips (ukevisning)
-  (function attachSwipe() {
-    var startX = 0, startY = 0, moved = false;
-
-    chips.addEventListener("touchstart", function (e) {
-      if (!e.touches || !e.touches.length) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      moved = false;
-    }, { passive: true });
-
-    chips.addEventListener("touchmove", function (e) {
-      if (!e.touches || !e.touches.length) return;
-      var dx = e.touches[0].clientX - startX;
-      var dy = e.touches[0].clientY - startY;
-      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) moved = true;
-    }, { passive: true });
-
-    chips.addEventListener("touchend", function (e) {
-      if (!moved) return;
-      var endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
-      var dx = endX - startX;
-      if (dx < -40) nextWeek();
-      else if (dx > 40) prevWeek();
-    }, { passive: true });
-  })();
 
   Promise.all([
     fetch(API_A).then(function (r) { return r.json(); }),
@@ -703,15 +680,13 @@
     }
     ACTIVE_DATE = todayPick || ALL_DATES[0];
 
-    // ukestart settes slik at aktiv dato ligger innenfor [WEEK_START..WEEK_START+6]
     var ai = idxOf(ALL_DATES, ACTIVE_DATE);
     if (ai < 0) ai = 0;
     WEEK_START = clampWeekStart(ai - (ai % WEEK_SIZE));
 
     renderWeek();
 
-    // hvis kunden først booker og så endrer pilsett, vil sync ta seg av det.
-    // Men vi kan også kjøre en "lette" sync ved load hvis det finnes bookedDates:
+    // Sync hvis kunden allerede har booket datoer fra før
     syncSetsForBookedDates();
 
   }).catch(function (e) {
