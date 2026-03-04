@@ -695,34 +695,35 @@
     grid.innerHTML = "<div class='gk-empty'>Kunne ikke laste tider.</div>";
   });
 // -----------------------------
-// GK Rules Gate (popup + checkbox)
+// GK Rules Gate (GolfKongen v1 - once per day)
 // -----------------------------
-(function setupRulesGate() {
-  var KEY = "gk_booking_rules_ok_v1";
-  var TTL_DAYS = 90; // husk godkjenning i 90 dager
-  var now = Date.now();
+(function setupRulesGateGK() {
+  var KEY = "gk_booking_rules_ok_daily_v1";
+  var TERMS_URL = "https://golfkongen.no/sider/terms-and-conditions";
+
+  function todayKey() {
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = ("0" + (d.getMonth() + 1)).slice(-2);
+    var day = ("0" + d.getDate()).slice(-2);
+    return y + "-" + m + "-" + day;
+  }
 
   function readOK() {
     try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return false;
-      var obj = JSON.parse(raw);
-      if (!obj || !obj.ts) return false;
-      var ageDays = (now - obj.ts) / (1000 * 60 * 60 * 24);
-      return ageDays <= TTL_DAYS;
+      return localStorage.getItem(KEY) === todayKey();
     } catch (e) { return false; }
   }
 
   function writeOK() {
-    try { localStorage.setItem(KEY, JSON.stringify({ ts: Date.now() })); } catch (e) {}
+    try { localStorage.setItem(KEY, todayKey()); } catch (e) {}
   }
 
   function setButtonsEnabled(enabled) {
     try {
       var btns = document.querySelectorAll(".gk-lbtn");
       for (var i = 0; i < btns.length; i++) {
-        // Ikke rør knapper som allerede er "Lagt i handlekurv"
-        var t = (btns[i].textContent || "");
+        var t = String(btns[i].textContent || "");
         if (t.indexOf("Lagt i handlekurv") !== -1) continue;
         btns[i].disabled = !enabled;
         btns[i].setAttribute("data-gk-locked", enabled ? "0" : "1");
@@ -730,67 +731,84 @@
     } catch (e2) {}
   }
 
-  function injectGateCSS() {
-    if (document.getElementById("gk-rules-gate-css")) return;
+  function injectCSS() {
+    if (document.getElementById("gk-rules-gate-css-gk1")) return;
+
     var css = ""
-      + ".gk-rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,.60);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:12px}"
+      + ".gk-rules-overlay{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% 20%, rgba(43,209,139,.12), rgba(0,0,0,0)), rgba(0,0,0,.66);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:12px}"
       + "@media(min-width:900px){.gk-rules-overlay{align-items:center}}"
-      + ".gk-rules-modal{width:100%;max-width:820px;border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#171717,#121212);box-shadow:0 20px 60px rgba(0,0,0,.55)}"
-      + ".gk-rules-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.10)}"
-      + ".gk-rules-head b{font-size:15px}"
-      + ".gk-rules-head div{margin-top:6px;color:rgba(255,255,255,.72);font-size:12px;line-height:1.35}"
-      + ".gk-rules-body{max-height:60vh;overflow:auto;padding:12px 14px;color:rgba(255,255,255,.90);font-size:12.5px;line-height:1.45}"
-      + ".gk-rules-body h3{margin:12px 0 6px;font-size:12.5px}"
-      + ".gk-rules-body ul{margin:6px 0 10px 18px;padding:0}"
+      + ".gk-rules-modal{width:100%;max-width:860px;border:1px solid rgba(255,255,255,.12);border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#171717,#101010);box-shadow:0 28px 80px rgba(0,0,0,.60)}"
+      + ".gk-rules-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.10);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}"
+      + ".gk-rules-brand{display:flex;gap:10px;align-items:center}"
+      + ".gk-rules-dot{width:12px;height:12px;border-radius:999px;background:linear-gradient(135deg, rgba(43,209,139,1), rgba(125,255,184,1));box-shadow:0 0 0 4px rgba(43,209,139,.12)}"
+      + ".gk-rules-title b{display:block;font-size:15px;letter-spacing:.2px;color:rgba(255,255,255,.94)}"
+      + ".gk-rules-title span{display:block;margin-top:5px;color:rgba(255,255,255,.70);font-size:12px;line-height:1.35}"
+      + ".gk-rules-body{padding:12px 14px;color:rgba(255,255,255,.90);font-size:12.5px;line-height:1.48}"
+      + ".gk-rules-grid{display:grid;grid-template-columns:1fr;gap:10px}"
+      + "@media(min-width:860px){.gk-rules-grid{grid-template-columns:1fr 1fr}}"
+      + ".gk-rules-card{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:16px;padding:12px}"
+      + ".gk-rules-card h3{margin:0 0 8px;font-size:12.5px}"
+      + ".gk-rules-card ul{margin:0;padding-left:18px}"
+      + ".gk-rules-card li{margin:6px 0}"
       + ".gk-rules-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,.10);display:flex;gap:10px;flex-direction:column}"
       + "@media(min-width:700px){.gk-rules-footer{flex-direction:row;align-items:center;justify-content:space-between}}"
       + ".gk-rules-check{display:flex;gap:10px;align-items:flex-start}"
       + ".gk-rules-check input{margin-top:3px;transform:scale(1.15)}"
-      + ".gk-rules-actions{display:flex;gap:10px;justify-content:flex-end}"
-      + ".gk-rules-btn{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);font-weight:900;cursor:pointer}"
+      + ".gk-rules-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}"
+      + ".gk-rules-btn{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}"
+      + ".gk-rules-btn:active{transform:scale(.99)}"
       + ".gk-rules-btn.ok{border-color:rgba(43,209,139,.55);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08))}"
-      + ".gk-rules-btn[disabled]{opacity:.55;cursor:not-allowed}";
+      + ".gk-rules-btn.link{border-color:rgba(43,209,139,.22)}"
+      + ".gk-rules-btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}"
+      + ".gk-x{border:none;background:transparent;color:rgba(255,255,255,.75);cursor:pointer;font-size:18px;line-height:1;padding:8px 10px;border-radius:12px}"
+      + ".gk-x:hover{background:rgba(255,255,255,.06)}";
+
     var st = document.createElement("style");
-    st.id = "gk-rules-gate-css";
+    st.id = "gk-rules-gate-css-gk1";
     st.appendChild(document.createTextNode(css));
     document.head.appendChild(st);
   }
 
   function rulesHTML() {
-    // Kort, men dekker det viktigste. (Uten SuperSaaS)
+    // Kort + tydelig, “GK språk”, ingen SuperSaaS
     return ""
-      + "<h3>Generelt</h3><ul>"
-      + "<li>Fasilitetene eies og driftes av Sportskongen AS / GolfKongen.</li>"
-      + "<li>Ved booking og bruk bekrefter du at du har lest og akseptert vilkårene.</li>"
-      + "<li>Regler/priser kan oppdateres og vil fremgå på GolfKongen.no, bookingsiden og/eller i lokalet.</li>"
-      + "</ul>"
-      + "<h3>Booking, betaling og avbestilling</h3><ul>"
-      + "<li>Booking skjer via GolfKongen.no (handlekurv/checkout). Booking er personlig.</li>"
-      + "<li>Avbestilling: senest 30 minutter før start. Senere avbestilling/no-show gir normalt ingen refusjon.</li>"
-      + "</ul>"
-      + "<h3>Aldersgrense</h3><ul>"
-      + "<li>16 års aldersgrense for å booke og bruke fasilitetene alene.</li>"
-      + "<li>Monster energidrikk selges i lokalet og har 16-års grense.</li>"
-      + "</ul>"
-      + "<h3>Oppførsel, sikkerhet og ansvar</h3><ul>"
-      + "<li>Følg instrukser/skilting. Kun den som kaster i kasteområdet.</li>"
-      + "<li>Alkohol er ikke tillatt.</li>"
-      + "<li>Booker er ansvarlig for skade/tyveri/hærverk – også for gjester. Tyveri/hærverk politianmeldes.</li>"
-      + "</ul>"
-      + "<h3>Kameraovervåking</h3><ul>"
-      + "<li>Lokalet er kameraovervåket etter norsk lov (ikke toalett).</li>"
-      + "</ul>"
-      + "<h3>Brukstid og områder</h3><ul>"
-      + "<li>Booket tid skal overholdes. Overtid kan faktureres.</li>"
-      + "<li>Kjeller, kjøkken og musikkverksted er forbudt for kunder.</li>"
-      + "</ul>"
-      + "<h3>Tekniske feil</h3><ul>"
-      + "<li>Ved feil som hindrer bruk: ombooking eller refusjon for berørt tid.</li>"
-      + "</ul>";
+      + "<div class='gk-rules-grid'>"
+      + "  <div class='gk-rules-card'>"
+      + "    <h3>Booking, betaling og avbestilling</h3>"
+      + "    <ul>"
+      + "      <li>Booking skjer via GolfKongen.no og er personlig.</li>"
+      + "      <li>Avbestilling senest <b>30 min</b> før start. Senere avbestilling/no-show gir normalt ingen refusjon.</li>"
+      + "      <li>Booket tid skal overholdes. Overtid kan faktureres (avrundet til påbegynte timer).</li>"
+      + "    </ul>"
+      + "  </div>"
+      + "  <div class='gk-rules-card'>"
+      + "    <h3>Alder, oppførsel og sikkerhet</h3>"
+      + "    <ul>"
+      + "      <li><b>16 års</b> aldersgrense for å booke og bruke fasilitetene alene.</li>"
+      + "      <li>Kun den som kaster skal være i kasteområdet. Følg instrukser og skilting.</li>"
+      + "      <li>Alkohol er ikke tillatt i lokalet.</li>"
+      + "    </ul>"
+      + "  </div>"
+      + "  <div class='gk-rules-card'>"
+      + "    <h3>Ansvar, skade og områder</h3>"
+      + "    <ul>"
+      + "      <li>Bruk skjer på eget ansvar. Booker er ansvarlig for skade/tyveri/hærverk – også for gjester.</li>"
+      + "      <li>Tyveri og hærverk politianmeldes. Skade meldes umiddelbart.</li>"
+      + "      <li>Forbudte områder for kunder: kjeller, kjøkken og musikkverksted.</li>"
+      + "    </ul>"
+      + "  </div>"
+      + "  <div class='gk-rules-card'>"
+      + "    <h3>Kamera og tekniske feil</h3>"
+      + "    <ul>"
+      + "      <li>Lokalet er kameraovervåket etter norsk lov (ikke toalett).</li>"
+      + "      <li>Ved feil som hindrer bruk: ombooking eller refusjon for berørt tid.</li>"
+      + "    </ul>"
+      + "  </div>"
+      + "</div>";
   }
 
   function showGate() {
-    injectGateCSS();
+    injectCSS();
 
     var overlay = document.createElement("div");
     overlay.className = "gk-rules-overlay";
@@ -805,13 +823,32 @@
     head.className = "gk-rules-head";
     modal.appendChild(head);
 
-    var h = document.createElement("b");
-    h.textContent = "Vilkår for booking og bruk (GolfKongen)";
-    head.appendChild(h);
+    var brand = document.createElement("div");
+    brand.className = "gk-rules-brand";
+    head.appendChild(brand);
 
-    var hs = document.createElement("div");
-    hs.textContent = "Du må bekrefte at du har lest og akseptert vilkårene før du kan legge tider i handlekurven.";
-    head.appendChild(hs);
+    var dot = document.createElement("div");
+    dot.className = "gk-rules-dot";
+    brand.appendChild(dot);
+
+    var title = document.createElement("div");
+    title.className = "gk-rules-title";
+    brand.appendChild(title);
+
+    var b = document.createElement("b");
+    b.textContent = "Vilkår for booking og bruk (GolfKongen)";
+    title.appendChild(b);
+
+    var s = document.createElement("span");
+    s.textContent = "Du må bekrefte vilkårene før du kan legge tider i handlekurven. Dette spør vi om én gang per dag.";
+    title.appendChild(s);
+
+    var x = document.createElement("button");
+    x.type = "button";
+    x.className = "gk-x";
+    x.setAttribute("aria-label", "Lukk");
+    x.textContent = "✕";
+    head.appendChild(x);
 
     var body = document.createElement("div");
     body.className = "gk-rules-body";
@@ -839,34 +876,44 @@
     actions.className = "gk-rules-actions";
     footer.appendChild(actions);
 
-    var btnCancel = document.createElement("button");
-    btnCancel.type = "button";
-    btnCancel.className = "gk-rules-btn";
-    btnCancel.textContent = "Avbryt";
-    actions.appendChild(btnCancel);
+    var more = document.createElement("a");
+    more.className = "gk-rules-btn link";
+    more.href = TERMS_URL;
+    more.target = "_blank";
+    more.rel = "noopener";
+    more.textContent = "Les mer";
+    actions.appendChild(more);
 
-    var btnOk = document.createElement("button");
-    btnOk.type = "button";
-    btnOk.className = "gk-rules-btn ok";
-    btnOk.textContent = "Fortsett";
-    btnOk.disabled = true;
-    actions.appendChild(btnOk);
+    var ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "gk-rules-btn ok";
+    ok.textContent = "Jeg godtar";
+    ok.disabled = true;
+    actions.appendChild(ok);
 
-    cb.onchange = function(){
-      btnOk.disabled = !cb.checked;
+    cb.onchange = function () {
+      ok.disabled = !cb.checked;
     };
 
-    btnCancel.onclick = function(){
-      // lar de lukke, men fortsatt låst
-      document.body.removeChild(overlay);
+    function closeOnly() {
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
       setButtonsEnabled(false);
+    }
+
+    function accept() {
+      writeOK();
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      setButtonsEnabled(true);
+    }
+
+    x.onclick = closeOnly;
+
+    // Klikk utenfor = lukk (men fortsatt låst)
+    overlay.onclick = function (e) {
+      if (e && e.target === overlay) closeOnly();
     };
 
-    btnOk.onclick = function(){
-      writeOK();
-      document.body.removeChild(overlay);
-      setButtonsEnabled(true);
-    };
+    ok.onclick = accept;
 
     document.body.appendChild(overlay);
   }
@@ -877,16 +924,16 @@
   } else {
     setButtonsEnabled(false);
 
-    // hvis knapper rendres litt senere, hold dem låst
+    // Hold knapper låst til de finnes
     var tries = 0;
-    var t = setInterval(function(){
+    var t = setInterval(function () {
       setButtonsEnabled(false);
       tries++;
       if (document.querySelectorAll(".gk-lbtn").length > 0 || tries > 40) clearInterval(t);
     }, 250);
 
-    // åpne popup etter liten delay (så siden ikke "hopper")
-    setTimeout(showGate, 350);
+    // Vis popup
+    setTimeout(showGate, 250);
   }
 })();
 })();
