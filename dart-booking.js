@@ -416,5 +416,199 @@
     status.innerHTML = "Kunne ikke laste tider (se console).";
     grid.innerHTML = "<div class='gk-empty'>Kunne ikke laste tider.</div>";
   });
+// -----------------------------
+// GK Rules Gate (popup + checkbox)
+// -----------------------------
+(function setupRulesGate() {
+  var KEY = "gk_booking_rules_ok_v1";
+  var TTL_DAYS = 90; // husk godkjenning i 90 dager
+  var now = Date.now();
 
+  function readOK() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return false;
+      var obj = JSON.parse(raw);
+      if (!obj || !obj.ts) return false;
+      var ageDays = (now - obj.ts) / (1000 * 60 * 60 * 24);
+      return ageDays <= TTL_DAYS;
+    } catch (e) { return false; }
+  }
+
+  function writeOK() {
+    try { localStorage.setItem(KEY, JSON.stringify({ ts: Date.now() })); } catch (e) {}
+  }
+
+  function setButtonsEnabled(enabled) {
+    try {
+      var btns = document.querySelectorAll(".gk-lbtn");
+      for (var i = 0; i < btns.length; i++) {
+        // Ikke rør knapper som allerede er "Lagt i handlekurv"
+        var t = (btns[i].textContent || "");
+        if (t.indexOf("Lagt i handlekurv") !== -1) continue;
+        btns[i].disabled = !enabled;
+        btns[i].setAttribute("data-gk-locked", enabled ? "0" : "1");
+      }
+    } catch (e2) {}
+  }
+
+  function injectGateCSS() {
+    if (document.getElementById("gk-rules-gate-css")) return;
+    var css = ""
+      + ".gk-rules-overlay{position:fixed;inset:0;background:rgba(0,0,0,.60);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:12px}"
+      + "@media(min-width:900px){.gk-rules-overlay{align-items:center}}"
+      + ".gk-rules-modal{width:100%;max-width:820px;border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#171717,#121212);box-shadow:0 20px 60px rgba(0,0,0,.55)}"
+      + ".gk-rules-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.10)}"
+      + ".gk-rules-head b{font-size:15px}"
+      + ".gk-rules-head div{margin-top:6px;color:rgba(255,255,255,.72);font-size:12px;line-height:1.35}"
+      + ".gk-rules-body{max-height:60vh;overflow:auto;padding:12px 14px;color:rgba(255,255,255,.90);font-size:12.5px;line-height:1.45}"
+      + ".gk-rules-body h3{margin:12px 0 6px;font-size:12.5px}"
+      + ".gk-rules-body ul{margin:6px 0 10px 18px;padding:0}"
+      + ".gk-rules-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,.10);display:flex;gap:10px;flex-direction:column}"
+      + "@media(min-width:700px){.gk-rules-footer{flex-direction:row;align-items:center;justify-content:space-between}}"
+      + ".gk-rules-check{display:flex;gap:10px;align-items:flex-start}"
+      + ".gk-rules-check input{margin-top:3px;transform:scale(1.15)}"
+      + ".gk-rules-actions{display:flex;gap:10px;justify-content:flex-end}"
+      + ".gk-rules-btn{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);font-weight:900;cursor:pointer}"
+      + ".gk-rules-btn.ok{border-color:rgba(43,209,139,.55);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08))}"
+      + ".gk-rules-btn[disabled]{opacity:.55;cursor:not-allowed}";
+    var st = document.createElement("style");
+    st.id = "gk-rules-gate-css";
+    st.appendChild(document.createTextNode(css));
+    document.head.appendChild(st);
+  }
+
+  function rulesHTML() {
+    // Kort, men dekker det viktigste. (Uten SuperSaaS)
+    return ""
+      + "<h3>Generelt</h3><ul>"
+      + "<li>Fasilitetene eies og driftes av Sportskongen AS / GolfKongen.</li>"
+      + "<li>Ved booking og bruk bekrefter du at du har lest og akseptert vilkårene.</li>"
+      + "<li>Regler/priser kan oppdateres og vil fremgå på GolfKongen.no, bookingsiden og/eller i lokalet.</li>"
+      + "</ul>"
+      + "<h3>Booking, betaling og avbestilling</h3><ul>"
+      + "<li>Booking skjer via GolfKongen.no (handlekurv/checkout). Booking er personlig.</li>"
+      + "<li>Avbestilling: senest 30 minutter før start. Senere avbestilling/no-show gir normalt ingen refusjon.</li>"
+      + "</ul>"
+      + "<h3>Aldersgrense</h3><ul>"
+      + "<li>16 års aldersgrense for å booke og bruke fasilitetene alene.</li>"
+      + "<li>Monster energidrikk selges i lokalet og har 16-års grense.</li>"
+      + "</ul>"
+      + "<h3>Oppførsel, sikkerhet og ansvar</h3><ul>"
+      + "<li>Følg instrukser/skilting. Kun den som kaster i kasteområdet.</li>"
+      + "<li>Alkohol er ikke tillatt.</li>"
+      + "<li>Booker er ansvarlig for skade/tyveri/hærverk – også for gjester. Tyveri/hærverk politianmeldes.</li>"
+      + "</ul>"
+      + "<h3>Kameraovervåking</h3><ul>"
+      + "<li>Lokalet er kameraovervåket etter norsk lov (ikke toalett).</li>"
+      + "</ul>"
+      + "<h3>Brukstid og områder</h3><ul>"
+      + "<li>Booket tid skal overholdes. Overtid kan faktureres.</li>"
+      + "<li>Kjeller, kjøkken og musikkverksted er forbudt for kunder.</li>"
+      + "</ul>"
+      + "<h3>Tekniske feil</h3><ul>"
+      + "<li>Ved feil som hindrer bruk: ombooking eller refusjon for berørt tid.</li>"
+      + "</ul>";
+  }
+
+  function showGate() {
+    injectGateCSS();
+
+    var overlay = document.createElement("div");
+    overlay.className = "gk-rules-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+
+    var modal = document.createElement("div");
+    modal.className = "gk-rules-modal";
+    overlay.appendChild(modal);
+
+    var head = document.createElement("div");
+    head.className = "gk-rules-head";
+    modal.appendChild(head);
+
+    var h = document.createElement("b");
+    h.textContent = "Vilkår for booking og bruk (GolfKongen)";
+    head.appendChild(h);
+
+    var hs = document.createElement("div");
+    hs.textContent = "Du må bekrefte at du har lest og akseptert vilkårene før du kan legge tider i handlekurven.";
+    head.appendChild(hs);
+
+    var body = document.createElement("div");
+    body.className = "gk-rules-body";
+    body.innerHTML = rulesHTML();
+    modal.appendChild(body);
+
+    var footer = document.createElement("div");
+    footer.className = "gk-rules-footer";
+    modal.appendChild(footer);
+
+    var checkWrap = document.createElement("label");
+    checkWrap.className = "gk-rules-check";
+    footer.appendChild(checkWrap);
+
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = false;
+    checkWrap.appendChild(cb);
+
+    var ct = document.createElement("div");
+    ct.innerHTML = "Jeg har lest og aksepterer vilkårene.";
+    checkWrap.appendChild(ct);
+
+    var actions = document.createElement("div");
+    actions.className = "gk-rules-actions";
+    footer.appendChild(actions);
+
+    var btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "gk-rules-btn";
+    btnCancel.textContent = "Avbryt";
+    actions.appendChild(btnCancel);
+
+    var btnOk = document.createElement("button");
+    btnOk.type = "button";
+    btnOk.className = "gk-rules-btn ok";
+    btnOk.textContent = "Fortsett";
+    btnOk.disabled = true;
+    actions.appendChild(btnOk);
+
+    cb.onchange = function(){
+      btnOk.disabled = !cb.checked;
+    };
+
+    btnCancel.onclick = function(){
+      // lar de lukke, men fortsatt låst
+      document.body.removeChild(overlay);
+      setButtonsEnabled(false);
+    };
+
+    btnOk.onclick = function(){
+      writeOK();
+      document.body.removeChild(overlay);
+      setButtonsEnabled(true);
+    };
+
+    document.body.appendChild(overlay);
+  }
+
+  // Init
+  if (readOK()) {
+    setButtonsEnabled(true);
+  } else {
+    setButtonsEnabled(false);
+
+    // hvis knapper rendres litt senere, hold dem låst
+    var tries = 0;
+    var t = setInterval(function(){
+      setButtonsEnabled(false);
+      tries++;
+      if (document.querySelectorAll(".gk-lbtn").length > 0 || tries > 40) clearInterval(t);
+    }, 250);
+
+    // åpne popup etter liten delay (så siden ikke "hopper")
+    setTimeout(showGate, 350);
+  }
+})();
 })();
