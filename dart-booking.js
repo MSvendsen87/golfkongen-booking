@@ -1,6 +1,6 @@
 (function () {
 
-  console.log("[DART BOOKING v25] LOADED");
+  console.log("[DART BOOKING v26] LOADED");
 
   // Produkter
   var PRODUCT_A = "1316";
@@ -26,101 +26,119 @@
   var root = document.getElementById("gk-booking");
   var status = document.getElementById("gk-booking-status");
   var daysEl = document.getElementById("gk-booking-days");
-  if (!root || !status || !daysEl) return;
+  if (!root || !daysEl) return;
 
-  status.innerHTML = "";
+  if (status) status.innerHTML = "";
   daysEl.innerHTML = "";
 
   // -----------------------------
-  // UI TOPBAR
+  // Styles (mobile-first)
   // -----------------------------
-  var topbar = document.getElementById("gk-booking-topbar");
-  if (!topbar) {
-    topbar = document.createElement("div");
-    topbar.id = "gk-booking-topbar";
-    topbar.style.display = "flex";
-    topbar.style.flexWrap = "wrap";
-    topbar.style.gap = "10px";
-    topbar.style.alignItems = "center";
-    topbar.style.justifyContent = "space-between";
-    topbar.style.margin = "10px 0 12px 0";
-    topbar.style.padding = "10px 12px";
-    topbar.style.border = "1px solid #ddd";
-    topbar.style.borderRadius = "10px";
-    root.insertBefore(topbar, root.firstChild);
-  } else {
-    topbar.innerHTML = "";
+  function injectCSS() {
+    if (document.getElementById("gk-dart-css-v26")) return;
+    var css = ""
+      + "#gk-booking{max-width:1100px;margin:0 auto;padding:12px}"
+      + ".gk-b-top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,0.92);backdrop-filter:blur(6px);border:1px solid #e5e5e5;border-radius:14px;padding:10px;margin:10px 0 12px 0}"
+      + ".gk-b-top-inner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}"
+      + ".gk-b-left{display:flex;flex-wrap:wrap;gap:10px;align-items:center}"
+      + ".gk-b-right{display:flex;gap:10px;align-items:center}"
+      + ".gk-cartbtn{display:inline-block;padding:10px 12px;border-radius:12px;border:1px solid #111;text-decoration:none;font-weight:800}"
+      + ".gk-sets{display:flex;gap:8px;align-items:center;flex-wrap:wrap}"
+      + ".gk-sets strong{font-weight:900}"
+      + ".gk-sets-btn{padding:6px 10px;border-radius:10px;border:1px solid #111;cursor:pointer}"
+      + ".gk-sets-val{min-width:20px;text-align:center;font-weight:900}"
+      + ".gk-sets-hint{opacity:.78;font-size:12px}"
+      + ".gk-cal{border:1px solid #e5e5e5;border-radius:14px;overflow:hidden}"
+      + ".gk-cal-head{padding:10px 12px;border-bottom:1px solid #e5e5e5;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}"
+      + ".gk-cal-title{font-weight:900;font-size:16px}"
+      + ".gk-cal-nav{display:flex;gap:8px;align-items:center}"
+      + ".gk-navbtn{padding:8px 10px;border-radius:10px;border:1px solid #111;background:#fff;cursor:pointer;font-weight:800}"
+      + ".gk-chips{display:flex;gap:8px;overflow:auto;padding:10px 12px;border-bottom:1px solid #e5e5e5}"
+      + ".gk-chip{white-space:nowrap;padding:8px 10px;border-radius:999px;border:1px solid #d7d7d7;background:#fff;cursor:pointer;font-weight:800}"
+      + ".gk-chip[data-active='1']{border-color:#111}"
+      + ".gk-chip small{opacity:.75;font-weight:700}"
+      + ".gk-grid{padding:10px 12px;display:flex;flex-direction:column;gap:8px}"
+      + ".gk-row{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center}"
+      + ".gk-time{font-weight:900;opacity:.9}"
+      + ".gk-lanes{display:flex;gap:8px;flex-wrap:wrap}"
+      + ".gk-lbtn{padding:10px 12px;border-radius:12px;border:1px solid #111;background:#fff;cursor:pointer;font-weight:900;flex:1;min-width:120px}"
+      + ".gk-lbtn[disabled]{opacity:.65;cursor:not-allowed}"
+      + ".gk-note{padding:10px 12px;opacity:.8;font-size:12px}"
+      + ".gk-empty{padding:16px 12px;opacity:.85}"
+      + "@media (min-width:900px){"
+      + "  #gk-booking{padding:16px}"
+      + "  .gk-row{grid-template-columns:130px 1fr}"
+      + "  .gk-cal-title{font-size:18px}"
+      + "  .gk-lbtn{flex:0;min-width:140px}"
+      + "}";
+    var style = document.createElement("style");
+    style.id = "gk-dart-css-v26";
+    style.type = "text/css";
+    style.appendChild(document.createTextNode(css));
+    document.head.appendChild(style);
   }
+  injectCSS();
+
+  // -----------------------------
+  // Topbar
+  // -----------------------------
+  var topbar = document.createElement("div");
+  topbar.className = "gk-b-top";
+
+  var topInner = document.createElement("div");
+  topInner.className = "gk-b-top-inner";
+  topbar.appendChild(topInner);
 
   var leftBox = document.createElement("div");
-  leftBox.style.display = "flex";
-  leftBox.style.flexWrap = "wrap";
-  leftBox.style.gap = "10px";
-  leftBox.style.alignItems = "center";
-  topbar.appendChild(leftBox);
+  leftBox.className = "gk-b-left";
+  topInner.appendChild(leftBox);
 
   var rightBox = document.createElement("div");
-  rightBox.style.display = "flex";
-  rightBox.style.gap = "10px";
-  rightBox.style.alignItems = "center";
-  topbar.appendChild(rightBox);
+  rightBox.className = "gk-b-right";
+  topInner.appendChild(rightBox);
 
   var cartBtn = document.createElement("a");
-  cartBtn.id = "gk-booking-cartbtn";
+  cartBtn.className = "gk-cartbtn";
   cartBtn.href = CART_URL;
   cartBtn.textContent = "Gå til handlekurv";
-  cartBtn.style.display = "inline-block";
-  cartBtn.style.padding = "10px 12px";
-  cartBtn.style.borderRadius = "10px";
-  cartBtn.style.border = "1px solid #111";
-  cartBtn.style.textDecoration = "none";
-  cartBtn.style.fontWeight = "700";
   rightBox.appendChild(cartBtn);
 
-  // Pilsett-velger
+  // Pilsett UI
   var setsWrap = document.createElement("div");
-  setsWrap.style.display = "flex";
-  setsWrap.style.gap = "8px";
-  setsWrap.style.alignItems = "center";
+  setsWrap.className = "gk-sets";
   leftBox.appendChild(setsWrap);
 
-  var setsLabel = document.createElement("div");
+  var setsLabel = document.createElement("strong");
   setsLabel.textContent = "Leie pilsett:";
-  setsLabel.style.fontWeight = "700";
   setsWrap.appendChild(setsLabel);
 
   function mkBtn(txt) {
     var b = document.createElement("button");
     b.type = "button";
+    b.className = "gk-sets-btn";
     b.textContent = txt;
-    b.style.padding = "6px 10px";
-    b.style.borderRadius = "8px";
-    b.style.border = "1px solid #111";
-    b.style.cursor = "pointer";
     return b;
   }
-
   var btnMinus = mkBtn("-");
   var btnPlus = mkBtn("+");
-
   var setsVal = document.createElement("div");
+  setsVal.className = "gk-sets-val";
   setsVal.textContent = "0";
-  setsVal.style.minWidth = "18px";
-  setsVal.style.textAlign = "center";
-  setsVal.style.fontWeight = "700";
 
   setsWrap.appendChild(btnMinus);
   setsWrap.appendChild(setsVal);
   setsWrap.appendChild(btnPlus);
 
   var setsHint = document.createElement("div");
+  setsHint.className = "gk-sets-hint";
   setsHint.textContent = "For deg som ikke har eget (25 kr pr sett). Legges til per dato du booker.";
-  setsHint.style.opacity = "0.8";
-  setsHint.style.fontSize = "12px";
   leftBox.appendChild(setsHint);
 
+  // Insert topbar before content
+  root.insertBefore(topbar, root.firstChild);
+
   // -----------------------------
-  // STATE
+  // State
   // -----------------------------
   var setsQty = 0;               // 0-8 (valg)
   var setsCountByDate = {};      // { "YYYY-MM-DD": number } hvor mange som er lagt til for den datoen
@@ -140,18 +158,17 @@
     } catch (e) { return def; }
   }
   function saveState() {
-    try { localStorage.setItem("gk_dart_sets_qty_v25", String(setsQty)); } catch (e) {}
-    try { localStorage.setItem("gk_dart_sets_count_by_date_v25", JSON.stringify(setsCountByDate)); } catch (e2) {}
+    try { localStorage.setItem("gk_dart_sets_qty_v26", String(setsQty)); } catch (e) {}
+    try { localStorage.setItem("gk_dart_sets_count_by_date_v26", JSON.stringify(setsCountByDate)); } catch (e2) {}
   }
   function loadState() {
-    setsQty = getInt("gk_dart_sets_qty_v25", 0);
-    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v25", {});
+    setsQty = getInt("gk_dart_sets_qty_v26", 0);
+    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v26", {});
   }
   function updateSetsUI() {
     setsVal.textContent = String(setsQty);
     saveState();
   }
-
   loadState();
   updateSetsUI();
 
@@ -189,15 +206,12 @@
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
 
-    console.log("[DART] POST /cart/add (variant) body:", body);
-
     postAddForm(body).then(function () { cb(true); })
-      .catch(function (e) { console.log("[DART] addVariantToCart error:", e); cb(false); });
+      .catch(function () { cb(false); });
   }
 
   function addProductToCart(productId, qty, cb) {
     if (!qty || qty <= 0) { cb(true); return; }
-
     var body =
       "product_id=" + encodeURIComponent(String(productId)) +
       "&qty=" + encodeURIComponent(String(qty)) +
@@ -205,10 +219,8 @@
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
 
-    console.log("[DART] POST /cart/add (product) body:", body);
-
     postAddForm(body).then(function () { cb(true); })
-      .catch(function (e) { console.log("[DART] addProductToCart error:", e); cb(false); });
+      .catch(function () { cb(false); });
   }
 
   // -----------------------------
@@ -292,10 +304,25 @@
     return arr;
   }
 
+  function fmtDayLabel(dateStr) {
+    // YYYY-MM-DD -> "Man 09.03"
+    var d = new Date(dateStr + "T00:00:00");
+    var wd = ["Søn","Man","Tir","Ons","Tor","Fre","Lør"][d.getDay()];
+    var dd = ("0" + d.getDate()).slice(-2);
+    var mm = ("0" + (d.getMonth() + 1)).slice(-2);
+    return wd + " " + dd + "." + mm;
+  }
+
+  function isToday(dateStr) {
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = ("0" + (now.getMonth() + 1)).slice(-2);
+    var d = ("0" + now.getDate()).slice(-2);
+    return dateStr === (y + "-" + m + "-" + d);
+  }
+
   // -----------------------------
   // Pilsett per dato (riktig)
-  // - Hvis du har valgt 2 pilsett og booker 2 datoer => total 4
-  // - Vi legger bare til differansen hvis dato allerede har noe
   // -----------------------------
   function ensureSetsForDate(dateKey, cb) {
     if (setsQty <= 0) { cb(true); return; }
@@ -306,8 +333,6 @@
 
     var need = setsQty - already;
     if (need <= 0) { cb(true); return; }
-
-    status.innerHTML = "Legger til pilsett… (" + need + " stk)";
 
     function addOne() {
       if (need <= 0) {
@@ -322,14 +347,177 @@
         addOne();
       });
     }
-
     addOne();
   }
 
   // -----------------------------
-  // Render
+  // Calendar UI (chips + grid)
   // -----------------------------
-  status.innerHTML = "Laster ledige tider…";
+  var cal = document.createElement("div");
+  cal.className = "gk-cal";
+  daysEl.appendChild(cal);
+
+  var calHead = document.createElement("div");
+  calHead.className = "gk-cal-head";
+  cal.appendChild(calHead);
+
+  var calTitle = document.createElement("div");
+  calTitle.className = "gk-cal-title";
+  calTitle.textContent = "Velg dato";
+  calHead.appendChild(calTitle);
+
+  var calNav = document.createElement("div");
+  calNav.className = "gk-cal-nav";
+  calHead.appendChild(calNav);
+
+  var prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "gk-navbtn";
+  prevBtn.textContent = "Forrige";
+  calNav.appendChild(prevBtn);
+
+  var nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "gk-navbtn";
+  nextBtn.textContent = "Neste";
+  calNav.appendChild(nextBtn);
+
+  var chips = document.createElement("div");
+  chips.className = "gk-chips";
+  cal.appendChild(chips);
+
+  var grid = document.createElement("div");
+  grid.className = "gk-grid";
+  cal.appendChild(grid);
+
+  var note = document.createElement("div");
+  note.className = "gk-note";
+  note.textContent = "Tips: Du kan legge flere tider i handlekurven før du går til kassa.";
+  cal.appendChild(note);
+
+  // -----------------------------
+  // Load & render
+  // -----------------------------
+  if (status) status.innerHTML = "Laster ledige tider…";
+
+  var ALL_SLOTS = null;
+  var ALL_DATES = [];
+  var ACTIVE_DATE = "";
+
+  function setActiveDate(d) {
+    ACTIVE_DATE = d;
+    // chips active state
+    var kids = chips.children;
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i];
+      if (!el || !el.getAttribute) continue;
+      el.setAttribute("data-active", el.getAttribute("data-date") === d ? "1" : "0");
+    }
+    renderDay(d);
+  }
+
+  function scrollChipIntoView(d) {
+    var kids = chips.children;
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i];
+      if (el && el.getAttribute && el.getAttribute("data-date") === d) {
+        try { el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); } catch (e) {}
+        break;
+      }
+    }
+  }
+
+  function renderDay(dateStr) {
+    grid.innerHTML = "";
+
+    if (!ALL_SLOTS || !ALL_SLOTS[dateStr]) {
+      var em = document.createElement("div");
+      em.className = "gk-empty";
+      em.textContent = "Ingen ledige tider denne dagen.";
+      grid.appendChild(em);
+      calTitle.textContent = dateStr ? (dateStr + (isToday(dateStr) ? " (I dag)" : "")) : "Velg dato";
+      return;
+    }
+
+    calTitle.textContent = dateStr + (isToday(dateStr) ? " (I dag)" : "");
+
+    var times = keys(ALL_SLOTS[dateStr]);
+    for (var ti = 0; ti < times.length; ti++) {
+      var time = times[ti];
+
+      var row = document.createElement("div");
+      row.className = "gk-row";
+
+      var t = document.createElement("div");
+      t.className = "gk-time";
+      t.textContent = time;
+      row.appendChild(t);
+
+      var lanes = document.createElement("div");
+      lanes.className = "gk-lanes";
+      row.appendChild(lanes);
+
+      function mkLaneBtn(label, slot) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "gk-lbtn";
+        b.textContent = label;
+
+        b.onclick = function () {
+          b.disabled = true;
+          b.textContent = "Legger til…";
+
+          ensureSetsForDate(slot.date, function (okSets) {
+            if (!okSets) {
+              b.disabled = false;
+              b.textContent = label + " (feil – prøv igjen)";
+              return;
+            }
+
+            addVariantToCart(slot.product, slot.variant, function (okVar) {
+              if (okVar) {
+                if (status) status.innerHTML = "";
+                b.textContent = "Lagt i handlekurv ✓";
+              } else {
+                b.disabled = false;
+                b.textContent = label + " (feil – prøv igjen)";
+              }
+            });
+          });
+        };
+
+        return b;
+      }
+
+      var slotObj = ALL_SLOTS[dateStr][time];
+
+      if (slotObj.A) lanes.appendChild(mkLaneBtn("Bane A", slotObj.A));
+      if (slotObj.B) lanes.appendChild(mkLaneBtn("Bane B", slotObj.B));
+
+      grid.appendChild(row);
+    }
+  }
+
+  function idxOf(arr, v) {
+    for (var i = 0; i < arr.length; i++) if (arr[i] === v) return i;
+    return -1;
+  }
+
+  function goPrev() {
+    var i = idxOf(ALL_DATES, ACTIVE_DATE);
+    if (i <= 0) return;
+    setActiveDate(ALL_DATES[i - 1]);
+    scrollChipIntoView(ACTIVE_DATE);
+  }
+  function goNext() {
+    var i = idxOf(ALL_DATES, ACTIVE_DATE);
+    if (i < 0 || i >= ALL_DATES.length - 1) return;
+    setActiveDate(ALL_DATES[i + 1]);
+    scrollChipIntoView(ACTIVE_DATE);
+  }
+
+  prevBtn.onclick = goPrev;
+  nextBtn.onclick = goNext;
 
   Promise.all([
     fetch(API_A).then(function (r) { return r.json(); }),
@@ -345,98 +533,56 @@
     var mapA = buildIndex(varsA, PRODUCT_A, "A");
     var mapB = buildIndex(varsB, PRODUCT_B, "B");
 
-    var slots = merge(mapA, mapB);
-    var dates = keys(slots);
+    ALL_SLOTS = merge(mapA, mapB);
+    ALL_DATES = keys(ALL_SLOTS);
 
-    status.innerHTML = "";
+    if (status) status.innerHTML = "";
 
-    if (!dates.length) {
-      status.innerHTML = "Ingen ledige tider akkurat nå.";
+    chips.innerHTML = "";
+
+    if (!ALL_DATES.length) {
+      grid.innerHTML = "<div class='gk-empty'>Ingen ledige tider akkurat nå.</div>";
       return;
     }
 
-    for (var di = 0; di < dates.length; di++) {
-      var date = dates[di];
+    // Build chips
+    for (var i = 0; i < ALL_DATES.length; i++) {
+      (function () {
+        var d = ALL_DATES[i];
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "gk-chip";
+        chip.setAttribute("data-date", d);
 
-      var box = document.createElement("div");
-      box.style.border = "1px solid #ddd";
-      box.style.margin = "10px 0";
-      box.style.padding = "10px";
-      box.style.borderRadius = "10px";
+        var main = document.createElement("div");
+        main.textContent = fmtDayLabel(d);
+        chip.appendChild(main);
 
-      var title = document.createElement("div");
-      title.textContent = date;
-      title.style.fontWeight = "800";
-      title.style.fontSize = "18px";
-      title.style.marginBottom = "8px";
-      box.appendChild(title);
+        var sub = document.createElement("small");
+        sub.textContent = isToday(d) ? "I dag" : d;
+        chip.appendChild(sub);
 
-      var times = keys(slots[date]);
+        chip.onclick = function () {
+          setActiveDate(d);
+          scrollChipIntoView(d);
+        };
 
-      for (var ti = 0; ti < times.length; ti++) {
-        var time = times[ti];
-
-        var row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.gap = "10px";
-        row.style.margin = "6px 0";
-
-        var t = document.createElement("div");
-        t.textContent = time;
-        t.style.minWidth = "92px";
-        t.style.fontWeight = "700";
-        row.appendChild(t);
-
-        function mkLaneBtn(label, slot) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.textContent = label;
-          b.style.padding = "7px 10px";
-          b.style.borderRadius = "8px";
-          b.style.border = "1px solid #111";
-          b.style.cursor = "pointer";
-
-          b.onclick = function () {
-            b.disabled = true;
-            b.textContent = "Legger til…";
-
-            // 1) Sikre pilsett pr dato
-            ensureSetsForDate(slot.date, function (okSets) {
-              if (!okSets) {
-                b.disabled = false;
-                b.textContent = label + " (feil – prøv igjen)";
-                return;
-              }
-
-              // 2) Legg til booking-variant
-              addVariantToCart(slot.product, slot.variant, function (okVar) {
-                if (okVar) {
-                  status.innerHTML = "";
-                  b.textContent = "Lagt i handlekurv ✓";
-                } else {
-                  b.disabled = false;
-                  b.textContent = label + " (feil – prøv igjen)";
-                }
-              });
-            });
-          };
-
-          return b;
-        }
-
-        if (slots[date][time].A) row.appendChild(mkLaneBtn("Bane A", slots[date][time].A));
-        if (slots[date][time].B) row.appendChild(mkLaneBtn("Bane B", slots[date][time].B));
-
-        box.appendChild(row);
-      }
-
-      daysEl.appendChild(box);
+        chips.appendChild(chip);
+      })();
     }
+
+    // Default: today if available, else first
+    var todayPick = "";
+    for (var j = 0; j < ALL_DATES.length; j++) {
+      if (isToday(ALL_DATES[j])) { todayPick = ALL_DATES[j]; break; }
+    }
+    setActiveDate(todayPick || ALL_DATES[0]);
+    scrollChipIntoView(ACTIVE_DATE);
 
   }).catch(function (e) {
     console.log("[DART] load error:", e);
-    status.innerHTML = "Kunne ikke laste tider (se console).";
+    if (status) status.innerHTML = "Kunne ikke laste tider (se console).";
+    grid.innerHTML = "<div class='gk-empty'>Kunne ikke laste tider.</div>";
   });
 
 })();
