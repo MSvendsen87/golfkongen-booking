@@ -1,6 +1,6 @@
 (function () {
 
-  console.log("[DART BOOKING v26] LOADED");
+  console.log("[DART BOOKING v27] LOADED");
 
   // Produkter
   var PRODUCT_A = "1316";
@@ -32,47 +32,85 @@
   daysEl.innerHTML = "";
 
   // -----------------------------
-  // Styles (mobile-first)
+  // Styles (Mobile first - GK dark)
   // -----------------------------
   function injectCSS() {
-    if (document.getElementById("gk-dart-css-v26")) return;
+    if (document.getElementById("gk-dart-css-v27")) return;
+
     var css = ""
-      + "#gk-booking{max-width:1100px;margin:0 auto;padding:12px}"
-      + ".gk-b-top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,0.92);backdrop-filter:blur(6px);border:1px solid #e5e5e5;border-radius:14px;padding:10px;margin:10px 0 12px 0}"
-      + ".gk-b-top-inner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}"
-      + ".gk-b-left{display:flex;flex-wrap:wrap;gap:10px;align-items:center}"
-      + ".gk-b-right{display:flex;gap:10px;align-items:center}"
-      + ".gk-cartbtn{display:inline-block;padding:10px 12px;border-radius:12px;border:1px solid #111;text-decoration:none;font-weight:800}"
-      + ".gk-sets{display:flex;gap:8px;align-items:center;flex-wrap:wrap}"
-      + ".gk-sets strong{font-weight:900}"
-      + ".gk-sets-btn{padding:6px 10px;border-radius:10px;border:1px solid #111;cursor:pointer}"
-      + ".gk-sets-val{min-width:20px;text-align:center;font-weight:900}"
-      + ".gk-sets-hint{opacity:.78;font-size:12px}"
-      + ".gk-cal{border:1px solid #e5e5e5;border-radius:14px;overflow:hidden}"
-      + ".gk-cal-head{padding:10px 12px;border-bottom:1px solid #e5e5e5;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}"
+      + ":root{--gk-bg:#111;--gk-card:#171717;--gk-card2:#1c1c1c;--gk-line:rgba(255,255,255,.10);--gk-soft:rgba(255,255,255,.08);--gk-text:rgba(255,255,255,.92);--gk-muted:rgba(255,255,255,.72);--gk-ac:#2bd18b;--gk-ac2:#7dffb8;--gk-btn:#fff;--gk-btnText:#111}"
+      + "#gk-booking{max-width:1100px;margin:0 auto;padding:12px;color:var(--gk-text)}"
+
+      // TOPBAR CARD
+      + ".gk-b-top{position:sticky;top:0;z-index:8;background:linear-gradient(180deg, rgba(17,17,17,.92), rgba(17,17,17,.82));backdrop-filter:blur(10px);border:1px solid var(--gk-line);border-radius:16px;padding:12px;margin:10px 0 14px 0;box-shadow:0 10px 30px rgba(0,0,0,.25)}"
+      + ".gk-b-top-inner{display:flex;flex-direction:column;gap:12px}"
+
+      // row 1: title + cart
+      + ".gk-top-row1{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}"
+      + ".gk-top-title{display:flex;flex-direction:column;gap:4px}"
+      + ".gk-top-title b{font-size:14px;letter-spacing:.2px}"
+      + ".gk-top-title span{font-size:12px;color:var(--gk-muted);line-height:1.2}"
+
+      // cart button
+      + ".gk-cartbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid rgba(43,209,139,.55);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08));color:var(--gk-text);text-decoration:none;font-weight:900;white-space:nowrap;min-width:160px}"
+      + ".gk-cartbtn:active{transform:scale(.99)}"
+
+      // row 2: sets control
+      + ".gk-sets{display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--gk-line);border-radius:14px;padding:10px}"
+      + ".gk-sets-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}"
+      + ".gk-sets-head strong{font-weight:900}"
+      + ".gk-sets-hint{font-size:12px;color:var(--gk-muted);line-height:1.25}"
+      + ".gk-sets-ctrl{display:flex;gap:10px;align-items:center}"
+      + ".gk-sets-btn{width:44px;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--gk-text);font-weight:900;font-size:18px;cursor:pointer}"
+      + ".gk-sets-btn:active{transform:scale(.99)}"
+      + ".gk-sets-val{min-width:28px;text-align:center;font-weight:900;font-size:16px}"
+
+      // CALENDAR CARD
+      + ".gk-cal{border:1px solid var(--gk-line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg, var(--gk-card), var(--gk-card2));box-shadow:0 10px 30px rgba(0,0,0,.18)}"
+      + ".gk-cal-head{padding:12px 12px;border-bottom:1px solid var(--gk-line);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}"
       + ".gk-cal-title{font-weight:900;font-size:16px}"
       + ".gk-cal-nav{display:flex;gap:8px;align-items:center}"
-      + ".gk-navbtn{padding:8px 10px;border-radius:10px;border:1px solid #111;background:#fff;cursor:pointer;font-weight:800}"
-      + ".gk-chips{display:flex;gap:8px;overflow:auto;padding:10px 12px;border-bottom:1px solid #e5e5e5}"
-      + ".gk-chip{white-space:nowrap;padding:8px 10px;border-radius:999px;border:1px solid #d7d7d7;background:#fff;cursor:pointer;font-weight:800}"
-      + ".gk-chip[data-active='1']{border-color:#111}"
-      + ".gk-chip small{opacity:.75;font-weight:700}"
-      + ".gk-grid{padding:10px 12px;display:flex;flex-direction:column;gap:8px}"
-      + ".gk-row{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center}"
-      + ".gk-time{font-weight:900;opacity:.9}"
-      + ".gk-lanes{display:flex;gap:8px;flex-wrap:wrap}"
-      + ".gk-lbtn{padding:10px 12px;border-radius:12px;border:1px solid #111;background:#fff;cursor:pointer;font-weight:900;flex:1;min-width:120px}"
+      + ".gk-navbtn{padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--gk-text);cursor:pointer;font-weight:900}"
+      + ".gk-navbtn:active{transform:scale(.99)}"
+
+      // DATE CHIPS (bigger cards)
+      + ".gk-chips{display:flex;gap:10px;overflow:auto;padding:12px;border-bottom:1px solid var(--gk-line);scrollbar-width:none}"
+      + ".gk-chips::-webkit-scrollbar{display:none}"
+      + ".gk-chip{flex:0 0 auto;min-width:96px;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);cursor:pointer;color:var(--gk-text);text-align:left}"
+      + ".gk-chip[data-active='1']{border-color:rgba(43,209,139,.75);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08))}"
+      + ".gk-chip .gk-chip-top{font-weight:900;font-size:13px;line-height:1.05}"
+      + ".gk-chip .gk-chip-sub{font-size:11px;color:var(--gk-muted);margin-top:4px}"
+
+      // GRID
+      + ".gk-grid{padding:12px;display:flex;flex-direction:column;gap:10px}"
+      + ".gk-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:stretch}"
+      + ".gk-time{display:flex;align-items:center;justify-content:flex-start;font-weight:900;color:var(--gk-text);opacity:.95}"
+      + ".gk-lanes{display:grid;grid-template-columns:1fr 1fr;gap:10px}"
+
+      // Lane button
+      + ".gk-lbtn{width:100%;padding:14px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:var(--gk-text);cursor:pointer;font-weight:900}"
+      + ".gk-lbtn:hover{border-color:rgba(43,209,139,.55)}"
+      + ".gk-lbtn:active{transform:scale(.99)}"
       + ".gk-lbtn[disabled]{opacity:.65;cursor:not-allowed}"
-      + ".gk-note{padding:10px 12px;opacity:.8;font-size:12px}"
-      + ".gk-empty{padding:16px 12px;opacity:.85}"
+      + ".gk-lbtn.gk-ok{border-color:rgba(43,209,139,.75);background:linear-gradient(135deg, rgba(43,209,139,.18), rgba(125,255,184,.08))}"
+
+      // Notes
+      + ".gk-note{padding:12px;color:var(--gk-muted);font-size:12px;line-height:1.35}"
+      + ".gk-empty{padding:16px 12px;color:var(--gk-muted)}"
+
+      // Desktop tweaks
       + "@media (min-width:900px){"
       + "  #gk-booking{padding:16px}"
+      + "  .gk-b-top-inner{flex-direction:row;align-items:stretch;justify-content:space-between}"
+      + "  .gk-top-row1{flex:1}"
+      + "  .gk-sets{max-width:520px;flex:0 0 520px}"
       + "  .gk-row{grid-template-columns:130px 1fr}"
       + "  .gk-cal-title{font-size:18px}"
-      + "  .gk-lbtn{flex:0;min-width:140px}"
-      + "}";
+      + "}"
+      ;
+
     var style = document.createElement("style");
-    style.id = "gk-dart-css-v26";
+    style.id = "gk-dart-css-v27";
     style.type = "text/css";
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
@@ -80,7 +118,7 @@
   injectCSS();
 
   // -----------------------------
-  // Topbar
+  // Topbar (new structure)
   // -----------------------------
   var topbar = document.createElement("div");
   topbar.className = "gk-b-top";
@@ -89,28 +127,44 @@
   topInner.className = "gk-b-top-inner";
   topbar.appendChild(topInner);
 
-  var leftBox = document.createElement("div");
-  leftBox.className = "gk-b-left";
-  topInner.appendChild(leftBox);
+  var row1 = document.createElement("div");
+  row1.className = "gk-top-row1";
+  topInner.appendChild(row1);
 
-  var rightBox = document.createElement("div");
-  rightBox.className = "gk-b-right";
-  topInner.appendChild(rightBox);
+  var titleBox = document.createElement("div");
+  titleBox.className = "gk-top-title";
+  row1.appendChild(titleBox);
+
+  var titleB = document.createElement("b");
+  titleB.textContent = "Dart booking";
+  titleBox.appendChild(titleB);
+
+  var titleS = document.createElement("span");
+  titleS.textContent = "Velg pilsett (valgfritt), legg til tider – gå til handlekurv når du er klar.";
+  titleBox.appendChild(titleS);
 
   var cartBtn = document.createElement("a");
   cartBtn.className = "gk-cartbtn";
   cartBtn.href = CART_URL;
   cartBtn.textContent = "Gå til handlekurv";
-  rightBox.appendChild(cartBtn);
+  row1.appendChild(cartBtn);
 
-  // Pilsett UI
+  // Sets card
   var setsWrap = document.createElement("div");
   setsWrap.className = "gk-sets";
-  leftBox.appendChild(setsWrap);
+  topInner.appendChild(setsWrap);
+
+  var setsHead = document.createElement("div");
+  setsHead.className = "gk-sets-head";
+  setsWrap.appendChild(setsHead);
 
   var setsLabel = document.createElement("strong");
-  setsLabel.textContent = "Leie pilsett:";
-  setsWrap.appendChild(setsLabel);
+  setsLabel.textContent = "Leie pilsett";
+  setsHead.appendChild(setsLabel);
+
+  var setsCtrl = document.createElement("div");
+  setsCtrl.className = "gk-sets-ctrl";
+  setsHead.appendChild(setsCtrl);
 
   function mkBtn(txt) {
     var b = document.createElement("button");
@@ -119,29 +173,30 @@
     b.textContent = txt;
     return b;
   }
-  var btnMinus = mkBtn("-");
+  var btnMinus = mkBtn("−");
   var btnPlus = mkBtn("+");
+
   var setsVal = document.createElement("div");
   setsVal.className = "gk-sets-val";
   setsVal.textContent = "0";
 
-  setsWrap.appendChild(btnMinus);
-  setsWrap.appendChild(setsVal);
-  setsWrap.appendChild(btnPlus);
+  setsCtrl.appendChild(btnMinus);
+  setsCtrl.appendChild(setsVal);
+  setsCtrl.appendChild(btnPlus);
 
   var setsHint = document.createElement("div");
   setsHint.className = "gk-sets-hint";
-  setsHint.textContent = "For deg som ikke har eget (25 kr pr sett). Legges til per dato du booker.";
-  leftBox.appendChild(setsHint);
+  setsHint.textContent = "For deg som ikke har eget sett. 25 kr per pilsett. Legges til per dato du booker.";
+  setsWrap.appendChild(setsHint);
 
-  // Insert topbar before content
+  // Insert topbar
   root.insertBefore(topbar, root.firstChild);
 
   // -----------------------------
   // State
   // -----------------------------
-  var setsQty = 0;               // 0-8 (valg)
-  var setsCountByDate = {};      // { "YYYY-MM-DD": number } hvor mange som er lagt til for den datoen
+  var setsQty = 0;               // 0-8
+  var setsCountByDate = {};      // { "YYYY-MM-DD": number }
 
   function getJSON(key, def) {
     try {
@@ -158,12 +213,12 @@
     } catch (e) { return def; }
   }
   function saveState() {
-    try { localStorage.setItem("gk_dart_sets_qty_v26", String(setsQty)); } catch (e) {}
-    try { localStorage.setItem("gk_dart_sets_count_by_date_v26", JSON.stringify(setsCountByDate)); } catch (e2) {}
+    try { localStorage.setItem("gk_dart_sets_qty_v27", String(setsQty)); } catch (e) {}
+    try { localStorage.setItem("gk_dart_sets_count_by_date_v27", JSON.stringify(setsCountByDate)); } catch (e2) {}
   }
   function loadState() {
-    setsQty = getInt("gk_dart_sets_qty_v26", 0);
-    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v26", {});
+    setsQty = getInt("gk_dart_sets_qty_v27", 0);
+    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v27", {});
   }
   function updateSetsUI() {
     setsVal.textContent = String(setsQty);
@@ -304,13 +359,12 @@
     return arr;
   }
 
-  function fmtDayLabel(dateStr) {
-    // YYYY-MM-DD -> "Man 09.03"
+  function fmtChip(dateStr) {
     var d = new Date(dateStr + "T00:00:00");
     var wd = ["Søn","Man","Tir","Ons","Tor","Fre","Lør"][d.getDay()];
     var dd = ("0" + d.getDate()).slice(-2);
     var mm = ("0" + (d.getMonth() + 1)).slice(-2);
-    return wd + " " + dd + "." + mm;
+    return { top: wd + " " + dd + "." + mm, sub: dateStr };
   }
 
   function isToday(dateStr) {
@@ -322,7 +376,7 @@
   }
 
   // -----------------------------
-  // Pilsett per dato (riktig)
+  // Sets per date (correct)
   // -----------------------------
   function ensureSetsForDate(dateKey, cb) {
     if (setsQty <= 0) { cb(true); return; }
@@ -351,7 +405,7 @@
   }
 
   // -----------------------------
-  // Calendar UI (chips + grid)
+  // Calendar UI
   // -----------------------------
   var cal = document.createElement("div");
   cal.className = "gk-cal";
@@ -392,7 +446,7 @@
 
   var note = document.createElement("div");
   note.className = "gk-note";
-  note.textContent = "Tips: Du kan legge flere tider i handlekurven før du går til kassa.";
+  note.textContent = "Du kan legge flere tider i handlekurven før du går til kassa.";
   cal.appendChild(note);
 
   // -----------------------------
@@ -406,7 +460,6 @@
 
   function setActiveDate(d) {
     ACTIVE_DATE = d;
-    // chips active state
     var kids = chips.children;
     for (var i = 0; i < kids.length; i++) {
       var el = kids[i];
@@ -477,6 +530,7 @@
             addVariantToCart(slot.product, slot.variant, function (okVar) {
               if (okVar) {
                 if (status) status.innerHTML = "";
+                b.className = "gk-lbtn gk-ok";
                 b.textContent = "Lagt i handlekurv ✓";
               } else {
                 b.disabled = false;
@@ -490,7 +544,6 @@
       }
 
       var slotObj = ALL_SLOTS[dateStr][time];
-
       if (slotObj.A) lanes.appendChild(mkLaneBtn("Bane A", slotObj.A));
       if (slotObj.B) lanes.appendChild(mkLaneBtn("Bane B", slotObj.B));
 
@@ -502,7 +555,6 @@
     for (var i = 0; i < arr.length; i++) if (arr[i] === v) return i;
     return -1;
   }
-
   function goPrev() {
     var i = idxOf(ALL_DATES, ACTIVE_DATE);
     if (i <= 0) return;
@@ -515,7 +567,6 @@
     setActiveDate(ALL_DATES[i + 1]);
     scrollChipIntoView(ACTIVE_DATE);
   }
-
   prevBtn.onclick = goPrev;
   nextBtn.onclick = goNext;
 
@@ -537,7 +588,6 @@
     ALL_DATES = keys(ALL_SLOTS);
 
     if (status) status.innerHTML = "";
-
     chips.innerHTML = "";
 
     if (!ALL_DATES.length) {
@@ -545,7 +595,7 @@
       return;
     }
 
-    // Build chips
+    // Build chips (bigger)
     for (var i = 0; i < ALL_DATES.length; i++) {
       (function () {
         var d = ALL_DATES[i];
@@ -554,12 +604,16 @@
         chip.className = "gk-chip";
         chip.setAttribute("data-date", d);
 
-        var main = document.createElement("div");
-        main.textContent = fmtDayLabel(d);
-        chip.appendChild(main);
+        var f = fmtChip(d);
 
-        var sub = document.createElement("small");
-        sub.textContent = isToday(d) ? "I dag" : d;
+        var top = document.createElement("div");
+        top.className = "gk-chip-top";
+        top.textContent = f.top;
+        chip.appendChild(top);
+
+        var sub = document.createElement("div");
+        sub.className = "gk-chip-sub";
+        sub.textContent = isToday(d) ? "I dag" : f.sub;
         chip.appendChild(sub);
 
         chip.onclick = function () {
