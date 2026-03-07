@@ -858,20 +858,22 @@
         }
 
         addVariantToCart(slot.product, slot.variant, function (okVar) {
-          if (okVar) {
-            if (status) status.innerHTML = "";
-            if (appStatus) appStatus.innerHTML = "";
+  if (okVar) {
+    try { localStorage.setItem("gk_success_target", "booking"); } catch (e) {}
 
-            bookedDates[slot.date] = true;
-            saveState();
+    if (status) status.innerHTML = "";
+    if (appStatus) appStatus.innerHTML = "";
 
-            btn.className = "gk-lbtn gk-ok";
-            btn.textContent = "Lagt i handlekurv ✓";
-          } else {
-            btn.disabled = false;
-            btn.textContent = "Book tid (feil – prøv igjen)";
-          }
-        });
+    bookedDates[slot.date] = true;
+    saveState();
+
+    btn.className = "gk-lbtn gk-ok";
+    btn.textContent = "Lagt i handlekurv ✓";
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Book tid (feil – prøv igjen)";
+  }
+});
       });
     };
 
