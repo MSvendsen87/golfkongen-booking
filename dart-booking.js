@@ -33,6 +33,10 @@
   }
   if (path !== PAGE_PATH) return;
 
+  try {
+    localStorage.removeItem("gk_last_booking_payload_v1");
+  } catch (e) {}
+
   var root = document.getElementById(ROOT_ID);
   var status = document.getElementById(STATUS_ID);
   var daysEl = document.getElementById(DAYS_ID);
@@ -41,6 +45,52 @@
 
   if (status) status.innerHTML = "";
   daysEl.innerHTML = "";
+
+  /* ------------------------------------------------ */
+  /* BOOKING STORAGE */
+  /* ------------------------------------------------ */
+
+  function gkStoreBookingDetails(payload) {
+    try {
+      var KEY = "gk_last_booking_payload_v1";
+      var TARGET_KEY = "gk_success_target";
+
+      var current = null;
+      try {
+        current = JSON.parse(localStorage.getItem(KEY) || "null");
+      } catch (e) {
+        current = null;
+      }
+
+      if (!current || typeof current !== "object") {
+        current = {
+          createdAt: new Date().toISOString(),
+          source: payload && payload.source ? payload.source : "booking",
+          title: payload && payload.title ? payload.title : "Booking",
+          items: [],
+          extras: {}
+        };
+      }
+
+      if (!current.items || !current.items.push) current.items = [];
+
+      if (payload && payload.item) {
+        current.items.push(payload.item);
+      }
+
+      if (payload && payload.extras) {
+        current.extras = payload.extras;
+      }
+
+      if (payload && payload.source) current.source = payload.source;
+      if (payload && payload.title) current.title = payload.title;
+
+      localStorage.setItem(KEY, JSON.stringify(current));
+      localStorage.setItem(TARGET_KEY, "booking");
+    } catch (e) {
+      console.log("[GK BOOKING STORE] error", e);
+    }
+  }
 
   /* ------------------------------------------------ */
   /* CSS */
@@ -227,6 +277,7 @@
       + ".gk-cal-nav{display:flex;grid-template-columns:none}"
       + ".gk-lanes{grid-template-columns:1fr 1fr}"
       + "}";
+
     var style = document.createElement("style");
     style.id = "gk-dart-css-v30";
     style.type = "text/css";
@@ -858,22 +909,38 @@
         }
 
         addVariantToCart(slot.product, slot.variant, function (okVar) {
-  if (okVar) {
-    try { localStorage.setItem("gk_success_target", "booking"); } catch (e) {}
+          if (okVar) {
+            gkStoreBookingDetails({
+              source: "dart",
+              title: "Dart booking",
+              item: {
+                type: "dart",
+                label: slot.lane === "A" ? "Dart – Bane A" : "Dart – Bane B",
+                lane: slot.lane || "",
+                date: slot.date || "",
+                time: slot.time || "",
+                productId: String(slot.product || ""),
+                variantId: String(slot.variant || ""),
+                price: (slot.price !== null && typeof slot.price !== "undefined") ? String(slot.price) : ""
+              },
+              extras: {
+                dartSets: setsQty || 0
+              }
+            });
 
-    if (status) status.innerHTML = "";
-    if (appStatus) appStatus.innerHTML = "";
+            if (status) status.innerHTML = "";
+            if (appStatus) appStatus.innerHTML = "";
 
-    bookedDates[slot.date] = true;
-    saveState();
+            bookedDates[slot.date] = true;
+            saveState();
 
-    btn.className = "gk-lbtn gk-ok";
-    btn.textContent = "Lagt i handlekurv ✓";
-  } else {
-    btn.disabled = false;
-    btn.textContent = "Book tid (feil – prøv igjen)";
-  }
-});
+            btn.className = "gk-lbtn gk-ok";
+            btn.textContent = "Lagt i handlekurv ✓";
+          } else {
+            btn.disabled = false;
+            btn.textContent = "Book tid (feil – prøv igjen)";
+          }
+        });
       });
     };
 
