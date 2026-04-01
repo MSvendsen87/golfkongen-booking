@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v30] LOADED");
+  console.log("[DART BOOKING v31] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -97,7 +97,7 @@
   /* ------------------------------------------------ */
 
   function injectCSS() {
-    if (document.getElementById("gk-dart-css-v30")) return;
+    if (document.getElementById("gk-dart-css-v31")) return;
 
     var css = ""
       + ":root{"
@@ -111,7 +111,10 @@
       + "--gk-ac:#2bd18b;"
       + "--gk-ac2:#7dffb8;"
       + "--gk-gold:#f0c14b;"
-      + "--gk-red:#ff7676;"
+      + "--gk-red:#ff6b6b;"
+      + "--gk-red-2:#ff9a9a;"
+      + "--gk-stop:#ffb86b;"
+      + "--gk-stop-2:#ffd3a1;"
       + "}"
 
       + "#gk-booking{max-width:1040px;margin:0 auto;padding:12px;color:var(--gk-text)}"
@@ -147,8 +150,8 @@
       + "color:#ffe29b"
       + "}"
       + ".gk-chip-meta.warn{"
-      + "border-color:rgba(255,118,118,.28);"
-      + "background:linear-gradient(135deg, rgba(255,118,118,.14), rgba(255,118,118,.06));"
+      + "border-color:rgba(255,107,107,.28);"
+      + "background:linear-gradient(135deg, rgba(255,107,107,.14), rgba(255,107,107,.06));"
       + "color:#ffc1c1"
       + "}"
 
@@ -238,10 +241,20 @@
       + "background:linear-gradient(135deg, rgba(240,193,75,.16), rgba(240,193,75,.06));"
       + "color:#ffe29b"
       + "}"
+      + ".gk-mini.ok{"
+      + "border-color:rgba(43,209,139,.30);"
+      + "background:linear-gradient(135deg, rgba(43,209,139,.16), rgba(125,255,184,.06));"
+      + "color:#bff5d8"
+      + "}"
       + ".gk-mini.warn{"
-      + "border-color:rgba(255,118,118,.30);"
-      + "background:linear-gradient(135deg, rgba(255,118,118,.12), rgba(255,118,118,.05));"
-      + "color:#ffc1c1"
+      + "border-color:rgba(255,107,107,.34);"
+      + "background:linear-gradient(135deg, rgba(255,107,107,.18), rgba(255,107,107,.06));"
+      + "color:#ffd1d1"
+      + "}"
+      + ".gk-mini.stop{"
+      + "border-color:rgba(255,184,107,.32);"
+      + "background:linear-gradient(135deg, rgba(255,184,107,.16), rgba(255,184,107,.05));"
+      + "color:#ffe0bc"
       + "}"
 
       + ".gk-lanes{display:grid;grid-template-columns:1fr;gap:10px}"
@@ -260,10 +273,11 @@
       + "color:var(--gk-text);font-weight:900;cursor:pointer"
       + "}"
       + ".gk-lbtn:active{transform:scale(.99)}"
-      + ".gk-lbtn[disabled]{opacity:.78;cursor:not-allowed;transform:none}"
+      + ".gk-lbtn[disabled]{opacity:.88;cursor:not-allowed;transform:none}"
       + ".gk-lbtn.gk-ok{border-color:rgba(43,209,139,.75)}"
       + ".gk-lbtn.gk-locked{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.05)}"
-      + ".gk-lbtn.gk-stopped{border-color:rgba(255,118,118,.28);background:rgba(255,118,118,.08)}"
+      + ".gk-lbtn.gk-stopped{border-color:rgba(255,184,107,.36);background:linear-gradient(135deg, rgba(255,184,107,.14), rgba(255,184,107,.05));color:#ffe0bc}"
+      + ".gk-lbtn.gk-booked{border-color:rgba(255,107,107,.45);background:linear-gradient(135deg, rgba(255,107,107,.20), rgba(255,107,107,.07));color:#ffd3d3}"
 
       + ".gk-note{padding:0 14px 14px 14px;color:var(--gk-muted);font-size:12px;line-height:1.45}"
       + ".gk-empty{padding:18px 14px;color:var(--gk-muted)}"
@@ -279,7 +293,7 @@
       + "}";
 
     var style = document.createElement("style");
-    style.id = "gk-dart-css-v30";
+    style.id = "gk-dart-css-v31";
     style.type = "text/css";
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
@@ -311,7 +325,7 @@
   titleBox.appendChild(titleB);
 
   var titleS = document.createElement("span");
-  titleS.textContent = "Pris vises per bane og tid. Booking stenger 20 minutter før start. Kun ledige tider vises i oversikten.";
+  titleS.textContent = "Pris vises per bane og tid. Booking stenger 20 minutter før start. Bookede tider vises i rødt.";
   titleBox.appendChild(titleS);
 
   var meta = document.createElement("div");
@@ -687,7 +701,7 @@
     for (var i = 0; i < variants.length; i++) {
       var v = variants[i];
       var qty = parseInt(v.qty || "0", 10);
-      if (isNaN(qty) || qty <= 0) continue;
+      if (isNaN(qty)) qty = 0;
 
       var dt = parseDT(v);
       if (!dt.date || !dt.time) continue;
@@ -705,6 +719,7 @@
         date: dt.date,
         time: dt.time,
         qty: qty,
+        soldOut: qty <= 0,
         closed: !!st.closed,
         price: parsePrice(v, productObj),
         lane: laneName
@@ -796,7 +811,7 @@
 
   var note = document.createElement("div");
   note.className = "gk-note";
-  note.textContent = "Pris vises per bane. Tider mindre enn 20 minutter før start vises som stengt. Du kan legge flere tider/dager i handlekurven før du går til kassa.";
+  note.textContent = "Pris vises per bane. Tider mindre enn 20 minutter før start vises som stengt. Fullbookede tider vises som booket i rødt. Du kan legge flere tider/dager i handlekurven før du går til kassa.";
   cal.appendChild(note);
 
   /* ------------------------------------------------ */
@@ -866,16 +881,21 @@
     priceChip.textContent = formatPriceNOK(slot.price);
     meta.appendChild(priceChip);
 
-    var liveChip = document.createElement("div");
-    liveChip.className = "gk-mini";
-    liveChip.textContent = "Ledig nå";
-    meta.appendChild(liveChip);
-
-    if (slot.closed) {
+    if (slot.soldOut) {
+      var soldChip = document.createElement("div");
+      soldChip.className = "gk-mini warn";
+      soldChip.textContent = "Booket";
+      meta.appendChild(soldChip);
+    } else if (slot.closed) {
       var stopChip = document.createElement("div");
-      stopChip.className = "gk-mini warn";
+      stopChip.className = "gk-mini stop";
       stopChip.textContent = "Stengt – mindre enn 20 min igjen";
       meta.appendChild(stopChip);
+    } else {
+      var liveChip = document.createElement("div");
+      liveChip.className = "gk-mini ok";
+      liveChip.textContent = "Ledig nå";
+      meta.appendChild(liveChip);
     }
 
     var btn = document.createElement("button");
@@ -884,14 +904,18 @@
     btn.textContent = "Book tid";
     card.appendChild(btn);
 
-    if (slot.closed) {
+    if (slot.soldOut) {
+      btn.disabled = true;
+      btn.textContent = "Booket";
+      btn.className = "gk-lbtn gk-booked";
+    } else if (slot.closed) {
       btn.disabled = true;
       btn.textContent = "Stengt";
       btn.className = "gk-lbtn gk-stopped";
     }
 
     btn.onclick = function () {
-      if (slot.closed) return;
+      if (slot.closed || slot.soldOut) return;
 
       if (String(btn.getAttribute("data-gk-locked") || "0") === "1") {
         showGate();
@@ -953,7 +977,7 @@
     if (!ALL_SLOTS || !ALL_SLOTS[dateStr]) {
       var em = document.createElement("div");
       em.className = "gk-empty";
-      em.textContent = "Ingen ledige tider denne dagen.";
+      em.textContent = "Ingen tider denne dagen.";
       grid.appendChild(em);
       calTitle.textContent = dateStr ? (dateStr + (isToday(dateStr) ? " (I dag)" : "")) : "Velg dato";
       return;
@@ -963,7 +987,7 @@
 
     var times = keys(ALL_SLOTS[dateStr]);
     if (!times.length) {
-      grid.innerHTML = "<div class='gk-empty'>Ingen ledige tider denne dagen.</div>";
+      grid.innerHTML = "<div class='gk-empty'>Ingen tider denne dagen.</div>";
       return;
     }
 
@@ -1003,7 +1027,7 @@
     var slice = ALL_DATES.slice(WEEK_START, WEEK_START + WEEK_SIZE);
 
     if (!slice.length) {
-      grid.innerHTML = "<div class='gk-empty'>Ingen ledige tider akkurat nå.</div>";
+      grid.innerHTML = "<div class='gk-empty'>Ingen tider akkurat nå.</div>";
       return;
     }
 
@@ -1077,7 +1101,7 @@
     appStatus.innerHTML = "";
 
     if (!ALL_DATES.length) {
-      grid.innerHTML = "<div class='gk-empty'>Ingen ledige tider akkurat nå.</div>";
+      grid.innerHTML = "<div class='gk-empty'>Ingen tider akkurat nå.</div>";
       return;
     }
 
@@ -1139,6 +1163,7 @@
 
           if (txt.indexOf("Lagt i handlekurv") !== -1) continue;
           if (txt === "Stengt") continue;
+          if (txt === "Booket") continue;
 
           b.disabled = !enabled;
           b.setAttribute("data-gk-locked", enabled ? "0" : "1");
