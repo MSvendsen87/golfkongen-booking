@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v31] LOADED");
+  console.log("[DART BOOKING v32 CLUB LOCK] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -8,13 +8,16 @@
   var PRODUCT_A = "1316";
   var PRODUCT_B = "1317";
   var PRODUCT_SETS = "1318";
+  var PRODUCT_CLUB = "1322";
 
   var EVENT_ID = "9847005";
   var CART_URL = "/cart/index";
 
-  var API_BASE = "https://cold-shadow-36dc.post-cd6.workers.dev/products/";
+  var WORKER_BASE = "https://cold-shadow-36dc.post-cd6.workers.dev";
+  var API_BASE = WORKER_BASE + "/products/";
   var API_A = API_BASE + PRODUCT_A;
   var API_B = API_BASE + PRODUCT_B;
+  var API_CLUB = API_BASE + PRODUCT_CLUB;
 
   var PAGE_PATH = "/sider/dart-booking";
   var ROOT_ID = "gk-booking";
@@ -22,6 +25,42 @@
   var DAYS_ID = "gk-booking-days";
 
   var CUTOFF_MINUTES_BEFORE_START = 20;
+
+  /*
+    Klubbregel:
+    - Torsdag 19:00–22:00 er reservert for klubb frem til tirsdag 00:01 samme uke.
+    - Etter tirsdag 00:01 kan vanlig booking brukes dersom ingen klubbpåmelding finnes.
+    - Hvis minst én klubbpåmelding finnes, vises tiden som "Reservert klubb".
+    - Tidene vises fortsatt på nettsiden, men knappen deaktiveres.
+  */
+  var CLUB_CAPACITY = 10;
+  var CLUB_RELEASE_WEEKDAY = 2; // 0=søn, 1=man, 2=tir
+  var CLUB_RELEASE_HOUR = 0;
+  var CLUB_RELEASE_MINUTE = 1;
+  var CLUB_TIME_FROM = "19:00";
+  var CLUB_TIME_TO = "22:00";
+
+  /*
+    Enkel manuell stenging av tider.
+    Eksempel for gutteklubb fredag 19–22:
+    {
+      date: "2026-06-05",
+      from: "19:00",
+      to: "22:00",
+      label: "Stengt – gutteklubb"
+    }
+
+    Dette stenger kun i frontend. For full drift bør samme dato også legges i
+    gk-booking-admin sin closedTimes, slik at nye tider ikke opprettes unødvendig.
+  */
+  var CUSTOM_CLOSED_TIMES = [
+    // {
+    //   date: "2026-06-05",
+    //   from: "19:00",
+    //   to: "22:00",
+    //   label: "Stengt – gutteklubb"
+    // }
+  ];
 
   /* ------------------------------------------------ */
   /* PATH / ROOT */
@@ -97,7 +136,7 @@
   /* ------------------------------------------------ */
 
   function injectCSS() {
-    if (document.getElementById("gk-dart-css-v31")) return;
+    if (document.getElementById("gk-dart-css-v32")) return;
 
     var css = ""
       + ":root{"
@@ -293,7 +332,7 @@
       + "}";
 
     var style = document.createElement("style");
-    style.id = "gk-dart-css-v31";
+    style.id = "gk-dart-css-v32";
     style.type = "text/css";
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
@@ -405,6 +444,7 @@
   var setsCountByDate = {};
   var bookedDates = {};
   var syncLock = false;
+  var CLUB_STATUS = {};
 
   function getJSON(key, def) {
     try {
@@ -459,68 +499,66 @@
   /* ------------------------------------------------ */
   /* CART */
   /* ------------------------------------------------ */
-function gkBumpCartCount() {
-  try {
-    var selectors = [
-      ".cart-count",
-      ".cart-counter",
-      ".cart-qty",
-      ".cart-items",
-      ".header-cart-count",
-      ".js-cart-count",
-      "[data-cart-count]",
-      "[data-cart-qty]",
-      "a[href*='/cart'] span",
-      "a[href*='/cart/index'] span"
-    ];
 
-    var updated = false;
+  function gkBumpCartCount() {
+    try {
+      var selectors = [
+        ".cart-count",
+        ".cart-counter",
+        ".cart-qty",
+        ".cart-items",
+        ".header-cart-count",
+        ".js-cart-count",
+        "[data-cart-count]",
+        "[data-cart-qty]",
+        "a[href*='/cart'] span",
+        "a[href*='/cart/index'] span"
+      ];
 
-    for (var s = 0; s < selectors.length; s++) {
-      var nodes = document.querySelectorAll(selectors[s]);
+      var updated = false;
 
-      for (var i = 0; i < nodes.length; i++) {
-        var el = nodes[i];
-        if (!el) continue;
+      for (var s = 0; s < selectors.length; s++) {
+        var nodes = document.querySelectorAll(selectors[s]);
 
-        var txt = String(el.textContent || "").trim();
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          if (!el) continue;
 
-        // Oppdater kun rene tall, f.eks. 0, 1, 2
-        if (/^\d+$/.test(txt)) {
-          var n = parseInt(txt, 10);
-          if (isNaN(n)) n = 0;
-          el.textContent = String(n + 1);
-          updated = true;
+          var txt = String(el.textContent || "").trim();
+
+          if (/^\d+$/.test(txt)) {
+            var n = parseInt(txt, 10);
+            if (isNaN(n)) n = 0;
+            el.textContent = String(n + 1);
+            updated = true;
+          }
         }
       }
-    }
 
-    // Ekstra fallback: finn handlekurvlenker og prøv små badge-elementer inni
-    var cartLinks = document.querySelectorAll("a[href*='/cart'], a[href*='/cart/index']");
-    for (var j = 0; j < cartLinks.length; j++) {
-      var link = cartLinks[j];
-      var smalls = link.querySelectorAll("span, b, em, strong, i");
+      var cartLinks = document.querySelectorAll("a[href*='/cart'], a[href*='/cart/index']");
+      for (var j = 0; j < cartLinks.length; j++) {
+        var link = cartLinks[j];
+        var smalls = link.querySelectorAll("span, b, em, strong, i");
 
-      for (var k = 0; k < smalls.length; k++) {
-        var child = smalls[k];
-        var t = String(child.textContent || "").trim();
+        for (var k = 0; k < smalls.length; k++) {
+          var child = smalls[k];
+          var t = String(child.textContent || "").trim();
 
-        if (/^\d+$/.test(t)) {
-          var x = parseInt(t, 10);
-          if (isNaN(x)) x = 0;
-          child.textContent = String(x + 1);
-          updated = true;
+          if (/^\d+$/.test(t)) {
+            var x = parseInt(t, 10);
+            if (isNaN(x)) x = 0;
+            child.textContent = String(x + 1);
+            updated = true;
+          }
         }
       }
-    }
 
-    console.log("[DART BOOKING] cart count bumped:", updated);
-  } catch (e) {
-    console.log("[DART BOOKING] cart count bump error:", e);
+      console.log("[DART BOOKING] cart count bumped:", updated);
+    } catch (e) {
+      console.log("[DART BOOKING] cart count bump error:", e);
+    }
   }
-}
-  
-  
+
   function postAddForm(bodyStr) {
     return fetch("/cart/add", {
       method: "POST",
@@ -534,20 +572,20 @@ function gkBumpCartCount() {
   }
 
   function addVariantToCart(productId, variantId, cb) {
-  var body =
-    "product_id=" + encodeURIComponent(String(productId)) +
-    "&variant=" + encodeURIComponent(String(variantId)) +
-    "&qty=1&quantity=1" +
-    "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
-    "&page=product";
+    var body =
+      "product_id=" + encodeURIComponent(String(productId)) +
+      "&variant=" + encodeURIComponent(String(variantId)) +
+      "&qty=1&quantity=1" +
+      "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
+      "&page=product";
 
-  postAddForm(body).then(function () {
-    gkBumpCartCount();
-    cb(true);
-  }).catch(function () {
-    cb(false);
-  });
-}
+    postAddForm(body).then(function () {
+      gkBumpCartCount();
+      cb(true);
+    }).catch(function () {
+      cb(false);
+    });
+  }
 
   function addProductToCart(productId, qty, cb) {
     if (!qty || qty <= 0) { cb(true); return; }
@@ -559,8 +597,10 @@ function gkBumpCartCount() {
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
 
-    postAddForm(body).then(function () { cb(true); })
-      .catch(function () { cb(false); });
+    postAddForm(body).then(function () {
+      gkBumpCartCount();
+      cb(true);
+    }).catch(function () { cb(false); });
   }
 
   /* ------------------------------------------------ */
@@ -568,36 +608,33 @@ function gkBumpCartCount() {
   /* ------------------------------------------------ */
 
   function parseDT(v) {
-  var date = "";
-  var time = "";
+    var date = "";
+    var time = "";
 
-  // 1) Prøv først Quickbutik values
-  if (v && v.values) {
-    for (var i = 0; i < v.values.length; i++) {
-      var it = v.values[i];
-      var n = String(it.name || "").toLowerCase();
-      var val = String(it.val || "").trim();
+    if (v && v.values) {
+      for (var i = 0; i < v.values.length; i++) {
+        var it = v.values[i];
+        var n = String(it.name || "").toLowerCase();
+        var val = String(it.val || "").trim();
 
-      if (!date && n.indexOf("dag") !== -1 && val) date = val;
-      if (!time && n.indexOf("tid") !== -1 && val) time = val;
+        if (!date && n.indexOf("dag") !== -1 && val) date = val;
+        if (!time && n.indexOf("tid") !== -1 && val) time = val;
+      }
     }
+
+    var sku = String((v && v.sku) || "").trim();
+    var m = sku.match(/^(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+
+    if (m) {
+      var skuDate = m[1];
+      var skuTime = m[2] + ":" + m[3] + "-" + m[4] + ":" + m[5];
+
+      if (!date) date = skuDate;
+      if (!time) time = skuTime;
+    }
+
+    return { date: date, time: time };
   }
-
-  // 2) Fallback: les dato og tid fra SKU
-  // Format: 2026-05-17-1000-1100
-  var sku = String((v && v.sku) || "").trim();
-  var m = sku.match(/^(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})-(\d{2})(\d{2})$/);
-
-  if (m) {
-    var skuDate = m[1];
-    var skuTime = m[2] + ":" + m[3] + "-" + m[4] + ":" + m[5];
-
-    if (!date) date = skuDate;
-    if (!time) time = skuTime;
-  }
-
-  return { date: date, time: time };
-}
 
   function parsePrice(v, productObj) {
     var candidates = [
@@ -711,6 +748,216 @@ function gkBumpCartCount() {
     }
     arr.sort();
     return arr;
+  }
+
+  function timeToMinutes(t) {
+    var p = String(t || "").split(":");
+    return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+  }
+
+  function slotOverlaps(time, from, to) {
+    var parts = String(time || "").split("-");
+    if (parts.length !== 2) return false;
+
+    var s1 = timeToMinutes(parts[0]);
+    var e1 = timeToMinutes(parts[1]);
+    var s2 = timeToMinutes(from);
+    var e2 = timeToMinutes(to);
+
+    return s1 < e2 && e1 > s2;
+  }
+
+  function isThursday(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    return d.getDay() === 4;
+  }
+
+  function mondayOfWeek(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    var day = d.getDay(); // 0=søn
+    var diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function clubReleaseDate(dateStr) {
+    var m = mondayOfWeek(dateStr);
+    var rel = new Date(m.getTime());
+    rel.setDate(m.getDate() + (CLUB_RELEASE_WEEKDAY - 1)); // tirsdag
+    rel.setHours(CLUB_RELEASE_HOUR, CLUB_RELEASE_MINUTE, 0, 0);
+    return rel;
+  }
+
+  function isAfterClubRelease(dateStr) {
+    var rel = clubReleaseDate(dateStr);
+    return new Date().getTime() >= rel.getTime();
+  }
+
+  function getCustomClosedLock(date, time) {
+    for (var i = 0; i < CUSTOM_CLOSED_TIMES.length; i++) {
+      var r = CUSTOM_CLOSED_TIMES[i];
+      if (!r || r.date !== date) continue;
+      if (slotOverlaps(time, r.from, r.to)) {
+        return {
+          active: true,
+          text: r.label || "Stengt",
+          reason: r.reason || r.label || "Manuelt stengt"
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function getClubLockForDateTime(date, time) {
+    if (!isThursday(date)) return null;
+    if (!slotOverlaps(time, CLUB_TIME_FROM, CLUB_TIME_TO)) return null;
+
+    var club = CLUB_STATUS[date] || null;
+    var signedUp = club ? club.signedUp : 0;
+
+    if (signedUp > 0) {
+      return {
+        active: true,
+        text: "Reservert klubb",
+        reason: "Klubbkveld er aktiv denne torsdagen."
+      };
+    }
+
+    if (!isAfterClubRelease(date)) {
+      return {
+        active: true,
+        text: "Reservert klubb",
+        reason: "Klubb har prioritet frem til tirsdag 00:01 samme uke."
+      };
+    }
+
+    return null;
+  }
+
+  function parseClubDateLabel(label) {
+    var s = String(label || "");
+    var m = s.match(/(\d{1,2})\.(\d{1,2})/);
+    if (!m) return "";
+
+    var dd = parseInt(m[1], 10);
+    var mm = parseInt(m[2], 10);
+    if (!dd || !mm) return "";
+
+    var now = new Date();
+    var year = now.getFullYear();
+
+    var d = new Date(year, mm - 1, dd);
+    d.setHours(0, 0, 0, 0);
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (d.getTime() < today.getTime() - 183 * 24 * 60 * 60 * 1000) {
+      d = new Date(year + 1, mm - 1, dd);
+      d.setHours(0, 0, 0, 0);
+    }
+
+    var y = d.getFullYear();
+    var mo = ("0" + (d.getMonth() + 1)).slice(-2);
+    var da = ("0" + d.getDate()).slice(-2);
+    return y + "-" + mo + "-" + da;
+  }
+
+  function buildClubStatus(product) {
+    var out = {};
+    var vars = product && product.variants ? product.variants : [];
+
+    for (var i = 0; i < vars.length; i++) {
+      var v = vars[i];
+      var label = "";
+
+      if (v.values && v.values.length) {
+        for (var j = 0; j < v.values.length; j++) {
+          var it = v.values[j];
+          var n = String(it.name || "").toLowerCase();
+          var val = String(it.val || "").trim();
+
+          if (val && (n.indexOf("dato") !== -1 || n.indexOf("dag") !== -1)) {
+            label = val;
+            break;
+          }
+        }
+
+        if (!label && v.values[0] && v.values[0].val) {
+          label = String(v.values[0].val || "").trim();
+        }
+      }
+
+      var date = parseClubDateLabel(label);
+      if (!date) continue;
+
+      var qty = parseInt(v.qty || "0", 10);
+      if (isNaN(qty)) qty = 0;
+
+      out[date] = {
+        productId: PRODUCT_CLUB,
+        variantId: String(v.id || ""),
+        sku: String(v.sku || ""),
+        label: label,
+        remaining: qty,
+        signedUp: Math.max(0, CLUB_CAPACITY - qty),
+        capacity: CLUB_CAPACITY
+      };
+    }
+
+    return out;
+  }
+
+  function applyClubVisibleSlots(map) {
+    for (var date in CLUB_STATUS) {
+      if (!CLUB_STATUS.hasOwnProperty(date)) continue;
+
+      var times = ["19:00-20:00", "20:00-21:00", "21:00-22:00"];
+
+      for (var i = 0; i < times.length; i++) {
+        var time = times[i];
+
+        if (!map[date]) map[date] = {};
+        if (!map[date][time]) map[date][time] = {};
+
+        var clubLock = getClubLockForDateTime(date, time);
+
+        if (clubLock) {
+          if (!map[date][time].A) {
+            map[date][time].A = makeVirtualClubSlot(date, time, "A", clubLock);
+          } else {
+            map[date][time].A.clubLock = clubLock;
+          }
+
+          if (!map[date][time].B) {
+            map[date][time].B = makeVirtualClubSlot(date, time, "B", clubLock);
+          } else {
+            map[date][time].B.clubLock = clubLock;
+          }
+        }
+      }
+    }
+
+    return map;
+  }
+
+  function makeVirtualClubSlot(date, time, lane, lock) {
+    return {
+      product: "",
+      variant: "",
+      sku: "",
+      date: date,
+      time: time,
+      qty: 0,
+      soldOut: false,
+      closed: true,
+      price: null,
+      lane: lane,
+      isVirtual: true,
+      clubLock: lock
+    };
   }
 
   /* ------------------------------------------------ */
@@ -894,7 +1141,7 @@ function gkBumpCartCount() {
 
   var note = document.createElement("div");
   note.className = "gk-note";
-  note.textContent = "Pris vises per bane. Tider mindre enn 20 minutter før start vises som stengt. Fullbookede tider vises som booket i rødt. Du kan legge flere tider/dager i handlekurven før du går til kassa.";
+  note.textContent = "Pris vises per bane. Tider mindre enn 20 minutter før start vises som stengt. Fullbookede tider vises som booket i rødt. Torsdag 19–22 er reservert for klubb frem til tirsdag samme uke.";
   cal.appendChild(note);
 
   /* ------------------------------------------------ */
@@ -959,6 +1206,9 @@ function gkBumpCartCount() {
     meta.className = "gk-lane-meta";
     top.appendChild(meta);
 
+    var customLock = getCustomClosedLock(slot.date, slot.time);
+    var clubLock = slot.clubLock || getClubLockForDateTime(slot.date, slot.time);
+
     var priceChip = document.createElement("div");
     priceChip.className = "gk-mini price";
     priceChip.textContent = formatPriceNOK(slot.price);
@@ -969,6 +1219,16 @@ function gkBumpCartCount() {
       soldChip.className = "gk-mini warn";
       soldChip.textContent = "Booket";
       meta.appendChild(soldChip);
+    } else if (customLock) {
+      var cChip = document.createElement("div");
+      cChip.className = "gk-mini stop";
+      cChip.textContent = customLock.text || "Stengt";
+      meta.appendChild(cChip);
+    } else if (clubLock) {
+      var clubChip = document.createElement("div");
+      clubChip.className = "gk-mini stop";
+      clubChip.textContent = clubLock.text || "Reservert klubb";
+      meta.appendChild(clubChip);
     } else if (slot.closed) {
       var stopChip = document.createElement("div");
       stopChip.className = "gk-mini stop";
@@ -991,14 +1251,24 @@ function gkBumpCartCount() {
       btn.disabled = true;
       btn.textContent = "Booket";
       btn.className = "gk-lbtn gk-booked";
-    } else if (slot.closed) {
+    } else if (customLock) {
+      btn.disabled = true;
+      btn.textContent = customLock.text || "Stengt";
+      btn.className = "gk-lbtn gk-stopped";
+    } else if (clubLock) {
+      btn.disabled = true;
+      btn.textContent = clubLock.text || "Reservert klubb";
+      btn.className = "gk-lbtn gk-stopped";
+    } else if (slot.closed || slot.isVirtual || !slot.product || !slot.variant) {
       btn.disabled = true;
       btn.textContent = "Stengt";
       btn.className = "gk-lbtn gk-stopped";
     }
 
     btn.onclick = function () {
-      if (slot.closed || slot.soldOut) return;
+      if (slot.closed || slot.soldOut || slot.isVirtual || !slot.product || !slot.variant) return;
+      if (getCustomClosedLock(slot.date, slot.time)) return;
+      if (getClubLockForDateTime(slot.date, slot.time)) return;
 
       if (String(btn.getAttribute("data-gk-locked") || "0") === "1") {
         showGate();
@@ -1166,10 +1436,14 @@ function gkBumpCartCount() {
 
   Promise.all([
     fetch(API_A).then(function (r) { return r.json(); }),
-    fetch(API_B).then(function (r) { return r.json(); })
+    fetch(API_B).then(function (r) { return r.json(); }),
+    fetch(API_CLUB).then(function (r) { return r.json(); }).catch(function () { return { product: null }; })
   ]).then(function (res) {
     var a = res[0] && res[0].product ? res[0].product : null;
     var b = res[1] && res[1].product ? res[1].product : null;
+    var club = res[2] && res[2].product ? res[2].product : null;
+
+    CLUB_STATUS = buildClubStatus(club);
 
     var varsA = a && a.variants ? a.variants : [];
     var varsB = b && b.variants ? b.variants : [];
@@ -1178,6 +1452,8 @@ function gkBumpCartCount() {
     var mapB = buildIndex(varsB, PRODUCT_B, "B", b);
 
     ALL_SLOTS = merge(mapA, mapB);
+    ALL_SLOTS = applyClubVisibleSlots(ALL_SLOTS);
+
     ALL_DATES = keys(ALL_SLOTS);
 
     if (status) status.innerHTML = "";
@@ -1247,6 +1523,8 @@ function gkBumpCartCount() {
           if (txt.indexOf("Lagt i handlekurv") !== -1) continue;
           if (txt === "Stengt") continue;
           if (txt === "Booket") continue;
+          if (txt.indexOf("Reservert") !== -1) continue;
+          if (b.classList.contains("gk-stopped") || b.classList.contains("gk-booked")) continue;
 
           b.disabled = !enabled;
           b.setAttribute("data-gk-locked", enabled ? "0" : "1");
