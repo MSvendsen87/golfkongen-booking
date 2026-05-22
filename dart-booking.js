@@ -503,18 +503,36 @@
   /* ------------------------------------------------ */
 
   function parseDT(v) {
-    var date = "", time = "";
-    if (v && v.values) {
-      for (var i = 0; i < v.values.length; i++) {
-        var it = v.values[i];
-        var n = String(it.name || "").toLowerCase();
-        var val = String(it.val || "");
-        if (!date && n.indexOf("dag") !== -1) date = val;
-        if (!time && n.indexOf("tid") !== -1) time = val;
-      }
+  var date = "";
+  var time = "";
+
+  // 1) Prøv først Quickbutik values
+  if (v && v.values) {
+    for (var i = 0; i < v.values.length; i++) {
+      var it = v.values[i];
+      var n = String(it.name || "").toLowerCase();
+      var val = String(it.val || "").trim();
+
+      if (!date && n.indexOf("dag") !== -1 && val) date = val;
+      if (!time && n.indexOf("tid") !== -1 && val) time = val;
     }
-    return { date: date, time: time };
   }
+
+  // 2) Fallback: les dato og tid fra SKU
+  // Format: 2026-05-17-1000-1100
+  var sku = String((v && v.sku) || "").trim();
+  var m = sku.match(/^(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+
+  if (m) {
+    var skuDate = m[1];
+    var skuTime = m[2] + ":" + m[3] + "-" + m[4] + ":" + m[5];
+
+    if (!date) date = skuDate;
+    if (!time) time = skuTime;
+  }
+
+  return { date: date, time: time };
+}
 
   function parsePrice(v, productObj) {
     var candidates = [
