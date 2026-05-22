@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v32 CLUB LOCK] LOADED");
+  console.log("[DART BOOKING v33 DATE RANGE CLUB LOCK] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -39,6 +39,20 @@
   var CLUB_RELEASE_MINUTE = 1;
   var CLUB_TIME_FROM = "19:00";
   var CLUB_TIME_TO = "22:00";
+
+  /*
+    Visning på vanlig dartbooking:
+    - Kun fra dagens dato og 40 dager frem.
+    - Klubbkvelder kan ha egne varianter langt frem i tid, men vanlig dartbooking
+      skal ikke vise gamle datoer eller dra inn 30 uker med klubb-torsdager.
+  */
+  var NORMAL_BOOKING_DAYS_AHEAD = 40;
+
+  /*
+    Klubbstatus leses maks 30 uker frem, slik at klubbregler fungerer fremover,
+    men dart-siden viser fortsatt bare NORMAL_BOOKING_DAYS_AHEAD.
+  */
+  var CLUB_WEEKS_AHEAD = 30;
 
   /*
     Enkel manuell stenging av tider.
@@ -136,7 +150,7 @@
   /* ------------------------------------------------ */
 
   function injectCSS() {
-    if (document.getElementById("gk-dart-css-v32")) return;
+    if (document.getElementById("gk-dart-css-v33")) return;
 
     var css = ""
       + ":root{"
@@ -332,7 +346,7 @@
       + "}";
 
     var style = document.createElement("style");
-    style.id = "gk-dart-css-v32";
+    style.id = "gk-dart-css-v33";
     style.type = "text/css";
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
@@ -836,6 +850,50 @@
     return null;
   }
 
+  function dateOnlyLocal(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function formatLocalDate(d) {
+    var y = d.getFullYear();
+    var m = ("0" + (d.getMonth() + 1)).slice(-2);
+    var day = ("0" + d.getDate()).slice(-2);
+    return y + "-" + m + "-" + day;
+  }
+
+  function todayLocalDateString() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return formatLocalDate(d);
+  }
+
+  function addDaysLocal(dateStr, days) {
+    var d = dateOnlyLocal(dateStr);
+    d.setDate(d.getDate() + days);
+    return formatLocalDate(d);
+  }
+
+  function isDateWithinRange(dateStr, startDateStr, daysAheadInclusive) {
+    if (!dateStr || !startDateStr) return false;
+
+    var d = dateOnlyLocal(dateStr);
+    var start = dateOnlyLocal(startDateStr);
+    var end = dateOnlyLocal(startDateStr);
+    end.setDate(end.getDate() + daysAheadInclusive);
+
+    return d.getTime() >= start.getTime() && d.getTime() <= end.getTime();
+  }
+
+  function isWithinNormalBookingRange(dateStr) {
+    return isDateWithinRange(dateStr, todayLocalDateString(), NORMAL_BOOKING_DAYS_AHEAD);
+  }
+
+  function isWithinClubReadRange(dateStr) {
+    return isDateWithinRange(dateStr, todayLocalDateString(), CLUB_WEEKS_AHEAD * 7);
+  }
+
   function parseClubDateLabel(label) {
     var s = String(label || "");
     var m = s.match(/(\d{1,2})\.(\d{1,2})/);
@@ -893,6 +951,9 @@
       var date = parseClubDateLabel(label);
       if (!date) continue;
 
+      // Ikke dra med gamle klubbkvelder, og ikke les mer enn 30 uker frem.
+      if (!isWithinClubReadRange(date)) continue;
+
       var qty = parseInt(v.qty || "0", 10);
       if (isNaN(qty)) qty = 0;
 
@@ -914,6 +975,9 @@
     for (var date in CLUB_STATUS) {
       if (!CLUB_STATUS.hasOwnProperty(date)) continue;
 
+      // På vanlig dartbooking viser vi bare dagens dato + 40 dager.
+      if (!isWithinNormalBookingRange(date)) continue;
+
       var times = ["19:00-20:00", "20:00-21:00", "21:00-22:00"];
 
       for (var i = 0; i < times.length; i++) {
@@ -923,6 +987,10 @@
         if (!map[date][time]) map[date][time] = {};
 
         var clubLock = getClubLockForDateTime(date, time);
+        var st = slotState(date, time);
+
+        // Ikke lag virtuelle klubb-slots for tider som allerede er passert i dag.
+        if (st && st.passed) continue;
 
         if (clubLock) {
           if (!map[date][time].A) {
@@ -1035,6 +1103,9 @@
 
       var dt = parseDT(v);
       if (!dt.date || !dt.time) continue;
+
+      // Vanlig dartbooking skal kun vise fra i dag og 40 dager frem.
+      if (!isWithinNormalBookingRange(dt.date)) continue;
 
       var st = slotState(dt.date, dt.time);
       if (st.passed) continue;
@@ -1454,7 +1525,9 @@
     ALL_SLOTS = merge(mapA, mapB);
     ALL_SLOTS = applyClubVisibleSlots(ALL_SLOTS);
 
-    ALL_DATES = keys(ALL_SLOTS);
+    ALL_DATES = keys(ALL_SLOTS).filter(function (d) {
+      return isWithinNormalBookingRange(d);
+    });
 
     if (status) status.innerHTML = "";
     appStatus.innerHTML = "";
