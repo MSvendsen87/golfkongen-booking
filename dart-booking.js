@@ -459,7 +459,68 @@
   /* ------------------------------------------------ */
   /* CART */
   /* ------------------------------------------------ */
+function gkBumpCartCount() {
+  try {
+    var selectors = [
+      ".cart-count",
+      ".cart-counter",
+      ".cart-qty",
+      ".cart-items",
+      ".header-cart-count",
+      ".js-cart-count",
+      "[data-cart-count]",
+      "[data-cart-qty]",
+      "a[href*='/cart'] span",
+      "a[href*='/cart/index'] span"
+    ];
 
+    var updated = false;
+
+    for (var s = 0; s < selectors.length; s++) {
+      var nodes = document.querySelectorAll(selectors[s]);
+
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (!el) continue;
+
+        var txt = String(el.textContent || "").trim();
+
+        // Oppdater kun rene tall, f.eks. 0, 1, 2
+        if (/^\d+$/.test(txt)) {
+          var n = parseInt(txt, 10);
+          if (isNaN(n)) n = 0;
+          el.textContent = String(n + 1);
+          updated = true;
+        }
+      }
+    }
+
+    // Ekstra fallback: finn handlekurvlenker og prøv små badge-elementer inni
+    var cartLinks = document.querySelectorAll("a[href*='/cart'], a[href*='/cart/index']");
+    for (var j = 0; j < cartLinks.length; j++) {
+      var link = cartLinks[j];
+      var smalls = link.querySelectorAll("span, b, em, strong, i");
+
+      for (var k = 0; k < smalls.length; k++) {
+        var child = smalls[k];
+        var t = String(child.textContent || "").trim();
+
+        if (/^\d+$/.test(t)) {
+          var x = parseInt(t, 10);
+          if (isNaN(x)) x = 0;
+          child.textContent = String(x + 1);
+          updated = true;
+        }
+      }
+    }
+
+    console.log("[DART BOOKING] cart count bumped:", updated);
+  } catch (e) {
+    console.log("[DART BOOKING] cart count bump error:", e);
+  }
+}
+  
+  
   function postAddForm(bodyStr) {
     return fetch("/cart/add", {
       method: "POST",
@@ -473,16 +534,20 @@
   }
 
   function addVariantToCart(productId, variantId, cb) {
-    var body =
-      "product_id=" + encodeURIComponent(String(productId)) +
-      "&variant=" + encodeURIComponent(String(variantId)) +
-      "&qty=1&quantity=1" +
-      "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
-      "&page=product";
+  var body =
+    "product_id=" + encodeURIComponent(String(productId)) +
+    "&variant=" + encodeURIComponent(String(variantId)) +
+    "&qty=1&quantity=1" +
+    "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
+    "&page=product";
 
-    postAddForm(body).then(function () { cb(true); })
-      .catch(function () { cb(false); });
-  }
+  postAddForm(body).then(function () {
+    gkBumpCartCount();
+    cb(true);
+  }).catch(function () {
+    cb(false);
+  });
+}
 
   function addProductToCart(productId, qty, cb) {
     if (!qty || qty <= 0) { cb(true); return; }
