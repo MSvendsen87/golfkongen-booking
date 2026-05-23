@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v34 VENUE LOCK] LOADED");
+  console.log("[DART BOOKING v34 VENUE LOCK ONLY] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -9,8 +9,7 @@
   var PRODUCT_B = "1317";
   var PRODUCT_SETS = "1318";
   var PRODUCT_CLUB = "1322";
-  var PRODUCT_DISC = "1320";
-  var PRODUCT_VENUE = "1349";
+  var PRODUCT_VENUE = "1349"; // Leie hele lokalet
 
   var EVENT_ID = "9847005";
   var CART_URL = "/cart/index";
@@ -20,7 +19,6 @@
   var API_A = API_BASE + PRODUCT_A;
   var API_B = API_BASE + PRODUCT_B;
   var API_CLUB = API_BASE + PRODUCT_CLUB;
-  var API_DISC = API_BASE + PRODUCT_DISC;
   var API_VENUE = API_BASE + PRODUCT_VENUE;
 
   var PAGE_PATH = "/sider/dart-booking";
@@ -455,44 +453,6 @@
   setsWrap.appendChild(setsSub);
 
   /* ------------------------------------------------ */
-  /* LEIE HELE LOKALET */
-  /* ------------------------------------------------ */
-
-  var venueWrap = document.createElement("div");
-  venueWrap.className = "gk-sets";
-  daysEl.appendChild(venueWrap);
-
-  var venueHead = document.createElement("div");
-  venueHead.className = "gk-sets-head";
-  venueWrap.appendChild(venueHead);
-
-  var venueTitleBox = document.createElement("div");
-  venueHead.appendChild(venueTitleBox);
-
-  var venueTitle = document.createElement("div");
-  venueTitle.className = "gk-sets-title";
-  venueTitle.textContent = "Book hele lokalet";
-  venueTitleBox.appendChild(venueTitle);
-
-  var venueSub = document.createElement("div");
-  venueSub.className = "gk-sets-sub";
-  venueSub.textContent = "Inkluderer begge dartbaner, discgolf simulator, møtebord og fri kaffe. Minimum 4 timer.";
-  venueTitleBox.appendChild(venueSub);
-
-  var venueMeta = document.createElement("div");
-  venueMeta.className = "gk-meta";
-  venueHead.appendChild(venueMeta);
-
-  var venuePrice = document.createElement("div");
-  venuePrice.className = "gk-chip-meta price";
-  venuePrice.textContent = "800 kr / 4 timer";
-  venueMeta.appendChild(venuePrice);
-
-  var venueGrid = document.createElement("div");
-  venueGrid.className = "gk-grid";
-  venueWrap.appendChild(venueGrid);
-
-  /* ------------------------------------------------ */
   /* STATE */
   /* ------------------------------------------------ */
 
@@ -823,6 +783,20 @@
     return s1 < e2 && e1 > s2;
   }
 
+  function timesOverlap(a, b) {
+    var aa = String(a || "").split("-");
+    var bb = String(b || "").split("-");
+    if (aa.length !== 2 || bb.length !== 2) return false;
+
+    var a1 = timeToMinutes(aa[0]);
+    var a2 = timeToMinutes(aa[1]);
+    var b1 = timeToMinutes(bb[0]);
+    var b2 = timeToMinutes(bb[1]);
+
+    return a1 < b2 && a2 > b1;
+  }
+
+
   function isThursday(dateStr) {
     var d = new Date(dateStr + "T00:00:00");
     return d.getDay() === 4;
@@ -860,86 +834,6 @@
           text: r.label || "Stengt",
           reason: r.reason || r.label || "Manuelt stengt"
         };
-      }
-    }
-
-    return null;
-  }
-
-  function timesOverlap(timeA, timeB) {
-    var a = String(timeA || "").split("-");
-    var b = String(timeB || "").split("-");
-    if (a.length !== 2 || b.length !== 2) return false;
-
-    var a1 = timeToMinutes(a[0]);
-    var a2 = timeToMinutes(a[1]);
-    var b1 = timeToMinutes(b[0]);
-    var b2 = timeToMinutes(b[1]);
-
-    return a1 < b2 && a2 > b1;
-  }
-
-  function getSoldVenueLock(date, time) {
-    if (!ALL_VENUE_SLOTS || !ALL_VENUE_SLOTS[date]) return null;
-
-    var venueTimes = keys(ALL_VENUE_SLOTS[date]);
-    for (var i = 0; i < venueTimes.length; i++) {
-      var vt = venueTimes[i];
-      var v = ALL_VENUE_SLOTS[date][vt];
-      if (!v) continue;
-
-      if (v.soldOut && timesOverlap(v.time, time)) {
-        return {
-          active: true,
-          text: "Hele lokalet booket",
-          reason: "Hele lokalet er booket i dette tidsrommet."
-        };
-      }
-    }
-
-    return null;
-  }
-
-  function getBookedResourceLockForVenue(date, venueTime) {
-    // Hvis samme eller overlappende hel-lokale-blokk allerede er booket, skal denne også stenges.
-    var venueLock = getSoldVenueLock(date, venueTime);
-    if (venueLock) return venueLock;
-
-    // Manuell stenging og klubbreservasjon skal også stoppe hel-lokale-booking.
-    var customLock = getCustomClosedLock(date, venueTime);
-    if (customLock) return customLock;
-
-    var clubLock = getClubLockForDateTime(date, venueTime);
-    if (clubLock) return clubLock;
-
-    // Dart A/B
-    if (ALL_SLOTS && ALL_SLOTS[date]) {
-      var times = keys(ALL_SLOTS[date]);
-      for (var i = 0; i < times.length; i++) {
-        var t = times[i];
-        if (!timesOverlap(t, venueTime)) continue;
-
-        var row = ALL_SLOTS[date][t];
-        if (row && row.A && row.A.soldOut) {
-          return { active: true, text: "Bane A booket", reason: "Dart Bane A er allerede booket i dette tidsrommet." };
-        }
-        if (row && row.B && row.B.soldOut) {
-          return { active: true, text: "Bane B booket", reason: "Dart Bane B er allerede booket i dette tidsrommet." };
-        }
-      }
-    }
-
-    // Disc simulator
-    if (ALL_DISC_SLOTS && ALL_DISC_SLOTS[date]) {
-      var discTimes = keys(ALL_DISC_SLOTS[date]);
-      for (var j = 0; j < discTimes.length; j++) {
-        var dt = discTimes[j];
-        if (!timesOverlap(dt, venueTime)) continue;
-
-        var discSlot = ALL_DISC_SLOTS[date][dt];
-        if (discSlot && discSlot.soldOut) {
-          return { active: true, text: "Disc simulator booket", reason: "Disc simulator er allerede booket i dette tidsrommet." };
-        }
       }
     }
 
@@ -1252,7 +1146,7 @@
     return map;
   }
 
-  function buildFlatIndex(variants, productId, productObj) {
+  function buildVenueIndex(variants, productObj) {
     var map = {};
 
     for (var i = 0; i < variants.length; i++) {
@@ -1263,27 +1157,44 @@
       var dt = parseDT(v);
       if (!dt.date || !dt.time) continue;
 
+      // Vanlig dartbooking skal kun ta hensyn til dagens dato + 40 dager.
       if (!isWithinNormalBookingRange(dt.date)) continue;
 
-      var st = slotState(dt.date, dt.time);
-      if (st.passed) continue;
-
       if (!map[dt.date]) map[dt.date] = {};
-
       map[dt.date][dt.time] = {
-        product: String(productId),
+        product: PRODUCT_VENUE,
         variant: String(v.id || ""),
         sku: String(v.sku || ""),
         date: dt.date,
         time: dt.time,
         qty: qty,
         soldOut: qty <= 0,
-        closed: !!st.closed,
         price: parsePrice(v, productObj)
       };
     }
 
     return map;
+  }
+
+  function getVenueLockForDateTime(date, time) {
+    if (!VENUE_SLOTS || !VENUE_SLOTS[date]) return null;
+
+    var venueTimes = keys(VENUE_SLOTS[date]);
+    for (var i = 0; i < venueTimes.length; i++) {
+      var vt = venueTimes[i];
+      var slot = VENUE_SLOTS[date][vt];
+      if (!slot || !slot.soldOut) continue;
+
+      if (timesOverlap(time, slot.time)) {
+        return {
+          active: true,
+          text: "Hele lokalet booket",
+          reason: "Hele lokalet er booket i dette tidsrommet."
+        };
+      }
+    }
+
+    return null;
   }
 
   function merge(a, b) {
@@ -1376,8 +1287,7 @@
   /* ------------------------------------------------ */
 
   var ALL_SLOTS = null;
-  var ALL_DISC_SLOTS = {};
-  var ALL_VENUE_SLOTS = {};
+  var VENUE_SLOTS = {};
   var ALL_DATES = [];
   var ACTIVE_DATE = "";
   var WEEK_START = 0;
@@ -1415,8 +1325,6 @@
     }
 
     renderDay(d);
-    renderVenueDay(d);
-    syncRulesButtonState();
     scrollActiveChipIntoView();
   }
 
@@ -1439,7 +1347,7 @@
 
     var customLock = getCustomClosedLock(slot.date, slot.time);
     var clubLock = slot.clubLock || getClubLockForDateTime(slot.date, slot.time);
-    var venueLock = getSoldVenueLock(slot.date, slot.time);
+    var venueLock = getVenueLockForDateTime(slot.date, slot.time);
 
     var priceChip = document.createElement("div");
     priceChip.className = "gk-mini price";
@@ -1508,7 +1416,7 @@
 
     btn.onclick = function () {
       if (slot.closed || slot.soldOut || slot.isVirtual || !slot.product || !slot.variant) return;
-      if (getSoldVenueLock(slot.date, slot.time)) return;
+      if (getVenueLockForDateTime(slot.date, slot.time)) return;
       if (getCustomClosedLock(slot.date, slot.time)) return;
       if (getClubLockForDateTime(slot.date, slot.time)) return;
 
@@ -1564,147 +1472,6 @@
     };
 
     return card;
-  }
-
-  function mkVenueCard(slot) {
-    var card = document.createElement("div");
-    card.className = "gk-lane-card";
-
-    var top = document.createElement("div");
-    top.className = "gk-lane-top";
-    card.appendChild(top);
-
-    var title = document.createElement("div");
-    title.className = "gk-lane-title";
-    title.textContent = slot.time;
-    top.appendChild(title);
-
-    var meta = document.createElement("div");
-    meta.className = "gk-lane-meta";
-    top.appendChild(meta);
-
-    var priceChip = document.createElement("div");
-    priceChip.className = "gk-mini price";
-    priceChip.textContent = formatPriceNOK(slot.price || 800);
-    meta.appendChild(priceChip);
-
-    var lock = getBookedResourceLockForVenue(slot.date, slot.time);
-
-    if (slot.soldOut) {
-      var soldChip = document.createElement("div");
-      soldChip.className = "gk-mini warn";
-      soldChip.textContent = "Booket";
-      meta.appendChild(soldChip);
-    } else if (lock) {
-      var lockChip = document.createElement("div");
-      lockChip.className = "gk-mini stop";
-      lockChip.textContent = lock.text || "Opptatt";
-      meta.appendChild(lockChip);
-    } else if (slot.closed) {
-      var stopChip = document.createElement("div");
-      stopChip.className = "gk-mini stop";
-      stopChip.textContent = "Stengt – mindre enn 20 min igjen";
-      meta.appendChild(stopChip);
-    } else {
-      var okChip = document.createElement("div");
-      okChip.className = "gk-mini ok";
-      okChip.textContent = "Ledig nå";
-      meta.appendChild(okChip);
-    }
-
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "gk-lbtn";
-    btn.textContent = "Book hele lokalet";
-    card.appendChild(btn);
-
-    if (slot.soldOut) {
-      btn.disabled = true;
-      btn.textContent = "Booket";
-      btn.className = "gk-lbtn gk-booked";
-    } else if (lock) {
-      btn.disabled = true;
-      btn.textContent = lock.text || "Opptatt";
-      btn.className = "gk-lbtn gk-stopped";
-    } else if (slot.closed || !slot.product || !slot.variant) {
-      btn.disabled = true;
-      btn.textContent = "Stengt";
-      btn.className = "gk-lbtn gk-stopped";
-    }
-
-    btn.onclick = function () {
-      if (slot.closed || slot.soldOut || !slot.product || !slot.variant) return;
-      if (getBookedResourceLockForVenue(slot.date, slot.time)) return;
-
-      if (String(btn.getAttribute("data-gk-locked") || "0") === "1") {
-        showGate();
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = "Legger til…";
-
-      addVariantToCart(slot.product, slot.variant, function (okVar) {
-        if (okVar) {
-          gkStoreBookingDetails({
-            source: "venue",
-            title: "Leie hele lokalet",
-            item: {
-              type: "venue",
-              label: "Leie hele lokalet",
-              date: slot.date || "",
-              time: slot.time || "",
-              productId: String(slot.product || ""),
-              variantId: String(slot.variant || ""),
-              price: (slot.price !== null && typeof slot.price !== "undefined") ? String(slot.price) : ""
-            },
-            extras: {}
-          });
-
-          if (status) status.innerHTML = "";
-          if (appStatus) appStatus.innerHTML = "";
-
-          bookedDates[slot.date] = true;
-          saveState();
-
-          btn.className = "gk-lbtn gk-ok";
-          btn.textContent = "Lagt i handlekurv ✓";
-        } else {
-          btn.disabled = false;
-          btn.textContent = "Feil – prøv igjen";
-        }
-      });
-    };
-
-    return card;
-  }
-
-  function renderVenueDay(dateStr) {
-    venueGrid.innerHTML = "";
-
-    if (!ALL_VENUE_SLOTS || !ALL_VENUE_SLOTS[dateStr]) {
-      var empty = document.createElement("div");
-      empty.className = "gk-empty";
-      empty.textContent = "Ingen hele-lokalet tider denne dagen.";
-      venueGrid.appendChild(empty);
-      return;
-    }
-
-    var times = keys(ALL_VENUE_SLOTS[dateStr]);
-
-    if (!times.length) {
-      venueGrid.innerHTML = "<div class='gk-empty'>Ingen hele-lokalet tider denne dagen.</div>";
-      return;
-    }
-
-    var lanes = document.createElement("div");
-    lanes.className = "gk-lanes";
-    venueGrid.appendChild(lanes);
-
-    for (var i = 0; i < times.length; i++) {
-      var slot = ALL_VENUE_SLOTS[dateStr][times[i]];
-      lanes.appendChild(mkVenueCard(slot));
-    }
   }
 
   function renderDay(dateStr) {
@@ -1821,38 +1588,28 @@
     fetch(API_A).then(function (r) { return r.json(); }),
     fetch(API_B).then(function (r) { return r.json(); }),
     fetch(API_CLUB).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
-    fetch(API_DISC).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
     fetch(API_VENUE).then(function (r) { return r.json(); }).catch(function () { return { product: null }; })
   ]).then(function (res) {
     var a = res[0] && res[0].product ? res[0].product : null;
     var b = res[1] && res[1].product ? res[1].product : null;
     var club = res[2] && res[2].product ? res[2].product : null;
-    var disc = res[3] && res[3].product ? res[3].product : null;
-    var venue = res[4] && res[4].product ? res[4].product : null;
+    var venue = res[3] && res[3].product ? res[3].product : null;
 
     CLUB_STATUS = buildClubStatus(club);
 
     var varsA = a && a.variants ? a.variants : [];
     var varsB = b && b.variants ? b.variants : [];
-    var varsDisc = disc && disc.variants ? disc.variants : [];
     var varsVenue = venue && venue.variants ? venue.variants : [];
+
+    VENUE_SLOTS = buildVenueIndex(varsVenue, venue);
 
     var mapA = buildIndex(varsA, PRODUCT_A, "A", a);
     var mapB = buildIndex(varsB, PRODUCT_B, "B", b);
 
-    ALL_DISC_SLOTS = buildFlatIndex(varsDisc, PRODUCT_DISC, disc);
-    ALL_VENUE_SLOTS = buildFlatIndex(varsVenue, PRODUCT_VENUE, venue);
-
     ALL_SLOTS = merge(mapA, mapB);
     ALL_SLOTS = applyClubVisibleSlots(ALL_SLOTS);
 
-    var dateSet = {};
-    var ds1 = keys(ALL_SLOTS);
-    var ds2 = keys(ALL_VENUE_SLOTS);
-    for (var di = 0; di < ds1.length; di++) dateSet[ds1[di]] = true;
-    for (var vi = 0; vi < ds2.length; vi++) dateSet[ds2[vi]] = true;
-
-    ALL_DATES = keys(dateSet).filter(function (d) {
+    ALL_DATES = keys(ALL_SLOTS).filter(function (d) {
       return isWithinNormalBookingRange(d);
     });
 
@@ -1877,6 +1634,8 @@
     var ai = idxOf(ALL_DATES, ACTIVE_DATE);
     if (ai < 0) ai = 0;
     WEEK_START = clampWeekStart(ai - (ai % WEEK_SIZE));
+
+    console.log("[DART] Venue lock loaded", { venueDates: keys(VENUE_SLOTS).length, commitBase: "e55e5a2" });
 
     renderWeek();
     syncSetsForBookedDates();
