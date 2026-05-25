@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v34 VENUE LOCK ONLY] LOADED");
+  console.log("[DART BOOKING v35 CLOSED TIMES + VENUE LOCK] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -20,6 +20,7 @@
   var API_B = API_BASE + PRODUCT_B;
   var API_CLUB = API_BASE + PRODUCT_CLUB;
   var API_VENUE = API_BASE + PRODUCT_VENUE;
+  var API_CLOSED_TIMES = "https://gk-booking-admin.post-cd6.workers.dev/booking/closed-times";
 
   var PAGE_PATH = "/sider/dart-booking";
   var ROOT_ID = "gk-booking";
@@ -77,6 +78,9 @@
     //   label: "Stengt – gutteklubb"
     // }
   ];
+
+  // Hentes fra gk-booking-admin /booking/closed-times
+  var DYNAMIC_CLOSED_TIMES = [];
 
   /* ------------------------------------------------ */
   /* PATH / ROOT */
@@ -824,14 +828,36 @@
     return new Date().getTime() >= rel.getTime();
   }
 
-  function getCustomClosedLock(date, time) {
-    for (var i = 0; i < CUSTOM_CLOSED_TIMES.length; i++) {
-      var r = CUSTOM_CLOSED_TIMES[i];
+  function closedRuleAppliesToProduct(rule, productId) {
+    var products = rule && rule.products;
+
+    if (!products) return true;
+    if (products === "all") return true;
+    if (String(products) === String(productId)) return true;
+
+    if (Array.isArray(products)) {
+      if (products.indexOf("all") !== -1) return true;
+      return products.map(String).indexOf(String(productId)) !== -1;
+    }
+
+    return false;
+  }
+
+  function getCustomClosedLock(date, time, productId) {
+    var allRules = [];
+
+    for (var a = 0; a < CUSTOM_CLOSED_TIMES.length; a++) allRules.push(CUSTOM_CLOSED_TIMES[a]);
+    for (var b = 0; b < DYNAMIC_CLOSED_TIMES.length; b++) allRules.push(DYNAMIC_CLOSED_TIMES[b]);
+
+    for (var i = 0; i < allRules.length; i++) {
+      var r = allRules[i];
       if (!r || r.date !== date) continue;
+      if (!closedRuleAppliesToProduct(r, productId)) continue;
+
       if (slotOverlaps(time, r.from, r.to)) {
         return {
           active: true,
-          text: r.label || "Stengt",
+          text: r.label || r.reason || "Stengt",
           reason: r.reason || r.label || "Manuelt stengt"
         };
       }
@@ -1345,7 +1371,7 @@
     meta.className = "gk-lane-meta";
     top.appendChild(meta);
 
-    var customLock = getCustomClosedLock(slot.date, slot.time);
+    var customLock = getCustomClosedLock(slot.date, slot.time, slot.product);
     var clubLock = slot.clubLock || getClubLockForDateTime(slot.date, slot.time);
     var venueLock = getVenueLockForDateTime(slot.date, slot.time);
 
@@ -1417,7 +1443,7 @@
     btn.onclick = function () {
       if (slot.closed || slot.soldOut || slot.isVirtual || !slot.product || !slot.variant) return;
       if (getVenueLockForDateTime(slot.date, slot.time)) return;
-      if (getCustomClosedLock(slot.date, slot.time)) return;
+      if (getCustomClosedLock(slot.date, slot.time, slot.product)) return;
       if (getClubLockForDateTime(slot.date, slot.time)) return;
 
       if (String(btn.getAttribute("data-gk-locked") || "0") === "1") {
@@ -1588,12 +1614,16 @@
     fetch(API_A).then(function (r) { return r.json(); }),
     fetch(API_B).then(function (r) { return r.json(); }),
     fetch(API_CLUB).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
-    fetch(API_VENUE).then(function (r) { return r.json(); }).catch(function () { return { product: null }; })
+    fetch(API_VENUE).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
+    fetch(API_CLOSED_TIMES).then(function (r) { return r.json(); }).catch(function () { return { closedTimes: [] }; })
   ]).then(function (res) {
     var a = res[0] && res[0].product ? res[0].product : null;
     var b = res[1] && res[1].product ? res[1].product : null;
     var club = res[2] && res[2].product ? res[2].product : null;
     var venue = res[3] && res[3].product ? res[3].product : null;
+    var closedConfig = res[4] || {};
+
+    DYNAMIC_CLOSED_TIMES = Array.isArray(closedConfig.closedTimes) ? closedConfig.closedTimes : [];
 
     CLUB_STATUS = buildClubStatus(club);
 
@@ -1635,7 +1665,7 @@
     if (ai < 0) ai = 0;
     WEEK_START = clampWeekStart(ai - (ai % WEEK_SIZE));
 
-    console.log("[DART] Venue lock loaded", { venueDates: keys(VENUE_SLOTS).length, commitBase: "e55e5a2" });
+    console.log("[DART] Venue + closedTimes loaded", { venueDates: keys(VENUE_SLOTS).length, closedTimes: DYNAMIC_CLOSED_TIMES.length, commitBase: "970c2fe" });
 
     renderWeek();
     syncSetsForBookedDates();
