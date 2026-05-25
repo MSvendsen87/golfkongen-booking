@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v36 PILSETT FIX + CLOSED TIMES] LOADED");
+  console.log("[DART BOOKING v37 PILSETT FALLBACK FIX] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -631,29 +631,32 @@
 
     var variantId = getFirstVariantId(SETS_PRODUCT);
 
-    if (!variantId) {
-      console.log("[DART BOOKING] Fant ikke variant på pilsettproduktet 1318", SETS_PRODUCT);
-      cb(false);
-      return;
-    }
-
     /*
-      v36:
-      Pilsett legges bare til når kunden booker tid.
-      Vi bruker variant-id og sender kun qty.
-      Vi sender IKKE quantity i tillegg, for å unngå dobbel/rar antallsøkning.
+      v37:
+      Pilsettprodukt 1318 kan være et enkelt produkt uten variant.
+      Da skal vi IKKE feile. Vi faller tilbake til product_id + qty.
+      Vi sender fortsatt kun qty, ikke quantity.
     */
     var body =
       "product_id=" + encodeURIComponent(String(PRODUCT_SETS)) +
-      "&variant=" + encodeURIComponent(String(variantId)) +
       "&qty=" + encodeURIComponent(String(qty)) +
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
 
+    if (variantId) {
+      body =
+        "product_id=" + encodeURIComponent(String(PRODUCT_SETS)) +
+        "&variant=" + encodeURIComponent(String(variantId)) +
+        "&qty=" + encodeURIComponent(String(qty)) +
+        "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
+        "&page=product";
+    }
+
     console.log("[DART BOOKING] Legger til pilsett", {
       productId: PRODUCT_SETS,
-      variantId: variantId,
-      qty: qty
+      variantId: variantId || null,
+      qty: qty,
+      mode: variantId ? "variant" : "product-only"
     });
 
     postAddForm(body).then(function () {
