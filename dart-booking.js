@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v39 PILSETT UNLINKED] LOADED");
+  console.log("[DART BOOKING v41 REDUSERT PRIS BADGES] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -296,7 +296,7 @@
       + "border:1px solid rgba(255,255,255,.08);"
       + "font-size:12px;font-weight:800;color:var(--gk-text)"
       + "}"
-      + ".gk-mini.price{"
+      + ".gk-mini.price.discount{border-color:rgba(43,209,139,.55);background:linear-gradient(135deg,rgba(43,209,139,.24),rgba(43,209,139,.08));color:#bfffe0;box-shadow:0 0 0 1px rgba(43,209,139,.12) inset}"      + ".gk-mini.price{"
       + "border-color:rgba(240,193,75,.30);"
       + "background:linear-gradient(135deg, rgba(240,193,75,.16), rgba(240,193,75,.06));"
       + "color:#ffe29b"
@@ -777,6 +777,18 @@
     var rounded = Math.round(Number(num) * 100) / 100;
     if (Math.abs(rounded - Math.round(rounded)) < 0.001) return Math.round(rounded) + " kr";
     return rounded.toFixed(2).replace(".", ",") + " kr";
+  }
+
+  function getStandardPriceForProduct(productId) {
+    productId = String(productId || "");
+    if (productId === PRODUCT_A || productId === PRODUCT_B) return 120;
+    return null;
+  }
+
+  function isDiscountedSlot(slot) {
+    var standard = getStandardPriceForProduct(slot && slot.product);
+    var price = Number(slot && slot.price);
+    return standard !== null && !isNaN(price) && price < standard;
   }
 
   function parseStartDateTime(date, time) {
@@ -1427,8 +1439,13 @@
     var venueLock = getVenueLockForDateTime(slot.date, slot.time);
 
     var priceChip = document.createElement("div");
-    priceChip.className = "gk-mini price";
-    priceChip.textContent = formatPriceNOK(slot.price);
+    priceChip.className = "gk-mini price" + (isDiscountedSlot(slot) ? " discount" : "");
+    priceChip.textContent = isDiscountedSlot(slot)
+      ? "Redusert pris " + formatPriceNOK(slot.price)
+      : formatPriceNOK(slot.price);
+    if (isDiscountedSlot(slot)) {
+      priceChip.title = "Lavere pris enn standardpris";
+    }
     meta.appendChild(priceChip);
 
     if (slot.soldOut) {
