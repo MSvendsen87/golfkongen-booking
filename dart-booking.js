@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v41 REDUSERT PRIS BADGES] LOADED");
+  console.log("[DART BOOKING v42 REDUSERT PRIS TYDELIG] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -296,7 +296,7 @@
       + "border:1px solid rgba(255,255,255,.08);"
       + "font-size:12px;font-weight:800;color:var(--gk-text)"
       + "}"
-      + ".gk-mini.price.discount{border-color:rgba(43,209,139,.55);background:linear-gradient(135deg,rgba(43,209,139,.24),rgba(43,209,139,.08));color:#bfffe0;box-shadow:0 0 0 1px rgba(43,209,139,.12) inset}"      + ".gk-mini.price{"
+      + ".gk-mini.price.discount{border-color:rgba(255,72,72,.75)!important;background:linear-gradient(135deg,rgba(255,72,72,.30),rgba(122,18,18,.32))!important;color:#ffe2e2!important;box-shadow:0 0 0 1px rgba(255,72,72,.18) inset,0 0 14px rgba(255,72,72,.12)!important;font-size:13px!important;font-weight:1000!important;padding:8px 11px!important;letter-spacing:.01em!important}"      + ".gk-mini.price{"
       + "border-color:rgba(240,193,75,.30);"
       + "background:linear-gradient(135deg, rgba(240,193,75,.16), rgba(240,193,75,.06));"
       + "color:#ffe29b"
