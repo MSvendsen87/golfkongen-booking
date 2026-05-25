@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v38 PILSETT STANDALONE] LOADED");
+  console.log("[DART BOOKING v39 PILSETT UNLINKED] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -1165,12 +1165,12 @@
 
   function ensureSetsForDate(dateKey, cb) {
     /*
-      v36:
-      Navnet beholdes for minst mulig endring ellers i koden.
-      Funksjonen legger nå valgt antall pilsett til én gang når kunden trykker Book tid.
-      Den synker ikke lenger tidligere bookede datoer.
+      v39:
+      Pilsett er helt løsrevet fra booking.
+      Booking av dartbane skal ALDRI automatisk legge pilsett i handlekurven.
+      Kunden bruker egen knapp "Legg X pilsett i handlekurv" hvis pilsett ønskes.
     */
-    addDartSetsToCart(setsQty, cb);
+    cb(true);
   }
 
   function syncSetsForBookedDates() {
@@ -1528,7 +1528,7 @@
                 price: (slot.price !== null && typeof slot.price !== "undefined") ? String(slot.price) : ""
               },
               extras: {
-                dartSets: setsQty || 0
+                dartSets: 0
               }
             });
 
