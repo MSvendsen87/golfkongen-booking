@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v37 PILSETT FALLBACK FIX] LOADED");
+  console.log("[DART BOOKING v38 PILSETT STANDALONE] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -454,8 +454,17 @@
 
   var setsSub = document.createElement("div");
   setsSub.className = "gk-sets-sub";
-  setsSub.textContent = "Valgfritt tillegg. 25 kr per pilsett. Legges til per dato du booker.";
+  setsSub.textContent = "Valgfritt tillegg. 25 kr per pilsett. Kan legges til sammen med booking, eller alene hvis du allerede er på plass.";
   setsWrap.appendChild(setsSub);
+
+  var setsAddBtn = document.createElement("button");
+  setsAddBtn.type = "button";
+  setsAddBtn.className = "gk-cartbtn";
+  setsAddBtn.style.marginTop = "10px";
+  setsAddBtn.style.minWidth = "0";
+  setsAddBtn.style.width = "100%";
+  setsAddBtn.textContent = "Legg pilsett i handlekurv";
+  setsWrap.appendChild(setsAddBtn);
 
   /* ------------------------------------------------ */
   /* STATE */
@@ -507,6 +516,17 @@
 
   function updateSetsUI() {
     setsVal.textContent = String(setsQty);
+
+    if (setsAddBtn) {
+      if (setsQty > 0) {
+        setsAddBtn.disabled = false;
+        setsAddBtn.textContent = "Legg " + setsQty + " pilsett i handlekurv";
+      } else {
+        setsAddBtn.disabled = true;
+        setsAddBtn.textContent = "Velg antall pilsett";
+      }
+    }
+
     saveState();
   }
 
@@ -667,6 +687,30 @@
       cb(false);
     });
   }
+
+  setsAddBtn.onclick = function () {
+    if (!setsQty || setsQty <= 0) return;
+
+    setsAddBtn.disabled = true;
+    setsAddBtn.textContent = "Legger til…";
+
+    addDartSetsToCart(setsQty, function (ok) {
+      if (ok) {
+        setsAddBtn.textContent = "Pilsett lagt i handlekurv ✓";
+
+        if (status) status.innerHTML = "";
+        if (appStatus) appStatus.innerHTML = "";
+
+        setTimeout(function () {
+          updateSetsUI();
+        }, 1200);
+      } else {
+        setsAddBtn.disabled = false;
+        setsAddBtn.textContent = "Kunne ikke legge til – prøv igjen";
+      }
+    });
+  };
+
 
   /* ------------------------------------------------ */
   /* HELPERS */
