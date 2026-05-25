@@ -1,5 +1,5 @@
 (function () {
-  console.log("[DART BOOKING v35 CLOSED TIMES + VENUE LOCK] LOADED");
+  console.log("[DART BOOKING v36 PILSETT FIX + CLOSED TIMES] LOADED");
 
   /* ------------------------------------------------ */
   /* KONFIG */
@@ -21,6 +21,7 @@
   var API_CLUB = API_BASE + PRODUCT_CLUB;
   var API_VENUE = API_BASE + PRODUCT_VENUE;
   var API_CLOSED_TIMES = "https://gk-booking-admin.post-cd6.workers.dev/booking/closed-times";
+  var API_SETS = API_BASE + PRODUCT_SETS;
 
   var PAGE_PATH = "/sider/dart-booking";
   var ROOT_ID = "gk-booking";
@@ -465,6 +466,7 @@
   var bookedDates = {};
   var syncLock = false;
   var CLUB_STATUS = {};
+  var SETS_PRODUCT = null;
 
   function getJSON(key, def) {
     try {
@@ -489,9 +491,18 @@
   }
 
   function loadState() {
-    setsQty = getInt("gk_dart_sets_qty_v30", 0);
-    setsCountByDate = getJSON("gk_dart_sets_count_by_date_v30", {});
-    bookedDates = getJSON("gk_dart_booked_dates_v30", {});
+    /*
+      v36:
+      Ikke hent tidligere pilsettvalg fra localStorage.
+      Gammelt lagret valg kunne gjøre at det plutselig ble lagt til 6–8 pilsett.
+      Pilsett skal kun legges til når kunden booker en tid.
+    */
+    setsQty = 0;
+    setsCountByDate = {};
+    bookedDates = {};
+    try { localStorage.removeItem("gk_dart_sets_qty_v30"); } catch (e) {}
+    try { localStorage.removeItem("gk_dart_sets_count_by_date_v30"); } catch (e2) {}
+    try { localStorage.removeItem("gk_dart_booked_dates_v30"); } catch (e3) {}
   }
 
   function updateSetsUI() {
@@ -506,14 +517,12 @@
     if (setsQty <= 0) return;
     setsQty -= 1;
     updateSetsUI();
-    syncSetsForBookedDates();
   };
 
   btnPlus.onclick = function () {
     if (setsQty >= 8) return;
     setsQty += 1;
     updateSetsUI();
-    syncSetsForBookedDates();
   };
 
   /* ------------------------------------------------ */
@@ -607,20 +616,53 @@
     });
   }
 
-  function addProductToCart(productId, qty, cb) {
-    if (!qty || qty <= 0) { cb(true); return; }
+  function getFirstVariantId(product) {
+    var variants = product && Array.isArray(product.variants) ? product.variants : [];
+    for (var i = 0; i < variants.length; i++) {
+      var v = variants[i] || {};
+      if (v.id) return String(v.id);
+    }
+    return "";
+  }
 
+  function addDartSetsToCart(qty, cb) {
+    qty = parseInt(qty || "0", 10);
+    if (isNaN(qty) || qty <= 0) { cb(true); return; }
+
+    var variantId = getFirstVariantId(SETS_PRODUCT);
+
+    if (!variantId) {
+      console.log("[DART BOOKING] Fant ikke variant på pilsettproduktet 1318", SETS_PRODUCT);
+      cb(false);
+      return;
+    }
+
+    /*
+      v36:
+      Pilsett legges bare til når kunden booker tid.
+      Vi bruker variant-id og sender kun qty.
+      Vi sender IKKE quantity i tillegg, for å unngå dobbel/rar antallsøkning.
+    */
     var body =
-      "product_id=" + encodeURIComponent(String(productId)) +
+      "product_id=" + encodeURIComponent(String(PRODUCT_SETS)) +
+      "&variant=" + encodeURIComponent(String(variantId)) +
       "&qty=" + encodeURIComponent(String(qty)) +
-      "&quantity=" + encodeURIComponent(String(qty)) +
       "&eventId=" + encodeURIComponent(String(EVENT_ID)) +
       "&page=product";
+
+    console.log("[DART BOOKING] Legger til pilsett", {
+      productId: PRODUCT_SETS,
+      variantId: variantId,
+      qty: qty
+    });
 
     postAddForm(body).then(function () {
       gkBumpCartCount();
       cb(true);
-    }).catch(function () { cb(false); });
+    }).catch(function (e) {
+      console.log("[DART BOOKING] addDartSetsToCart error:", e);
+      cb(false);
+    });
   }
 
   /* ------------------------------------------------ */
@@ -1075,60 +1117,22 @@
   /* ------------------------------------------------ */
 
   function ensureSetsForDate(dateKey, cb) {
-    if (!setsQty || setsQty <= 0) { cb(true); return; }
-    if (!dateKey) { cb(true); return; }
-
-    var already = parseInt(setsCountByDate[dateKey] || 0, 10);
-    if (isNaN(already)) already = 0;
-
-    var need = setsQty - already;
-    if (need <= 0) { cb(true); return; }
-
-    function addOne() {
-      if (need <= 0) {
-        setsCountByDate[dateKey] = setsQty;
-        saveState();
-        cb(true);
-        return;
-      }
-
-      addProductToCart(PRODUCT_SETS, 1, function (ok) {
-        if (!ok) { cb(false); return; }
-        need -= 1;
-        addOne();
-      });
-    }
-
-    addOne();
+    /*
+      v36:
+      Navnet beholdes for minst mulig endring ellers i koden.
+      Funksjonen legger nå valgt antall pilsett til én gang når kunden trykker Book tid.
+      Den synker ikke lenger tidligere bookede datoer.
+    */
+    addDartSetsToCart(setsQty, cb);
   }
 
   function syncSetsForBookedDates() {
-    if (syncLock) return;
-
-    var dates = bookedDateList();
-    if (!dates.length) return;
-
-    syncLock = true;
-    var idx = 0;
-
-    function next() {
-      if (idx >= dates.length) {
-        syncLock = false;
-        if (status) status.innerHTML = "";
-        if (appStatus) appStatus.innerHTML = "";
-        return;
-      }
-
-      var d = dates[idx++];
-      if (status) status.innerHTML = "Synker pilsett for " + d + "…";
-      if (appStatus) appStatus.innerHTML = "Synker pilsett for " + d + "…";
-
-      ensureSetsForDate(d, function () {
-        next();
-      });
-    }
-
-    next();
+    /*
+      v36:
+      Slått av. Pilsett skal aldri legges i handlekurv ved å trykke +/−.
+      Pilsett legges kun til samtidig som bookingvarianten legges til.
+    */
+    return;
   }
 
   /* ------------------------------------------------ */
@@ -1615,13 +1619,16 @@
     fetch(API_B).then(function (r) { return r.json(); }),
     fetch(API_CLUB).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
     fetch(API_VENUE).then(function (r) { return r.json(); }).catch(function () { return { product: null }; }),
-    fetch(API_CLOSED_TIMES).then(function (r) { return r.json(); }).catch(function () { return { closedTimes: [] }; })
+    fetch(API_CLOSED_TIMES).then(function (r) { return r.json(); }).catch(function () { return { closedTimes: [] }; }),
+    fetch(API_SETS).then(function (r) { return r.json(); }).catch(function () { return { product: null }; })
   ]).then(function (res) {
     var a = res[0] && res[0].product ? res[0].product : null;
     var b = res[1] && res[1].product ? res[1].product : null;
     var club = res[2] && res[2].product ? res[2].product : null;
     var venue = res[3] && res[3].product ? res[3].product : null;
     var closedConfig = res[4] || {};
+    SETS_PRODUCT = res[5] && res[5].product ? res[5].product : null;
+    console.log("[DART BOOKING] Pilsettprodukt lastet", SETS_PRODUCT);
 
     DYNAMIC_CLOSED_TIMES = Array.isArray(closedConfig.closedTimes) ? closedConfig.closedTimes : [];
 
