@@ -45,3 +45,10 @@ Ingen faktisk produksjonsmigrering er autorisert per nå.
 - Tidligere fungerte separate Make-scenarier med SuperSaaS-webhooks (simulator, dart, klubbkveld). Nåværende trigger er ikke verifisert i dagens JS-kode. Kartlegg produksjonsflyten, ikke anta at Make/SuperSaaS fortsatt brukes.
 - For produksjon er det et stoppkrav at en gyldig, betalt booking sender **ett** Pushover-varsel med riktig ressurs, dato/tid og pris. Halvtimer skal ikke sende ett varsel per blokk. Ikke push på ubetalt ordre eller admin-stenging.
 - Behold Pushover-konto og hemmeligheter privat; ingen nøkler i frontend eller GitHub. Test varsling etter ny betalingsflyt, men rør ikke dagens varsling før dette er kontrollert.
+
+## Obligatorisk: gruppepriser og innloggingsrabatter
+- Eier bekrefter at GolfKongen har **ansattpriser, klubbpriser, Team GolfKongen-priser og flere rabattordninger**, basert på hvem som er innlogget. Dette er kritisk å videreføre, i tillegg til ordinære rabattkoder.
+- Fullstendig kravspesifikasjon: `booking-v2/PRISGRUPPER_OG_RABATTER.md`.
+- Før produksjon kartlegg alle grupper, medlemskilde, rabattsammenlegging, gavekort og Quickbutik checkout-pris. **Ikke anta at de tre navngitte ordningene er hele listen.**
+- Autorisert innlogging og faktisk gruppeprivilegium skal kontrolleres server-side. Test både gjest, ansatte, klubber, Team GolfKongen, sammensatte grupper og forsøk på prismanipulering.
+- Ingen aktivering uten at alle eksisterende rabattordninger som gjelder booking fungerer og er testet.
