@@ -1,0 +1,36 @@
+# Pushover skal videreføres i Booking 2.0
+
+**Beslutning 24.10.2026:** Eier ønsker å beholde mobilvarsling via Pushover ved booking. Den fungerer i eksisterende oppsett. Dette er et **lanseringskrav**, ikke en valgfri fremtidig funksjon.
+
+## Kartlegging og usikkerhet
+- Tidligere fungerende oppsett (januar 2026): Separate **Make-scenarier med SuperSaaS-webhook** for disc/simulator, dart og klubbkveld. Hvert scenario sendte direkte til Pushover; Disc, Dart og Klubbkveld ble testet. Eksempeldata fra SuperSaaS: `res_name`, `full_name`, `start`, `finish`, `price_decimal`, `email`, `mobile`, `id`.
+- Nåværende GitHub-filer `dart-booking.js`, `disc-booking.js`, `venue-booking.js` og `booking-admin.js` har ingen Pushover-kall. Dermed kan ikke det *nåværende* varslingsutløserstedet fastslås fra denne koden. Det kan ligge i Make, Quickbutik, SuperSaaS eller annen privat integrasjon.
+- Supabase-prosjektets registrerte Edge Functions har ikke en tydelig Pushover/booking-varsler. Ikke anta at nøklene ligger i Supabase.
+- Ingen Pushover-token, brukernøkkel, Make-webhookadresse eller testmelding skal lagres her eller i frontend/GitHub.
+- Ikke slå av eller rekonfigurer det eksisterende Pushover-oppsettet før nytt er kontrollert med eieren.
+
+## Minstekrav ved lansering
+1. **Et Pushover-varsel per reell, bekreftet booking**, både HYZR, dart A/B og hele lokalet. Klubbkveld skal beholde eksisterende varsling også dersom funksjonen videreføres.
+2. Behold avsender/oppsett og minst eksisterende felt: aktivitet/bane, dato, fra–til, kundenavn, pris, booking-/ordre-ID. Kontaktdata der nåværende melding inkluderer det.
+3. Ingen vanlig «ny booking»-push ved åpning av kalender, valg av tid, handlekurv, ubetalt ordre, ubetalt hold, stengeregel, utgått reservasjon eller avbrutt betaling.
+4. **Felles bestilling av flere sammenhengende halvtimeintervaller gir ett varsel for hele perioden**, ikke et varsel for hver 30-minuttersblokk. 90 min = én booking.
+5. Push utløses bare fra betrodd serverside-hendelse etter validert ordre/betalingsstatus og faktisk reservert ressurs. Et browser-kall eller en vilkårlig ordrestatustekst er ikke nok.
+6. Hendelsesnøkkel for deduplisering: `booking_id:event_type:version`, eksempel `booking_123:confirmed:v1`. Egen varslingsstatus/outbox med retries/backoff og logg (success/failure). Beskytt mot duplikater når samme webhook mottas flere ganger.
+7. Når betalt ordre ankommer etter utløpt hold og tiden nå er opptatt: sett **paid_unallocated** for manuell behandling, aldri normal bekreftelsespush; send egen adminfeilmelding bare hvis eksplisitt besluttet.
+8. Systemet skal tåle at Pushover/Make er nede: bookingen kan fortsatt bekreftes, varsling kan forsøkes på nytt og avvik vises på admin-siden.
+9. En lenke i varselet bør gå til den aktuelle bookingen på godkjent/adminbeskyttet side (ingen hemmelige tokens i lenken).
+10. Ingen nye avgifter eller bytte av tjeneste uten forhåndsgodkjenning.
+
+## Administrasjonsgrensesnitt
+- På hver bekreftet booking: Pushover-status: `Ikke sendt`, `Sendt`, `Feilet – prøver igjen`. Vis sist sendt-tid og varslings-ID.
+- Mulighet for **eier** til å prøve på nytt dersom et varsel feiler, med eksplisitt bekreftelse og logg. Vanlig oppdatering av skjermen må ikke sende på nytt.
+- Valgfritt separat varsel for kansellering/ombooking senere, etter godkjenning. Endringer i push-regler må ikke forandre selve bookingens status.
+
+## Neste kontroll når eieren har PC/Quickbutik
+- Spor én historisk booking fra nettbutikk via ordre og eventuell Make-logg til Pushover. Dokumenter utløseren uten å dele hemmeligheter.
+- Sjekk både simulator, dart A/B, hele lokalet og klubbkveld. Hele lokalet-varsel er ikke bekreftet i historisk Make-oppsett.
+- Test én kontrollert betalt booking og nøyaktig **ett** Pushover-varsel, deretter duplisert webhook og én avbrutt betaling uten push.
+- Først når den nye flyten er dokumentert og testet, besluttes om eksisterende Make-scenarier gjenbrukes eller om et server-side adapter kobles til samme Pushover-konto. **Ingen endring i produksjon nå.**
+
+## Prioritet
+**Blokker produksjonslansering dersom Pushover-varsel ved ny bekreftet booking ikke er dokumentert og verifisert.**
