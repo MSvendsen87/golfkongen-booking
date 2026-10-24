@@ -38,3 +38,10 @@
 6. Test på staging/forhåndsvisning, få eksplisitt godkjenning og planlegg kontrollert overgang/rollback.
 
 Ingen faktisk produksjonsmigrering er autorisert per nå.
+
+## Kritisk: Pushover-varsler må beholdes
+- Eier bekreftet 24.10.2026 at Pushover ved booking allerede fungerer og skal videreføres uendret i brukeropplevelsen.
+- Egen detaljert migrerings- og testspesifikasjon: `booking-v2/PUSHOVER_VIDEREFORING.md`.
+- Tidligere fungerte separate Make-scenarier med SuperSaaS-webhooks (simulator, dart, klubbkveld). Nåværende trigger er ikke verifisert i dagens JS-kode. Kartlegg produksjonsflyten, ikke anta at Make/SuperSaaS fortsatt brukes.
+- For produksjon er det et stoppkrav at en gyldig, betalt booking sender **ett** Pushover-varsel med riktig ressurs, dato/tid og pris. Halvtimer skal ikke sende ett varsel per blokk. Ikke push på ubetalt ordre eller admin-stenging.
+- Behold Pushover-konto og hemmeligheter privat; ingen nøkler i frontend eller GitHub. Test varsling etter ny betalingsflyt, men rør ikke dagens varsling før dette er kontrollert.
