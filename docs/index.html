@@ -9,10 +9,15 @@
 <section id="app" class="hidden">
  <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button><a href="./booking/" target="_blank" rel="noopener" style="padding:10px;border:1px solid #637961;border-radius:9px;color:#d7bf78;font-weight:800;text-decoration:none">Se kundesiden (test)</a></div>
  <div id="checkout" class="panel hidden"><h2>Kassekontroll – 30-minuttersvarianter</h2><p>Sjekker eksisterende Quickbutik-produkter for HYZR, Dart A og Dart B. <strong>Dette oppretter ingen produkter eller ordre og åpner ikke booking.</strong></p><div class="row"><label>Dato <input type="date" id="checkDay"></label><button id="checkVariants" class="alt" style="width:auto">Kontroller Quickbutik-varianter</button></div><div id="checkResult" class="note" role="status">Velg en dato og trykk «Kontroller». Status for kunderabatter og Pushover må testes separat.</div>
+<h3 style="margin-top:20px">Rullerende 45-dagersbooking og betalingsstatus</h3>
+<p>Nye datoer dukker automatisk opp ved norsk midnatt. Den daglige Quickbutik-variantenjobben er installert, men oppretter ingenting før riktig API-hemmelighet og skriveaktivering er satt opp. Nye varianter forblir usynlige med lager 0 under klargjøringen.</p>
+<button id="checkIntegrations" class="alt" type="button" style="width:auto">Kontroller automatikk og betalingsklarhet</button>
+<div id="integrationCheckResult" class="note" role="status">Hent status for kalender, kundegrupper, automatisk variantpåfyll og betaling.</div>
+<p><a href="https://github.com/MSvendsen87/golfkongen-booking/actions/workflows/gk2-rolling-variants.yml" target="_blank" rel="noopener noreferrer">Se planlagt variantjobb i GitHub Actions</a></p>
 <h3 style="margin-top:20px">Ny betalingsmodell – én vare per varighet</h3>
 <p>Varighet og kundegruppepris skal være knyttet til samme salgsprodukt. Tidsrommet låses samlet i Booking 2.0. Dagens tre skjulte testprodukter (1474–1476) skal ikke åpnes for salg.</p>
 <button id="checkDesign" class="alt" type="button" style="width:auto">Kontroller betalingsoppsett</button>
-<div id="checkoutDesignResult" class="note" role="status" style="margin-top:10px">33 produkter er planlagt, men ingen er åpne for kjøp.</div>
+<div id="checkoutDesignResult" class="note" role="status" style="margin-top:10px">33 skjulte Quickbutik-produkter er koblet opp. Ingen er åpne for kjøp.</div>
 <h3 style="margin-top:22px">Test prisberegning mot serveren</h3>
 <div class="row">
 <label>Aktivitet<select id="quoteResource"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
@@ -185,6 +190,21 @@ function fillQuoteDurations(){
 }
 $('quoteResource').onchange=fillQuoteDurations;
 fillQuoteDurations();
+$('checkIntegrations').onclick=async()=>{
+ const area=$('integrationCheckResult');
+ area.textContent='Kontrollerer tilgang, skjulte varer, kundepriser og betalingskobling ...';
+ try{
+  const r=await api('/admin/integration-readiness');
+  const bool=(x)=>x?'JA':'NEI';
+  area.innerHTML=
+   '<div class="item"><b>Rullerende booking:</b> '+html(r.daysAhead)+' dager, fra '+html(r.firstBookable)+' til '+html(r.lastBookable)+'.</div>'+
+   '<div class="item"><b>Quickbutik-produkter:</b> '+html(r.mappedProducts)+' koblet, '+html(r.readyProducts)+' åpne.</div>'+
+   '<div class="item"><b>Kundegruppepriser:</b> '+html(r.specialPriceReported)+' av '+html(r.specialPriceRequired)+' registrert, '+html(r.specialPriceVerified)+' kassetestet.</div>'+
+   '<div class="item"><b>Quickbutik API-nøkkel på Supabase:</b> '+bool(r.quickbutikOrderReadKeyConfigured)+'. <b>Betalt ordre-webhook:</b> '+bool(r.webhookPaidVerificationDeployed)+'.</div>'+
+   '<div class="item"><b>Eksisterende fremtidige bookinger fullstendig kontrollert:</b> '+bool(r.legacyBookingsFullyReconciled)+'. <b>Pushover E2E:</b> '+bool(r.pushoverPaidFlowValidated)+'.</div>'+
+   '<p><b>Kundebetaling:</b> '+(r.publicCheckoutEnabled?'Aktiv':'SPERRET')+'. Automatisk Quickbutik-variantjobb bruker egen GitHub-hemmelighet, ikke Supabase API-nøkkelen.</p>';
+ }catch(e){area.textContent='Kontrollen mislyktes: '+e.message+'. Betaling må fortsatt være sperret.';}
+};
 $('checkDesign').onclick=async()=>{
  const el=$('checkoutDesignResult');
  el.textContent='Henter verifisert produktoversikt fra Booking 2.0 ...';
