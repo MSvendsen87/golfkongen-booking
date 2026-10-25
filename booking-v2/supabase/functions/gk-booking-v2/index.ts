@@ -1,7 +1,7 @@
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-const origins=new Set(["https://golfkongen.no","https://www.golfkongen.no","https://app.golfkongen.no"]);
+const origins=new Set(["https://golfkongen.no","https://www.golfkongen.no","https://app.golfkongen.no","https://eadgdcimcmfyuicizboo.supabase.co","https://msvendsen87.github.io"]);
 const allowedEmails=new Set(["post@golfkongen.no","kristoffer.mrk@gmail.com"]);
 const db=url&&serviceKey?createClient(url,serviceKey,{auth:{autoRefreshToken:false,persistSession:false}}):null;
 const getCors=(origin:string)=>origin&&origins.has(origin)?{"Access-Control-Allow-Origin":origin,"Vary":"Origin"}:{};
@@ -34,9 +34,14 @@ Deno.serve(async (req:Request)=>{
  const allow={"Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"authorization,apikey,content-type","Access-Control-Max-Age":"600"};
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:{...getCors(origin),...allow}});
  if(!db)return err("backend_not_ready",503,origin);
- const path=new URL(req.url).pathname.replace(/^\/gk-booking-v2/,"").replace(/\/$/,"");
+ const requestPath=new URL(req.url).pathname;
+ const slug="/gk-booking-v2";
+ const pos=requestPath.indexOf(slug);
+ const p0=pos>=0?requestPath.slice(pos+slug.length):requestPath;
+ const path=p0.endsWith("/")&&p0.length>1?p0.slice(0,-1):p0||"/";
  const u=new URL(req.url);
  try{
+  if(req.method==="GET"&&path==="/admin")return new Response(null,{status:302,headers:{"Location":"https://msvendsen87.github.io/golfkongen-booking/","Cache-Control":"no-store"}});
   if(req.method==="GET"&&path==="/health")return reply({ok:true,environment:"staging",bookingEnabled:false,checkout:false},200,origin);
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
