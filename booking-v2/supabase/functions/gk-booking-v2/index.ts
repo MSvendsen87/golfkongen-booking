@@ -97,7 +97,7 @@ Deno.serve(async (req:Request)=>{
   }
   if(req.method==="GET"&&path==="/admin/checkout-design"){
     const plans=await rpc("gk2_admin_checkout_design",{p_actor:user.email});
-    return reply({ok:true,plans,readyProducts:0,liveCheckoutEnabled:false,
+    return reply({ok:true,plans,readyProducts:plans.filter((p:Record<string,unknown>)=>p.isReady===true&&p.publishEnabled===true).length,liveCheckoutEnabled:false,
       blockers:["Quickbutik duration products missing","Group prices not synced","Paid-order webhook not verified","Pushover not adapted to new product IDs"]},200,origin);
   }
   if(req.method==="GET"&&path==="/admin/quote-preview"){
