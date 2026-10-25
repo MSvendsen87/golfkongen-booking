@@ -109,6 +109,10 @@ Deno.serve(async (req:Request)=>{
     const preview=await rpc("gk2_admin_quote_preview",{p_actor:user.email,p_resource:resource,p_group:group,p_minutes:minutes});
     return reply({ok:true,...preview},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/group-price-queue"){
+    const queue=await rpc("gk2_admin_group_price_queue",{p_actor:user.email});
+    return reply({ok:true,queue,checkoutVerified:false,quickbutikPricesReadable:false},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/price-matrix"){
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
@@ -125,6 +129,15 @@ Deno.serve(async (req:Request)=>{
    return reply({ok:true,id:await rpc("gk2_admin_block",{p_actor:a,p_target:b.target,p_from:b.dateFrom,p_to:b.dateTo,p_start:b.start,p_end:b.end,p_label:b.label,p_weekdays:Array.isArray(b.weekdays)?b.weekdays:null})},200,origin);
   }
   if(path==="/admin/unblock")return reply({ok:true,changed:await rpc("gk2_admin_unblock",{p_actor:a,p_id:b.id})},200,origin);
+  if(path==="/admin/group-price-stage"){
+    if(!["hyzr","dart_a","dart_b","venue"].includes(b.resource)
+      ||!["betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(b.group)
+      ||!Number.isInteger(b.minutes)||!["pending","entered_reported","checkout_verified"].includes(b.stage))
+      return err("invalid_group_price_state",400,origin);
+    const result=await rpc("gk2_admin_group_price_stage",{p_actor:a,p_resource:b.resource,
+      p_minutes:b.minutes,p_group:b.group,p_stage:b.stage,p_note:String(b.note||"").slice(0,300)});
+    return reply({ok:true,...result,bookingEnabled:false},200,origin);
+  }
   if(path==="/admin/price-draft"||path==="/admin/price-save"){
    if(!Number.isInteger(b.minutes)||!Number.isInteger(b.ore)||b.ore<0||b.ore>10000000)return err("invalid_price",400,origin);
    const saved=await rpc("gk2_admin_save_price",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_price_ore:b.ore,p_note:b.note||""});
