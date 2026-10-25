@@ -69,7 +69,7 @@ async function main(){
   if(created>=maxNew)break;
   const payload=await shop("GET",{product_id:String(p.productId)});
   const product=payload?.product;
-  if(!product||Array.isArray(product)||Number(product.id)!==p.productId)throw Error("Product identity mismatch "+p.productId);
+  if(!product||Array.isArray(product)||Number(product.id)!==p.productId)throw Error("Product identity mismatch: requested "+p.productId+"; returned="+String(product?.id??"missing").slice(0,30)+"; titlePrefix="+String(product?.title||"missing").slice(0,45)+"; shape="+(Array.isArray(payload?.product)?"array":typeof payload?.product));
   if(!(product.visible===false||product.visible===0||product.visible==="0"))
    throw Error("STOP: Product "+p.productId+" is visible; do not touch");
   if(!String(product.title||"").startsWith("Booking 2.0"))throw Error("Not a Booking2 product: "+p.productId);
