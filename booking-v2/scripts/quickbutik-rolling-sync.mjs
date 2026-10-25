@@ -73,7 +73,8 @@ async function main(){
   for(let attempt=1;attempt<=3;attempt++){
     if(attempt>1)await sleep(1200*attempt);
     payload=await shop("GET",{product_id:String(p.productId),include_details:"true"});
-    product=payload?.product;
+    // Quickbutik API has two successful single-product shapes: {product:{...}} or a bare {...}.
+    product=payload?.product??payload;
     if(product&&!Array.isArray(product)&&Number(product.id)===p.productId)break;
     const shape=Array.isArray(payload)?"array":typeof payload;
     const keys=payload&&typeof payload==="object"?Object.keys(payload).slice(0,8).join(","):"none";
