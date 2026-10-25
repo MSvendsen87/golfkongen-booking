@@ -37,12 +37,13 @@ Deno.serve(async (req:Request)=>{
  const path=new URL(req.url).pathname.replace(/^\/gk-booking-v2/,"").replace(/\/$/,"");
  const u=new URL(req.url);
  try{
-  if(req.method==="GET"&&path==="/health")return reply({ok:true,environment:"isolated-staging",checkout:false,project:"golfkongen-minbag-staging"},200,origin);
+  if(req.method==="GET"&&path==="/health")return reply({ok:true,environment:"staging",bookingEnabled:false,checkout:false},200,origin);
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
    if(!validDate(day))return err("invalid_date",400,origin);
    const result=await rpc("gk2_day_availability",{p_day:day});
-   return reply({ok:true,...result},200,origin);
+   const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
+   return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
   if(path==="/hold"||path==="/checkout"||path.startsWith("/webhook/")){
    // A working checkout must be verified against Quickbutik with protected server-side price
