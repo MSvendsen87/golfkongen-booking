@@ -12,8 +12,35 @@
  <div id="calendar" class="panel"><h2>Kalender for HYZR, dart A og dart B</h2><label>Dato <input type="date" id="day"></label><button id="refresh" class="alt" style="width:auto">Oppdater</button><div id="calendarStatus" class="note" role="status" style="margin:11px 0"></div><div class="calendarScroll"><div id="calendarGrid" class="cal"></div></div><div class="note">Dette er Booking 2.0-kalenderen i separat databaseområde. Den eldre bookingen 31. oktober er importert. Øvrige fremtidige bookinger og regler må kvalitetssikres før åpning.</div></div>
  <div id="blocks" class="panel hidden"><h2>Sperr tider eller åpne igjen</h2><div class="grid"><form id="blockForm"><label>Ressurs<select name="target"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue_only">Kun leie hele lokalet</option><option value="all">Steng alle ressurser</option></select></label><label>Fra dato<input name="dateFrom" type="date" required></label><label>Til dato<input name="dateTo" type="date" required></label><label>Fra kl.<input name="startTime" type="time" step="1800" value="10:00" required></label><label>Til kl.<input name="endTime" type="time" step="1800" value="11:00" required></label><label>Årsak<input name="label" maxlength="140" required></label><button type="submit">Lagre sperring</button></form><div><h3>Gjeldende sperringer for datoen</h3><div id="blockList"></div></div></div></div>
  <div id="hours" class="panel hidden"><h2>Åpningstider</h2><div class="note">Åpningstider lagres for hver ressurs. Endringer på denne siden påvirker foreløpig bare Booking 2.0.</div><form id="hoursForm" class="grid"><label>Ressurs<select name="resource"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label><label>Ukedag<select name="weekday"><option value="1">Mandag</option><option value="2">Tirsdag</option><option value="3">Onsdag</option><option value="4">Torsdag</option><option value="5">Fredag</option><option value="6">Lørdag</option><option value="7">Søndag</option></select></label><label>Åpner<input type="time" step="1800" name="opensTime" value="10:00"></label><label>Stenger<input type="time" step="1800" name="closesTime" value="22:00"></label><label>Aktiv<select name="active"><option value="true">Ja</option><option value="false">Stengt</option></select></label><button type="submit">Oppdater åpningstid</button></form><div id="hoursList"></div></div>
- <div id="prices" class="panel hidden"><h2>Priser og kundegrupper</h2><div class="note"><strong>Utkast.</strong> Prisen endres ikke hos Quickbutik før trygg integrasjon og betalingskontroll er implementert. Dette skjemaet lagrer bare et administrativt prisforslag.</div><form id="priceForm" class="grid"><label>Aktivitet<select name="resource"><option value="hyzr">HYZR (per simulator)</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label><label>Kundegruppe<select name="group"><option value="public">Ordinær</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="frisbee_dart">Frisbee + Dart</option><option value="paid_both">Betalt medlemskap + dartklubb</option></select></label><label>Minutter<input name="minutes" type="number" min="30" step="30" value="60"></label><label>Pris i NOK<input name="nok" type="number" min="0" step="1" value="150"></label><label class="full">Notat<input name="note" maxlength="250"></label><button type="submit">Lagre prisutkast</button></form><div id="priceList"></div></div>
- <div id="members" class="panel hidden"><h2>Medlemmer og fordeler</h2><p>Medlemsregisteret finnes allerede i Google Sheets. De sju kundegruppene og kundens reelle rabatter ligger i Quickbutik.</p><div class="note">Endringer legges i en kontrollkø. Gruppen er ikke aktiv før synk mot både medlemsregister og Quickbutik er bekreftet.</div><form id="memberForm" class="grid"><label>E-post<input type="email" name="email" required></label><label>Kundegruppe<select name="group"><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="medlemmer">Betalt medlemskap</option></select></label><label>Handling<select name="action"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Deaktiver</option></select></label><button type="submit">Send endring til kontroll</button></form><p><span>Medlemsoversikten krever autentisert tilgang.</span></p><div id="memberList"></div></div>
+ <div id="prices" class="panel hidden">
+<h2>Priser og kundegrupper</h2>
+<div class="note"><strong>Booking 2.0-prisliste – kan redigeres her.</strong> Alle beløp lagres kun i Booking 2.0, ikke i Quickbutik. Kassebetaling og Pushover er fortsatt sperret. Ordrebekreftelse skal bruke serververifisert kundegruppe og pris.</div>
+<h3>Prissammenligning mellom kundegrupper</h3>
+<div class="calendarScroll"><div id="tariffSummary">Laster priser ...</div></div>
+<h3 style="margin-top:20px">Endre en pris</h3>
+<form id="priceForm" class="grid">
+ <label>Aktivitet<select name="resource" id="tariffResource"><option value="hyzr">HYZR (én simulator)</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
+ <label>Kundegruppe<select name="group" id="tariffGroup">
+  <option value="public">Ordinær</option>
+  <option value="betalt_medlem">Betalt disc-medlemskap + dartklubb</option>
+  <option value="teamgolfkongen">Team GolfKongen</option>
+  <option value="frisbee_dart">Frisbee + Dart</option>
+  <option value="ansatte">Ansatte</option>
+  <option value="ambassador">Ambassadører</option>
+  <option value="frisbeeklubb">Frisbeeklubber</option>
+  <option value="dartklubb">Dartklubber</option>
+ </select></label>
+ <label>Varighet<select name="minutes" id="tariffDuration"></select></label>
+ <label>Pris i kroner<input type="number" name="nok" id="tariffAmount" min="0" max="100000" step="0.01" required></label>
+ <label class="full">Notat (valgfritt)<input name="note" maxlength="400"></label>
+ <button type="submit">Lagre / oppdater pris</button>
+</form>
+<div id="tariffSaveStatus" role="status" class="note">Velg gruppe, aktivitet og varighet. Beløpet oppdateres fra den lagrede prislisten.</div>
+<h3 style="margin-top:18px">Alle varigheter for valgt aktivitet og kundegruppe</h3>
+<div id="priceList">Laster ...</div>
+<div class="note">90 minutter og lengre er foreløpige kombinasjonspriser (hele timer + eventuell halvtime). De kan endres enkeltvis her. Hele lokalet kan bookes i hele timer fra 4 til 12 timer. Skjult/åpen status for produkter styres separat.</div>
+</div>
+<div id="members" class="panel hidden"><h2>Medlemmer og fordeler</h2><p>Medlemsregisteret finnes allerede i Google Sheets. De sju kundegruppene og kundens reelle rabatter ligger i Quickbutik.</p><div class="note">Endringer legges i en kontrollkø. Gruppen er ikke aktiv før synk mot både medlemsregister og Quickbutik er bekreftet.</div><form id="memberForm" class="grid"><label>E-post<input type="email" name="email" required></label><label>Kundegruppe<select name="group"><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="medlemmer">Betalt medlemskap</option></select></label><label>Handling<select name="action"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Deaktiver</option></select></label><button type="submit">Send endring til kontroll</button></form><p><span>Medlemsoversikten krever autentisert tilgang.</span></p><div id="memberList"></div></div>
  <div id="tournaments" class="panel hidden"><h2>Turneringer</h2><p>Dag/helg eller sesong. Ubegrenset antall forsøk og de tre beste rundene kan brukes ved senere poengregistrering.</p><div class="note">Turneringer lagres først som utkast og påvirker ikke bookingkalenderen eller HYZR. Resultatimport og godkjenning gjenstår.</div><form id="tournamentForm" class="grid"><label>Navn<input type="text" name="name" required minlength="3" maxlength="150"></label><label>Format<select name="format"><option value="single_day">Én dag</option><option value="weekend">Helg</option><option value="season">Sesong</option></select></label><label>Fra<input name="from" type="date" required></label><label>Til<input name="to" type="date" required></label><label>Bane (valgfritt)<input name="course" maxlength="120"></label><button type="submit">Opprett turneringsutkast</button></form><div id="tournamentList"></div></div>
  <div id="message" role="status" class="note" style="margin-top:18px">Ingen endringer gjort.</div>
 </section>
@@ -31,6 +58,55 @@ const html=s=>String(s??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'
 const client= C.supabaseUrl&&C.supabasePublicKey&&C.apiUrl?createClient(C.supabaseUrl,C.supabasePublicKey):null;
 let day=new Date().toISOString().slice(0,10),session=null,snapshot=null;
 $('day').value=day;$('checkDay').value=day;
+
+// Exact amounts in database drafts. No customer checkout is enabled.
+const tariffGroups=[
+ ['public','Ordinær'],['betalt_medlem','Betalt medlem + dartklubb'],
+ ['teamgolfkongen','Team GolfKongen'],['frisbee_dart','Frisbee + Dart'],
+ ['ansatte','Ansatte'],['ambassador','Ambassadører'],
+ ['frisbeeklubb','Frisbeeklubber'],['dartklubb','Dartklubber']
+];
+let tariffRecords=[];
+const priceText=ore=>Number.isInteger(ore)?(ore/100).toLocaleString('nb-NO',{minimumFractionDigits:0,maximumFractionDigits:2})+' kr':'–';
+const tariffFind=(resource,group,min)=>tariffRecords.find(p=>p.resource===resource&&p.group===group&&p.minutes===min);
+function fillTariffDuration(){
+ const resource=$('tariffResource').value, sel=$('tariffDuration'),old=Number(sel.value);
+ const durations=resource==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
+ sel.innerHTML=durations.map(m=>'<option value="'+m+'">'+(m>=60?Number(m/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' t':m+' min')+'</option>').join('');
+ if(durations.includes(old))sel.value=String(old);else sel.value=String(resource==='venue'?240:30);
+}
+function fillTariffAmount(){
+ const p=tariffFind($('tariffResource').value,$('tariffGroup').value,Number($('tariffDuration').value));
+ const amt=$('tariffAmount');
+ amt.value=p?(p.priceOre/100).toFixed(2):'';
+ $('tariffSaveStatus').textContent=p?'Lagret utkast: '+priceText(p.priceOre)+' — kun Booking 2.0. Ingen endring i Quickbutik.':'Ingen prisregel funnet for dette valget.';
+}
+function redrawTariffDetails(){
+ const resource=$('tariffResource').value, group=$('tariffGroup').value;
+ const recs=tariffRecords.filter(p=>p.resource===resource&&p.group===group).sort((a,b)=>a.minutes-b.minutes);
+ const title=r=>r.minutes>=60?Number(r.minutes/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' timer':r.minutes+' min';
+ $('priceList').innerHTML=recs.length?'<div class="calendarScroll"><table><thead><tr><th>Varighet</th><th>Pris</th><th>Handling</th></tr></thead><tbody>'+
+ recs.map(p=>'<tr><td>'+html(title(p))+'</td><td>'+html(priceText(p.priceOre))+'</td><td><button class="alt" type="button" data-select-duration="'+p.minutes+'" style="width:auto">Endre</button></td></tr>').join('')+
+ '</tbody></table></div>':'Ingen priser registrert for valgt aktivitet og gruppe.';
+ document.querySelectorAll('[data-select-duration]').forEach(btn=>btn.onclick=()=>{
+   $('tariffDuration').value=btn.dataset.selectDuration;
+   fillTariffAmount();
+   $('priceForm').scrollIntoView({behavior:'smooth',block:'center'});
+ });
+}
+function renderTariffPricing(list){
+ tariffRecords=Array.isArray(list)?list:[];
+ const money=(resource,group,dur)=>priceText(tariffFind(resource,group,dur)?.priceOre);
+ const headers=['Kundegruppe','HYZR 30 min','HYZR 60 min','Dart A 30 min','Dart A 60 min','Hele lokalet 4 t','Hele lokalet 5 t'];
+ const table='<table><thead><tr>'+headers.map(v=>'<th>'+html(v)+'</th>').join('')+'</tr></thead><tbody>'+
+ tariffGroups.map(([group,name])=>'<tr><td><b>'+html(name)+'</b></td>'+
+ ['hyzr:30','hyzr:60','dart_a:30','dart_a:60','venue:240','venue:300'].map(spec=>{
+   const parts=spec.split(':');return '<td>'+html(money(parts[0],group,Number(parts[1])))+'</td>';
+ }).join('')+'</tr>').join('')+'</tbody></table>';
+ $('tariffSummary').innerHTML=table;
+ fillTariffDuration();fillTariffAmount();redrawTariffDetails();
+}
+
 const message=(txt,error=false)=>{$('message').className=error?'note warn':'success';$('message').textContent=txt};
 const minutes=s=>{const [h,m]=s.split(':').map(Number);return h*60+m},HH=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
 const form=f=>Object.fromEntries(new FormData(f).entries());
@@ -45,7 +121,7 @@ function render(a,c){
  $('calendarStatus').textContent=c.bookingEnabled===true?'Kundebooking kan åpnes etter full betalingskontroll.':'KUN INTERN KALENDER: Kundebooking er fortsatt deaktivert. Ledige tidsrom er ikke åpne for kjøp.';
  $('blockList').innerHTML=a.blocks.length?a.blocks.map(b=>`<div class="item"><b>${html(b.label)}</b><br>${html(b.target)} · ${HH(b.start)}–${HH(b.end)}<br><button class="alt" data-unblock="${html(b.id)}">Åpne igjen</button></div>`).join(''):'Ingen aktive sperringer på denne datoen.';
  document.querySelectorAll('[data-unblock]').forEach(btn=>btn.onclick=async()=>{if(!confirm('Åpne igjen denne sperringen?'))return;try{await api('/admin/unblock',{id:btn.dataset.unblock});message('Sperringen er deaktivert.');await refresh()}catch(e){message(e.message,true)}});
- $('priceList').innerHTML=a.prices.map(p=>`<div class="item">${html(p.resource)} / ${html(p.group)} / ${html(p.minutes)} min — <b>${(p.priceOre/100).toLocaleString('nb-NO')} kr</b> · ${p.active?'Aktiv':'Utkast'}</div>`).join('')||'Ingen prisutkast.';
+ renderTariffPricing(a.prices||[]);
  $('memberList').innerHTML=a.membershipRequests.map(m=>`<div class="item">${html(m.email)} · ${html(m.action)} ${html(m.group)} — ${html(m.state)}</div>`).join('')||'Ingen ventende medlemsendringer.';
  $('tournamentList').innerHTML=a.tournaments.map(t=>`<div class="item">${html(t.name)} · ${html(t.format)} · ${html(t.starts)}–${html(t.ends)} · ${html(t.status)}</div>`).join('')||'Ingen turneringsutkast.';
  $('hoursList').innerHTML=a.openingHours.map(h=>`<div class="item">${html(h.resource)} · dag ${html(h.weekday)} · ${HH(h.opens)}–${HH(h.closes)} · ${h.active?'Åpen':'Stengt'}</div>`).join('')||'Ingen åpningstider satt.';
@@ -65,11 +141,10 @@ $('checkVariants').onclick=async()=>{
   const labels={hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B'};
   const rows=info.resources.map(r=>'<div class="item"><b>'+html(labels[r.resource])+'</b> — '+html(r.readyHalfhours)+' / '+html(r.expectedHalfhours)+' gyldige halvtimesvarianter · '+html(r.legacyHourVariants)+' eldre timesvarianter'+(r.samples.length?'<div class="sub">Eksempel på avvik: '+r.samples.map(s=>html(s.sku)+' ('+html(s.state)+')').join(', ')+'</div>':'')+'</div>').join('');
   const staging=(info.stagingProducts||[]).map(x=>'<div class="item"><b>'+html(labels[x.resource])+'</b> – nytt skjult produkt '+html(x.productId)+': '+html(x.totalVariants)+' testvarianter, '+html(x.readyHalfhours)+' salgbare halvtimer.'+(x.sampleTestVariantExists?' <strong>Trygg, sperret testvariant bekreftet.</strong>':' Testvariant ikke tilgjengelig for valgt dag.')+'</div>').join('');
-  const draft=(info.proposedHalfhourPrices||[]).map(x=>'<tr><td>'+html(x.group)+'</td><td>'+html(x.hyzr.toLocaleString('nb-NO',{minimumFractionDigits:x.hyzr%1?2:0}))+' kr</td><td>'+html(x.dart.toLocaleString('nb-NO',{minimumFractionDigits:x.dart%1?2:0}))+' kr</td></tr>').join('');
+
   el.innerHTML='<strong>'+(info.catalogReady?'Gamle varianter kan testes videre.':'Gamle timeprodukter er ikke klare for halvtimer.')+'</strong>'+rows+
   '<h3 style="margin-top:16px">Nye Booking 2.0-produkter – skjulte</h3>'+staging+
-  '<h3 style="margin-top:17px">Utkast: kundepris per 30 minutter</h3><p>Regnet forholdsmessig fra de tidligere oppgitte timeprisene. <strong>Ingen av disse prisene er godkjent eller lagt inn i Quickbutik.</strong> Ansattprisene forutsetter at 98 % rabatt kan beregnes korrekt i kassen.</p>'+
-  '<div class="calendarScroll"><table><thead><tr><th>Gruppe</th><th>HYZR</th><th>Dart A/B</th></tr></thead><tbody>'+draft+'</tbody></table></div>'+
+  '<h3 style="margin-top:17px">Prisadministrasjon</h3><p>Alle nye prisregler administreres i fanen <strong>Priser</strong>. Kassekontrollen endrer ikke prisene.</p>'+
   '<p><b>Betaling: IKKE aktivert.</b> Kunderabatter, gavekort, flervariant-kasse og Pushover må testes før produktene blir synlige.</p>';
  }catch(e){el.textContent='Kontrollen kunne ikke fullføres: '+e.message+'. Ingenting er endret.';}
  };
@@ -79,7 +154,26 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.quer
 const bind=(id,route,transform)=>(()=>{$(id).onsubmit=async e=>{e.preventDefault();try{const d=transform(form(e.target));const result=await api(route,d);message('Lagret i staging. Status: '+(result.status||'registrert'));await refresh();}catch(er){message('Kunne ikke lagre: '+er.message,true)}}})();
 bind('blockForm','/admin/block',b=>({...b,start:minutes(b.startTime),end:minutes(b.endTime)}));
 bind('hoursForm','/admin/hours',b=>({resource:b.resource,weekday:Number(b.weekday),opens:minutes(b.opensTime),closes:minutes(b.closesTime),active:b.active==='true'}));
-bind('priceForm','/admin/price-draft',b=>({resource:b.resource,group:b.group,minutes:Number(b.minutes),ore:Math.round(Number(b.nok)*100),note:b.note}));
+$('tariffResource').onchange=()=>{fillTariffDuration();fillTariffAmount();redrawTariffDetails();};
+$('tariffGroup').onchange=()=>{fillTariffAmount();redrawTariffDetails();};
+$('tariffDuration').onchange=fillTariffAmount;
+$('priceForm').onsubmit=async e=>{
+ e.preventDefault();
+ const b=form(e.target), amount=Number(b.nok),ore=Math.round(amount*100);
+ if(!Number.isFinite(amount)||amount<0||Math.abs(ore/100-amount)>0.00001){
+  $('tariffSaveStatus').textContent='Ugyldig beløp. Bruk inntil to desimaler.';return;
+ }
+ try{
+  const result=await api('/admin/price-save',{resource:b.resource,group:b.group,minutes:Number(b.minutes),ore,note:b.note||''});
+  if(result.quickbutikUpdated!==false)throw Error('Usikker status for Quickbutik – kontroller før videre bruk.');
+  $('tariffSaveStatus').textContent='Pris oppdatert i Booking 2.0: '+priceText(ore)+'. Ikke endret i Quickbutik.';
+  await refresh();
+  message('Pris lagret i Booking 2.0. Kassen er fortsatt sperret.');
+ }catch(e){
+  $('tariffSaveStatus').textContent='Kunne ikke lagre: '+e.message;
+  message('Pris ble ikke lagret: '+e.message,true);
+ }
+};
 bind('memberForm','/admin/member-request',b=>b);
 bind('tournamentForm','/admin/tournament-draft',b=>b);
 </script></body></html>
