@@ -88,7 +88,13 @@ async function main(){
   if(!String(product.title||"").startsWith("Booking 2.0"))throw Error("Not a Booking2 product: "+p.productId);
   if(!Number.isFinite(Number(product.price))||Number(product.price)<=0)
    throw Error("Invalid product regular price "+p.productId);
-  if(!Array.isArray(product.variants))throw Error("Variants missing for "+p.productId);
+  if(!Array.isArray(product.variants)){
+    // No-variant products may omit the variants array entirely in Quickbutik v1.
+    // Only allow empty list for an explicitly non-variant product.
+    const flag=String(product.hasVariants??"").toLowerCase();
+    if(["0","false"].includes(flag))product.variants=[];
+    else throw Error("Variants missing for product with variants "+p.productId);
+  }
   // maxNew applies across the whole run. Reread before next run for idempotency.
   const missing=planVariants(product,dates,p.minutes,Math.min(perPlanBudget,maxNew-created));
   missingTotal+=missing.length;products++;
