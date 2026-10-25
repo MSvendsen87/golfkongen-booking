@@ -30,6 +30,17 @@
 <div class="note"><strong>Booking 2.0-prisliste – kan redigeres her.</strong> Alle beløp lagres kun i Booking 2.0, ikke i Quickbutik. Kassebetaling og Pushover er fortsatt sperret. Ordrebekreftelse skal bruke serververifisert kundegruppe og pris.</div>
 <h3>Prissammenligning mellom kundegrupper</h3>
 <div class="calendarScroll"><div id="tariffSummary">Laster priser ...</div></div><button id="exportTariffs" type="button" class="alt" style="width:auto;margin-top:10px">Last ned Quickbutik-gruppepriser (CSV)</button><p class="note">Kun oversikt for kontroll og manuell overføring. Eksport synkroniserer ikke priser automatisk til Quickbutik.</p>
+<section id="groupPriceChecklist" style="margin-top:20px">
+<h3>Quickbutik – spesialpriser som faktisk må legges inn</h3>
+<div class="note">Quickbutik lar kundegrupper overstyre produktpriser. Her vises bare priser som avviker fra ordinær pris. <b>«Lagt inn» betyr registrert av deg, ikke kassetestet.</b> Ingen knapp her endrer Quickbutik.</div>
+<div id="specialPriceSummary" class="note" role="status">Laster kontrolliste ...</div>
+<div class="row">
+<label>Kundegruppe<select id="specialPriceGroup"><option value="all">Alle grupper</option><option value="ansatte">Ansatte</option><option value="betalt_medlem">Betalt medlem + dartklubb</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee + Dart</option><option value="ambassador">Ambassadører</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="dartklubb">Dartklubber</option></select></label>
+<label>Status<select id="specialPriceStatus"><option value="open">Gjenstående</option><option value="all">Alle</option><option value="entered_reported">Lagt inn</option><option value="checkout_verified">Testet i kassen</option></select></label>
+<button id="refreshSpecialPrice" class="alt" type="button" style="width:auto">Oppdater oversikten</button>
+</div>
+<div class="calendarScroll"><div id="specialPriceTable">Laster priser ...</div></div>
+</section>
 <h3 style="margin-top:20px">Endre en pris</h3>
 <form id="priceForm" class="grid">
  <label>Aktivitet<select name="resource" id="tariffResource"><option value="hyzr">HYZR (én simulator)</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
@@ -152,6 +163,52 @@ $('checkQuote').onclick=async()=>{
  }catch(e){el.textContent='Priskontroll mislyktes: '+e.message;}
 };
 
+
+let groupPriceQueue=[];
+const resourceNames={hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B',venue:'Hele lokalet'};
+function paintGroupPrices(){
+ const data=groupPriceQueue;
+ const counts={
+  pending:data.filter(x=>x.stage==='pending').length,
+  entered:data.filter(x=>x.stage==='entered_reported').length,
+  verified:data.filter(x=>x.stage==='checkout_verified').length,
+  stale:data.filter(x=>x.stage==='stale_price').length
+ };
+ $('specialPriceSummary').textContent=data.length+' nødvendige spesialpriser: '+counts.pending+
+  ' gjenstår, '+counts.entered+' registrert som lagt inn, '+counts.verified+
+  ' kassetestet, '+counts.stale+' må oppdateres etter prisendring. Ingen Quickbutik-endringer er gjort fra denne siden.';
+ const group=$('specialPriceGroup').value,status=$('specialPriceStatus').value;
+ const filtered=data.filter(x=>(group==='all'||x.group===group)&&(
+  status==='all'||(status==='open'?x.stage==='pending'||x.stage==='stale_price':x.stage===status)));
+ const groupName=Object.fromEntries(tariffGroups);
+ $('specialPriceTable').innerHTML='<table><thead><tr><th>Gruppe</th><th>Aktivitet</th><th>Tid</th><th>Produkt-ID</th><th>Ordinær</th><th>Gruppepris</th><th>Status / handling</th></tr></thead><tbody>'+
+ filtered.map(x=>'<tr><td>'+html(groupName[x.group]||x.group)+'</td><td>'+html(resourceNames[x.resource])+'</td><td>'+html(x.minutes)+' min</td><td><strong>'+html(x.quickbutikProductId)+'</strong></td>'+
+ '<td>'+html(priceText(x.regularOre))+'</td><td><b>'+html(priceText(x.expectedOre))+'</b></td>'+
+ '<td>'+html({pending:'Mangler',entered_reported:'Lagt inn (ikke testet)',checkout_verified:'Kassetestet',stale_price:'Pris endret – må kontrolleres på nytt'}[x.stage]||x.stage)+
+ '<div style="margin-top:6px"><button type="button" class="alt" style="width:auto" data-qb-report="'+html(x.quickbutikProductId)+'">'+(x.stage==='entered_reported'?'Oppdater rapport':'Merk lagt inn')+'</button>'+
+ (x.stage!=='pending'?'<button type="button" class="alt" style="width:auto;margin-left:5px" data-qb-reset="'+html(x.quickbutikProductId)+'">Tilbakestill</button>':'')+'</div></td></tr>').join('')+'</tbody></table>'+
+ (filtered.length?'':'Ingen priser i denne kategorien.');
+ document.querySelectorAll('[data-qb-report],[data-qb-reset]').forEach(button=>button.onclick=async()=>{
+  const id=Number(button.dataset.qbReport||button.dataset.qbReset),row=groupPriceQueue.find(x=>x.quickbutikProductId===id &&
+   (group==='all'||x.group===group));
+  if(!row){message('Velg en bestemt kundegruppe før du registrerer en pris.',true);return;}
+  const stage=button.hasAttribute('data-qb-reset')?'pending':'entered_reported';
+  if(!confirm(stage==='pending'?'Fjerne registreringsstatus?':'Bekrefter du at '+(groupName[row.group]||row.group)+' på Quickbutik-produkt '+id+' er lagret til '+priceText(row.expectedOre)+'? Dette tester IKKE kassen.'))return;
+  try{
+   await api('/admin/group-price-stage',{resource:row.resource,minutes:row.minutes,group:row.group,stage,note:stage==='entered_reported'?'Manuelt bekreftet i admin':'Tilbakestilt'});
+   await loadGroupPriceQueue();
+   message('Registrert i Booking 2.0. Kassebetaling er fortsatt deaktivert.');
+  }catch(e){message('Kunne ikke registrere: '+e.message,true)}
+ });
+}
+async function loadGroupPriceQueue(){
+ try{const data=await api('/admin/group-price-queue');groupPriceQueue=data.queue||[];paintGroupPrices();}
+ catch(e){$('specialPriceSummary').textContent='Kunne ikke hente kundegruppepriser: '+e.message;}
+}
+$('specialPriceGroup').onchange=paintGroupPrices;
+$('specialPriceStatus').onchange=paintGroupPrices;
+$('refreshSpecialPrice').onclick=loadGroupPriceQueue;
+
 const message=(txt,error=false)=>{$('message').className=error?'note warn':'success';$('message').textContent=txt};
 const minutes=s=>{const [h,m]=s.split(':').map(Number);return h*60+m},HH=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
 const form=f=>Object.fromEntries(new FormData(f).entries());
@@ -161,7 +218,7 @@ const api=async(path,data)=>{
  const resp=await fetch(C.apiUrl+path,{method:data===undefined?'GET':'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
  const parsed=await resp.json();if(!resp.ok)throw Error(parsed.code||'HTTP '+resp.status);return parsed;
 };
-async function refresh(){day=$('day').value||day;const a=await api('/admin/snapshot?date='+encodeURIComponent(day));const c=await api('/availability?date='+encodeURIComponent(day));snapshot=a;render(a,c);}
+async function refresh(){day=$('day').value||day;const a=await api('/admin/snapshot?date='+encodeURIComponent(day));const c=await api('/availability?date='+encodeURIComponent(day));snapshot=a;render(a,c);await loadGroupPriceQueue();}
 function render(a,c){
  $('calendarStatus').textContent=c.bookingEnabled===true?'Kundebooking kan åpnes etter full betalingskontroll.':'KUN INTERN KALENDER: Kundebooking er fortsatt deaktivert. Ledige tidsrom er ikke åpne for kjøp.';
  $('blockList').innerHTML=a.blocks.length?a.blocks.map(b=>`<div class="item"><b>${html(b.label)}</b><br>${html(b.target)} · ${HH(b.start)}–${HH(b.end)}<br><button class="alt" data-unblock="${html(b.id)}">Åpne igjen</button></div>`).join(''):'Ingen aktive sperringer på denne datoen.';
