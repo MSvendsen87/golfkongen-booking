@@ -1,0 +1,38 @@
+name: Booking 2.0 – Rolling 45-day variant staging
+on:
+  schedule:
+    # Europe/Oslo midnight is 22:00 UTC in summer and 23:00 UTC in winter.
+    # Both executions are idempotent; 00:05 local always gets the new last date.
+    - cron: '5 22,23 * * *'
+  workflow_dispatch:
+    inputs:
+      max_new_variants:
+        description: 'Maximum new hidden, zero-stock variants in this run (1-12000)'
+        required: false
+        default: '2000'
+permissions:
+  contents: read
+concurrency:
+  group: golfkongen-booking2-variants
+  cancel-in-progress: false
+jobs:
+  safe-hidden-variant-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout Booking 2.0 preview
+        uses: actions/checkout@v4
+        with:
+          ref: booking-v2-preview-2026-10-24
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit or create ONLY hidden zero-stock variants
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+          GK2_VARIANT_SYNC_WRITE: ${{ vars.GK2_VARIANT_SYNC_WRITE || 'false' }}
+          GK2_MAX_VARIANTS_PER_RUN: ${{ inputs.max_new_variants || '2000' }}
+          GK2_BATCH_SIZE: '25'
+        run: node booking-v2/scripts/quickbutik-rolling-sync.mjs
