@@ -7,7 +7,7 @@
 <section id="unconfigured" class="panel"><h2>Klart for sikker tilkobling</h2><div class="note">Ny Booking 2.0-admin koblet til det isolerte test-API-et. Ekte booking og Quickbutik-synk er deaktivert.</div></section>
 <section id="loginPanel" class="panel hidden" style="max-width:470px"><h2>Administratortilgang</h2><p>Innlogging er bare mulig for de to godkjente kontoene. Sikker tilgang kontrolleres også av serveren.</p><form id="loginForm"><label>E-post<input id="email" type="email" autocomplete="username" required></label><label>Passord<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Logg inn</button></form><p id="loginMsg" role="status"></p></section>
 <section id="app" class="hidden">
- <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button></div>
+ <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button><a href="./booking/" target="_blank" rel="noopener" style="padding:10px;border:1px solid #637961;border-radius:9px;color:#d7bf78;font-weight:800;text-decoration:none">Se kundesiden (test)</a></div>
  <div id="checkout" class="panel hidden"><h2>Kassekontroll – 30-minuttersvarianter</h2><p>Sjekker eksisterende Quickbutik-produkter for HYZR, Dart A og Dart B. <strong>Dette oppretter ingen produkter eller ordre og åpner ikke booking.</strong></p><div class="row"><label>Dato <input type="date" id="checkDay"></label><button id="checkVariants" class="alt" style="width:auto">Kontroller Quickbutik-varianter</button></div><div id="checkResult" class="note" role="status">Velg en dato og trykk «Kontroller». Status for kunderabatter og Pushover må testes separat.</div>
 <h3 style="margin-top:20px">Ny betalingsmodell – én vare per varighet</h3>
 <p>Varighet og kundegruppepris skal være knyttet til samme salgsprodukt. Tidsrommet låses samlet i Booking 2.0. Dagens tre skjulte testprodukter (1474–1476) skal ikke åpnes for salg.</p>
@@ -29,7 +29,7 @@
 <h2>Priser og kundegrupper</h2>
 <div class="note"><strong>Booking 2.0-prisliste – kan redigeres her.</strong> Alle beløp lagres kun i Booking 2.0, ikke i Quickbutik. Kassebetaling og Pushover er fortsatt sperret. Ordrebekreftelse skal bruke serververifisert kundegruppe og pris.</div>
 <h3>Prissammenligning mellom kundegrupper</h3>
-<div class="calendarScroll"><div id="tariffSummary">Laster priser ...</div></div>
+<div class="calendarScroll"><div id="tariffSummary">Laster priser ...</div></div><button id="exportTariffs" type="button" class="alt" style="width:auto;margin-top:10px">Last ned Quickbutik-gruppepriser (CSV)</button><p class="note">Kun oversikt for kontroll og manuell overføring. Eksport synkroniserer ikke priser automatisk til Quickbutik.</p>
 <h3 style="margin-top:20px">Endre en pris</h3>
 <form id="priceForm" class="grid">
  <label>Aktivitet<select name="resource" id="tariffResource"><option value="hyzr">HYZR (én simulator)</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
@@ -199,6 +199,21 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.quer
 const bind=(id,route,transform)=>(()=>{$(id).onsubmit=async e=>{e.preventDefault();try{const d=transform(form(e.target));const result=await api(route,d);message('Lagret i staging. Status: '+(result.status||'registrert'));await refresh();}catch(er){message('Kunne ikke lagre: '+er.message,true)}}})();
 bind('blockForm','/admin/block',b=>({...b,start:minutes(b.startTime),end:minutes(b.endTime)}));
 bind('hoursForm','/admin/hours',b=>({resource:b.resource,weekday:Number(b.weekday),opens:minutes(b.opensTime),closes:minutes(b.closesTime),active:b.active==='true'}));
+$('exportTariffs').onclick=async()=>{
+ try{
+  const plans=(await api('/admin/checkout-design')).plans||[];
+  const byKey=new Map(plans.map(x=>[x.resource+'|'+x.minutes,x.quickbutikProductId]));
+  const labels=Object.fromEntries(tariffGroups);
+  const head=['Kundegruppekode','Kundegruppe','Aktivitet','Varighet minutter','Quickbutik produkt-ID','Pris kroner','Pristype','Godkjent i Quickbutik'];
+  const all=tariffRecords.map(p=>[p.group,labels[p.group]||p.group,p.resource,p.minutes,byKey.get(p.resource+'|'+p.minutes)||'',(p.priceOre/100).toFixed(2).replace('.',','),'Spesifikk produktpris','NEI']);
+  const quote=x=>'"'+String(x).replace(/"/g,'""')+'"';
+  const csv='sep=;\\r\\n'+[head,...all].map(r=>r.map(quote).join(';')).join('\\r\\n');
+  const url=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='golfkongen-booking2-quickbutik-gruppepriser.csv';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  message('CSV med '+all.length+' prisrader lastet ned. Ingen Quickbutik-priser ble endret.');
+ }catch(e){message('CSV kunne ikke opprettes: '+e.message,true);}
+};
 $('tariffResource').onchange=()=>{fillTariffDuration();fillTariffAmount();redrawTariffDetails();};
 $('tariffGroup').onchange=()=>{fillTariffAmount();redrawTariffDetails();};
 $('tariffDuration').onchange=fillTariffAmount;
