@@ -49,3 +49,19 @@ Sikker videre kontroll:
 5. Bruk en eksisterende ordre og gammel Make-historikk read-only for å spore utløseren før ny test.
 
 Ingen endringer i dagens Make/Workers/Pushover må gjennomføres før dette er dokumentert.
+
+## 25.10.2026 – aktiv ordre-til-Pushover Worker nå bekreftet
+
+**Bekreftet fra live Worker-kilden som eieren limte inn (ikke publisert av oss):** `nameless-feather-dbf3` tar `event_type` og `order_id` fra URL, godtar `order.new` (også manglende event_type), henter `v1/orders?order_id=...&include_details=true` med Cloudflare `QB_API_KEY` og sender direkte til Pushover `/1/messages.json`. Produktene 1316/1317/1320/1322/1349 lager varsel; 1318 inngår bare som pilsettinfo.
+
+**KRITISK:** Koden hadde **virkelige Pushover-token og brukernøkkel hardkodet**, nå delt i chat. De skal IKKE kopieres inn i repo/dokumenter/tester. Roter Pushover-applikasjonstoken så snart det kan koordineres med en fungerende varsling. Vurder også fornying av brukernøkkel; lagre begge kun som Cloudflare Secrets.
+
+Svakheter i dagens Worker: ingen autentisering av webhook-forespørselen, ingen streng betalingssjekk, ingen varig deduplisering, mulig varsling fra ubekreftede ordrer, ingen idempotent retry-prosess. Ordrelinjer kan resultere i flere Pushover-meldinger (som kan være riktig ved flere separate bookinglinjer); én booking med halvtimeblokker skal ikke generere en melding per blokk.
+
+**Kontroll i tilkoblet Quickbutik-verktøy:** eksistende, betalte ordre viste normalisert `paymentStatus: paid`, og `fulfillmentStatus: completed`. Den eksakte navngivningen i *rå Quickbutik v1 REST JSON* må fortsatt inspiseres (kan hete `payment_status`); bruk streng allowlist, ikke anta at `completed` alene betyr betalt.
+
+**Staging-artifakt, ikke deployet:** `GolfKongen_Pushover_V2_STAGING.zip` (samtalevedlegg) med `booking-push-worker.mjs`, `booking-push-worker.test.mjs`, `schema.sql`, `README.md`. 48/48 lokale tester bestått. Ny Worker krever autentisert POST-header, gyldig `paymentStatus=paid`/`payment_status=paid`, egen Cloudflare D1-tabell med unik dedupliseringsnøkkel per ordrelinje, Cloudflare Secrets og eksplisitt `PUSH_ENABLED=true`. Uklart leveringsutfall krever manuell vurdering, ikke blindt automatisk nytt varsel. Koden er utviklingsutkast og ikke integrasjonstestet mot faktisk rå Quickbutik eller D1.
+
+**Nødvendig før publisering:** 1) verifiser rå v1-felt fra en anonymisert faktisk betalt ordre, 2) finn betalt-event eller sikker betalingsavstemming for ordre som var ubetalt ved `order.new`, 3) test en kontrollert faktisk booking i separat staging, 4) roter nøkler og endre Make-endepunkt kontrollert med rollback; 5) bevar eksisterende varsling under overgangen.
+
+**Produksjon uendret**: ingen webhook, Cloudflare Worker, Pushover-token, Quickbutik, medlemstabeller eller bookingregler endret.
