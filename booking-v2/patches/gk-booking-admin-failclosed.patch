@@ -4,7 +4,8 @@
  /* ------------------------------------------------ */
  
  async function syncMissingVariants({ env, productId, max, apply }) {
-+  // Sikkerhet: direkte opprettelse må ikke omgå aktive Supabase-stengeregler.
++  // Sikkerhet: denne skriveveien må ikke brukes til å opprette tider uten kontroll
++  // av sentrale stengeregler. Bruk den regelkontrollerte maintain-ruten.
 +  if (apply) {
 +    return json({
 +      ok: false,
@@ -14,12 +15,15 @@
 +  }
 +
    const productConfig = getBookingProductConfig(productId);
+   if (!productConfig) return unknownProduct(productId);
+ 
 @@ -730,6 +740,17 @@
    if (!productConfigs.length) return unknownProduct(productId);
  
    const rulesConfig = await getPublicBookingRulesConfig();
 +
-+  // Fail closed: muter aldri bookingprodukter hvis Supabase-reglene mangler.
++  // Fail closed: cron/maintain skal ALDRI oppdatere Quickbutik med tomme
++  // reserve-regler dersom databasen er utilgjengelig eller gir feil.
 +  if (!rulesConfig || !rulesConfig.ok || rulesConfig.source !== "supabase") {
 +    return json({
 +      ok: false,
@@ -30,3 +34,4 @@
 +  }
  
    if (rulesConfig && rulesConfig.source === "supabase") {
+     BOOKING_CONFIG.closedDates = rulesConfig.closedDates || [];
