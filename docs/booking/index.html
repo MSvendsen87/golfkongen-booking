@@ -15,19 +15,19 @@
  <label>Dato<input id="gk-v2-day" type="date" required></label>
  <label>Varighet<select id="gk-v2-duration"><option value="30">30 min</option><option value="60" selected>1 time</option><option value="90">1,5 time</option><option value="120">2 timer</option><option value="150">2,5 timer</option><option value="180">3 timer</option><option value="210">3,5 timer</option><option value="240">4 timer</option></select></label>
 </form>
-<h3>Tilgjengelige tider</h3><p id="gk-v2-status">Se tilgjengelige tider fra 1. november. Betaling er ikke aktivert.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Prisen for din kundegruppe verifiseres i Quickbutik før betaling. Ingen testpris vises som endelig pris.</div>
+<h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Bookingkalenderen oppdateres automatisk hver dag. Minst 45 dager frem.</p><p id="gk-v2-status">Se tilgjengelige tider fra 1. november. Betaling er ikke aktivert.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Prisen for din kundegruppe verifiseres i Quickbutik før betaling. Ingen testpris vises som endelig pris.</div>
 <div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span style="font-weight:700;color:#f8d28f">Booking åpner når kontrollene er godkjent</span></div>
 <div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling senest 20 minutter før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler (ikke toalett).</p><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar vilkårene.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
 <script>
 (function(){'use strict';
 // Public read-only endpoint requires genuine staging API. Keep checkout disabled until Quickbutik adapter is verified.
 var CONF={apiUrl:'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2',checkoutVerified:false};
-var $=id=>document.getElementById(id),selected=null,snapshot=null;
+var $=id=>document.getElementById(id),selected=null,snapshot=null,currentDayOslo='';
 
 function draw(){
  selected=null;$('gk-v2-continue').disabled=true;
  if(!CONF.apiUrl){$('gk-v2-status').textContent='Booking åpnes etter kontroll av betaling og sikkerhet.';return}
- var d=$('gk-v2-day').value;if(!d)return; if(d<'2026-11-01'){$('gk-v2-status').textContent='Første bookbare dato er 1. november 2026.';$('gk-v2-times').textContent='';return;}
+ var d=$('gk-v2-day').value;if(!d)return; if(d<$('gk-v2-day').min||d>$('gk-v2-day').max){$('gk-v2-status').textContent='Dato utenfor 45-dagersvinduet.';$('gk-v2-times').textContent='';return;} if(d<'2026-11-01'){$('gk-v2-status').textContent='Første bookbare dato er 1. november 2026.';$('gk-v2-times').textContent='';return;}
  $('gk-v2-status').textContent='Henter tilgjengelige tider …';$('gk-v2-times').textContent='';
  fetch(CONF.apiUrl+'/availability?date='+encodeURIComponent(d),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Kunne ikke hente kalender');return r.json()}).then(a=>{snapshot=a;render(a)}).catch(()=>{$('gk-v2-status').textContent='Kalenderen er midlertidig utilgjengelig.'})
 }
@@ -59,12 +59,37 @@ $('gk-v2-cancel').onclick=()=>{$('gk-v2-terms').hidden=true};
 $('gk-v2-submit').onclick=()=>{if(!$('gk-v2-accept').checked||!CONF.checkoutVerified)return; // no checkout adapter until verified
  $('gk-v2-terms').hidden=true;$('gk-v2-status').textContent='Bookingflyt er sperret inntil Quickbutik-checkout er koblet og testet.';
 };
-var today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-$('gk-v2-day').min='2026-11-01';
-var end=new Date(Date.now()+40*86400000).toISOString().slice(0,10);
-$('gk-v2-day').max=end;
-$('gk-v2-day').value=today<'2026-11-01'?'2026-11-01':today;
-fillDurations();draw();
+var osloDay=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+var plusCalendarDays=(iso,days)=>new Date(Date.parse(iso+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);
+function updateRollingWindow(options){
+ options=options||{};
+ var today=osloDay(),first=today<'2026-11-01'?'2026-11-01':today,last=plusCalendarDays(today,45);
+ var changed=currentDayOslo!==today,oldValue=$('gk-v2-day').value;
+ currentDayOslo=today;$('gk-v2-day').min=first;$('gk-v2-day').max=last;
+ if(!oldValue||oldValue<first)$('gk-v2-day').value=first;
+ else if(oldValue>last)$('gk-v2-day').value=last;
+ var fmt=iso=>new Intl.DateTimeFormat('nb-NO',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(iso+'T12:00:00Z'));
+ $('gk-v2-window-label').textContent='Kalender: '+fmt(first)+' – '+fmt(last)+'. Siste dato flyttes automatisk én dag frem ved midnatt (norsk tid).';
+ if(changed||options.forceDraw)draw();
+}
+async function verifyServerWindow(){
+ try{
+  var response=await fetch(CONF.apiUrl+'/window',{cache:'no-store'});
+  if(!response.ok)throw Error('booking_window_unavailable');
+  var w=await response.json();
+  if(w.ok&&w.todayOslo===currentDayOslo){
+   if(w.firstBookable!==$('gk-v2-day').min||w.lastBookable!==$('gk-v2-day').max){
+    $('gk-v2-status').textContent='Kalendergrenser oppdateres. Prøv å oppdatere siden.';
+    $('gk-v2-continue').disabled=true;
+   }
+  }
+ }catch(_){/* Booking remains locked; GET /availability and DB hold still enforce dates. */}
+}
+fillDurations();
+updateRollingWindow({forceDraw:true});
+verifyServerWindow();
+// Update a page left open overnight: no cron needed for the calendar itself.
+setInterval(()=>{var old=currentDayOslo;updateRollingWindow();if(old!==currentDayOslo)verifyServerWindow()},60000);
 })();
 </script>
 </section></main></body></html>
