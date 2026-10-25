@@ -185,12 +185,13 @@ function paintGroupPrices(){
  filtered.map(x=>'<tr><td>'+html(groupName[x.group]||x.group)+'</td><td>'+html(resourceNames[x.resource])+'</td><td>'+html(x.minutes)+' min</td><td><strong>'+html(x.quickbutikProductId)+'</strong></td>'+
  '<td>'+html(priceText(x.regularOre))+'</td><td><b>'+html(priceText(x.expectedOre))+'</b></td>'+
  '<td>'+html({pending:'Mangler',entered_reported:'Lagt inn (ikke testet)',checkout_verified:'Kassetestet',stale_price:'Pris endret – må kontrolleres på nytt'}[x.stage]||x.stage)+
- '<div style="margin-top:6px"><button type="button" class="alt" style="width:auto" data-qb-report="'+html(x.quickbutikProductId)+'">'+(x.stage==='entered_reported'?'Oppdater rapport':'Merk lagt inn')+'</button>'+
- (x.stage!=='pending'?'<button type="button" class="alt" style="width:auto;margin-left:5px" data-qb-reset="'+html(x.quickbutikProductId)+'">Tilbakestill</button>':'')+'</div></td></tr>').join('')+'</tbody></table>'+
+ '<div style="margin-top:6px"><button type="button" class="alt" style="width:auto" data-qb-report="'+html(x.quickbutikProductId)+'" data-qb-resource="'+html(x.resource)+'" data-qb-minutes="'+html(x.minutes)+'" data-qb-group="'+html(x.group)+'">'+(x.stage==='entered_reported'?'Oppdater rapport':'Merk lagt inn')+'</button>'+
+ (x.stage!=='pending'?'<button type="button" class="alt" style="width:auto;margin-left:5px" data-qb-reset="'+html(x.quickbutikProductId)+'" data-qb-resource="'+html(x.resource)+'" data-qb-minutes="'+html(x.minutes)+'" data-qb-group="'+html(x.group)+'">Tilbakestill</button>':'')+'</div></td></tr>').join('')+'</tbody></table>'+
  (filtered.length?'':'Ingen priser i denne kategorien.');
  document.querySelectorAll('[data-qb-report],[data-qb-reset]').forEach(button=>button.onclick=async()=>{
-  const id=Number(button.dataset.qbReport||button.dataset.qbReset),row=groupPriceQueue.find(x=>x.quickbutikProductId===id &&
-   (group==='all'||x.group===group));
+  const id=Number(button.dataset.qbReport||button.dataset.qbReset),row=groupPriceQueue.find(x=>
+   x.quickbutikProductId===id && x.group===button.dataset.qbGroup &&
+   x.resource===button.dataset.qbResource && x.minutes===Number(button.dataset.qbMinutes));
   if(!row){message('Velg en bestemt kundegruppe før du registrerer en pris.',true);return;}
   const stage=button.hasAttribute('data-qb-reset')?'pending':'entered_reported';
   if(!confirm(stage==='pending'?'Fjerne registreringsstatus?':'Bekrefter du at '+(groupName[row.group]||row.group)+' på Quickbutik-produkt '+id+' er lagret til '+priceText(row.expectedOre)+'? Dette tester IKKE kassen.'))return;
