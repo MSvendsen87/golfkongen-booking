@@ -68,3 +68,11 @@ Ingen faktisk produksjonsmigrering er autorisert per nå.
 - Krev serverdokumentasjon av vilkårsgodkjenning (tid/versjon/ordre); dagens dartkode spør bare én gang per dag lokalt.
 - Se `booking-v2/PILSETT_OG_VILKAR_2026-10-25.md` for implementasjon og kontrolltester.
 - Minst **45 dagers** rullerende bookinghorisont var tidligere besluttet; rett eldre 40-dagers forslag før implementering.
+
+## Mobilkontroll 26.10.2026 – 33 produkter, 121 prisinnføringer, Quickbutik-bulkpause
+- Eier viser fra **staging-admin**: Ansatte + HYZR + 1 time = **15 kr** i `Hent sikker pris`. Dette er bare serverens adminvisning; Quickbutik-kassen er fortsatt låst. Ingen Quickbutik-ordre opprettet.
+- Read-only staging-kontroll: **33** `checkout_product_plans`, **0** ready, **0** published, **0** group-price checkout verified. `gk2_private.group_price_entry_status`: **121** `entered_reported` / 121 totalt, ingen markert `checkout_verified`. **Ikke be eieren legge dem inn om igjen**.
+- Read-only Quickbutik: **1477** (HYZR 1 time) ordinær pris **150 kr**, skjult, én skjult variant med lager 0. En ansattpris på **15 kr** kan ikke verifiseres via produkt-GET.
+- Sikkerhetsretting i staging-grenen: `booking-v2/scripts/quickbutik-rolling-sync.mjs` avviser nå **alle bulk write-forsøk eksplisitt før PUT** dersom `GK2_VARIANT_SYNC_WRITE=true`; read-only/dry-run skal fortsatt være tilgjengelig. Årsak: pilot viste at Quickbutik `variants.add` kan lage `hidden=false` selv ved skjult produkt, og raw API kan returnere `visible:null`. Ingen live produkter eller varianter endret. Først bygg og test etterlesing/oppdatering av skjult-status med én variant, og godkjenn kontrollert bulk.
+- Neste reelle leveranse er **trygg verifisert Quickbutik-gruppepris og checkout hold -> betalt webhook -> Pushover**, ikke flere UI-prototyper, ikke nye kundegruppeprodukter.
+- Ikke trykk på «publiser» eller sett lager >0 på noen av de 33 testvarene. Forretningsreglene har 8 release gates (alle FALSE i siste kontroll).
