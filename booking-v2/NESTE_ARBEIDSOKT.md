@@ -52,3 +52,12 @@ Ingen faktisk produksjonsmigrering er autorisert per nå.
 - Før produksjon kartlegg alle grupper, medlemskilde, rabattsammenlegging, gavekort og Quickbutik checkout-pris. **Ikke anta at de tre navngitte ordningene er hele listen.**
 - Autorisert innlogging og faktisk gruppeprivilegium skal kontrolleres server-side. Test både gjest, ansatte, klubber, Team GolfKongen, sammensatte grupper og forsøk på prismanipulering.
 - Ingen aktivering uten at alle eksisterende rabattordninger som gjelder booking fungerer og er testet.
+
+## 25.10.2026 – eksisterende medlemsregister og popup funnet, sentral admin demonstrert
+- **Bruk funnet eksisterende ark**: `Lyngdal Dartklubb medlemsliste`, fanen `Medlemmer` (Google Sheets-id `17jhezENGfYxgIV-Rzwrippc054vLERH5j4dUwlvXxb8`), 24 aktive oppføringer per read-only-kontroll. Ikke lag kopiregister!
+- Eksisterende `MSvendsen87/gk-member-popup.js` bygger popup på `/customer/index`, medlemdata fra Cloudflare `/club-members`; `MSvendsen87/ldk-clubgate` leser samme endepunkt.
+- **Kritiske forskjeller**: Sheets bruker gruppe-koder i kombinasjoner, mens Quickbutik har 7 kundegrupper og egne rabattregler. Workerens direkte kobling til Sheet er ennå ikke beviselig verifisert.
+- Dagens popup `findMember` tillater matching på bare navn – ikke bruk dette til sikker tilgang eller rabatt. `resolveBenefits` prioriterer bare ett butikkfordelstekstfelt, så kombinert frisbee+dart kan vises ufullstendig. Begge må rettes i kontrollert neste versjon, ikke produksjonskode direkte.
+- Eget GitHub-arbeidsnotat: `booking-v2/MEDLEMSSENTER_KARTLEGGING.md`.
+- **Eksisterende Booking 2.0-forhåndsvisning utvidet** som ny nedlastbar `booking-v2-members-preview.html` + zip `GolfKongen_Booking_2_0_medlemssenter_demo.zip` med admin-fanen `Medlemmer & fordeler` (oversikt, fiktive medlemmer med CRUD, gruppepriser, popup-forhåndsvisning). Testet Chromium desktop/mobil og sikret at HTML fra testmedlemsnavn escapes. Endringer gjelder bare lokal demo, ikke live. Behold dette visuelle oppsettet, ikke bygg en ny separat admin.
+- **Neste reelle steg**: undersøke Cloudflare Worker-koden/Apps Script-mapping, Quickbutik-tilgang til sikre customer groups API, og etablere trygg synkverifisering; må kontrollere ekte kassebeløp før medlemshåndtering kan endre rettigheter live. Ikke bruk usikre nettlesermatcher, og ikke skriv personopplysninger til repo.
