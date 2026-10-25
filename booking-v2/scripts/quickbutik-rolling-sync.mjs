@@ -8,7 +8,18 @@ import {readFileSync} from "node:fs";
 
 const manifest=JSON.parse(readFileSync(new URL("../data/quickbutik-duration-manifest.json",import.meta.url),"utf8"));
 const key=process.env.GK2_QUICKBUTIK_API_KEY||"";
-const write=process.env.GK2_VARIANT_SYNC_WRITE==="true";
+const writeRequested=process.env.GK2_VARIANT_SYNC_WRITE==="true";
+// Verified 25.10.2026: Quickbutik variants.add does NOT preserve hidden=true.
+// The raw API may return visible:null after a PUT even for a hidden parent.
+// Stock=0 and a hidden parent are useful safeguards, but do not establish a
+// supported, verified hidden-variant bulk-write protocol. Keep reads working
+// while rejecting write mode BEFORE the first product/API write.
+// Re-enable only after a tested adapter explicitly verifies both product and
+// per-variant visibility/stock, with a safe recovery procedure.
+if (writeRequested) {
+  throw Error("SAFETY STOP: Booking2 bulk Quickbutik variants.add disabled. New variants default hidden=false; implement a verified hide/readback flow and repeat the single-hidden-variant pilot before any bulk write.");
+}
+const write=false;
 const maxNew=Number(process.env.GK2_MAX_VARIANTS_PER_RUN||2000);
 if(!Number.isSafeInteger(maxNew)||maxNew<1||maxNew>12000)throw Error("Unsafe maxNew budget; expected integer 1..12000");
 const chunkSize=Number(process.env.GK2_BATCH_SIZE||25);
