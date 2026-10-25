@@ -31,3 +31,40 @@ Booking 2.0 **kan ikke publiseres** før aktivt gruppesystem, alle eksisterende 
 - Quickbutik sier at mer enn én aktiv rabatt på **hele ordren** kombineres; standardrabatt og rabattkode kan ikke kombineres på samme produkt; én rabattkode per ordre; rabatt på én bestemt variant støttes ikke i standard rabattfunksjon. Verifiser faktisk butikkinnstilling før implementering: https://quickbutik.com/no/hjelp/hvordan-oppretter-jeg-rabatter-i-quickbutik
 - Dagens booking-JS legger varer i kassen med `/cart/add` og konkret `product_id` + `variant`, mens den viser pris fra produkt/variant. Frontenden har ikke en tydelig autoritativ kundegruppeutregning. **Ikke anta at synlig forhåndspris automatisk er kundens pris i kassen**.
 - Neste konkrete, sikre steg: Eier viser liste over grupper i kontrollpanelet via skjermbilde (uten kundeopplysninger). Deretter kartlegges prisreglene og `Rabatter` (read-only), og til slutt testes korrekt checkout-beløp med innlogget testkonto.
+
+## Bekreftet av eier 25.10.2026: alle sju eksisterende kundegrupper og fordeler
+
+Tabellen er bekreftet av eieren og skjermbilde av Quickbutik-gruppene. Prisene er **ikke** verifisert med den virkelige kassen ennå.
+
+| Eksisterende Quickbutik-kundegruppe | HYZR per time | Dart per time (A/B) | Hele lokalet | Utstyr i butikken |
+| --- | --- | --- | --- | --- |
+| Betalt disc medlemskap + dartklubb | 100 kr | 100 kr | Ordinær | 10 % på disc og dart |
+| Team GolfKongen | 100 kr | Ordinær | Ordinær | 30 % på disc |
+| Frisbee + Dart | 120 kr | 100 kr | Ordinær | 10 % på disc og dart |
+| Ansatte | 98 % rabatt | 98 % rabatt | 98 % rabatt | 30 % på hele butikken |
+| Ambassadører | 100 kr | Ordinær | Ordinær | 15 % på disc |
+| Frisbeeklubber | 120 kr | Ordinær | Ordinær | 10 % på disc |
+| Dartklubber | Ordinær | 100 kr | Ordinær | 10 % på dart |
+
+**Ordinær** = ikke oppgitt en egen gruppespesialpris for aktiviteten; eksisterende generelle tilbud/rabattregler må fortsatt gjelde som før.
+
+**Avgjørende:** Ansatte skal ha 98 % på *booking* (også hele lokalet), 30 % på butikkvarer; ikke automatisk stable 30 % og 98 % på samme booking. Gjenbruk eksisterende Quickbutik-kundegrupper og rabattordninger for utstyr; ikke lag en separat kopi av butikkens rabattmotor.
+
+### Åpent før integrasjon
+- Per-time-satser er avklart for 60 minutter. Må teste/avklare beregning for 30/90/120+ minutter, spesielt avrunding og minimumspris. Ikke gjett 30-minutterspriser.
+- Flere gruppemedlemskap hos samme kunde: bekreft faktisk prioritet og kombinasjonsregler i Quickbutik.
+- Særskilt klubbkveld/andre bookingprodukter: verifiser om de er del av «all booking» for ansatte.
+- Vist pris før checkout må matche korrekt innlogget pris i handlekurven og betalt ordre, med gyldige rabattkoder/gavekort.
+- Pushover må sende faktisk totalbeløp for bekreftet booking, ikke generell listepris.
+- Gruppeidentifikasjon og pris valideres server-side mot Quickbutik; aldri stol på UI-valg, lokale variabler eller bare oppgitt e-post.
+
+### Quickbutik-dokumentasjon
+Quickbutik støtter generell grupperabatt og produktspesifikke priser. Produktspesifikk pris kan overstyre generell grupperabatt: https://quickbutik.com/no/hjelp/hvordan-tilpasser-jeg-priser-for-en-kundegruppe
+
+Gruppespesifikk kampanjerabatt kan være synlig først i checkout: https://quickbutik.com/no/hjelp/hvordan-aktiverer-jeg-en-rabattkampanje-spesifikt-for-kundegruppe
+
+### Neste verifikasjon i kontrollpanelet
+1. Klikk rediger (blyant) på **Ansatte** i `Kunder > Kundegrupper`. Se kun generelt prisavslag og eventuelle spesifikke priser for bookingprodukter, uten kundedata.
+2. Deretter åpne Team GolfKongen og Frisbeeklubber for et eksempel på hver timepris (100/120).
+3. Se bookingproduktene 1316, 1317, 1320, 1349 samt rabattoversikten for mulige tilleggsregler. Ikke lagre eller endre noe ennå.
+4. Etter verifisering velges egnet testkunde for en kontrollert checkout-test og Pushover-verifisering uten risiko for nye faktiske bookinger.
