@@ -1,3 +1,4 @@
+import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -61,6 +62,20 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="GET"&&path==="/admin/snapshot"){
     const day=u.searchParams.get("date")||"";if(!validDate(day))return err("invalid_date",400,origin);
     return reply({ok:true,...await rpc("gk2_admin_snapshot",{p_actor:user.email,p_day:day})},200,origin);
+  }
+  if(req.method==="GET"&&path==="/admin/checkout-preflight"){
+    const day=u.searchParams.get("date")||"";
+    if(!validDate(day))return err("invalid_date",400,origin);
+    const catalogs=await Promise.all(Object.entries(PRODUCT_IDS).map(async ([resource,pid])=>{
+      const response=await fetch("https://cold-shadow-36dc.post-cd6.workers.dev/products/"+pid,{
+        headers:{"Accept":"application/json"},signal:AbortSignal.timeout(12000)
+      });
+      if(!response.ok)throw Error("catalog_unavailable:"+resource);
+      const body=await response.json();
+      if(!body?.product||!Array.isArray(body.product.variants))throw Error("invalid_catalog:"+resource);
+      return [resource,body.product];
+    }));
+    return reply({ok:true,...auditDayCatalog({date:day,products:Object.fromEntries(catalogs)})},200,origin);
   }
   if(req.method!=="POST")return err("method_not_allowed",405,origin);
   const b=await body(req);
