@@ -91,19 +91,13 @@ Deno.serve(async (req:Request)=>{
           && v.hidden!==true && Number(v.stock??v.qty)>0).length,
         checkoutEnabled:false};
     }));
-    const proposedHalfhour=[ // DRAFT ONLY: based on owner's previously specified hourly rates
-      {group:"Ordinær",hyzr:75,dart:60},
-      {group:"Betalt disc-medlemskap + dartklubb",hyzr:50,dart:50},
-      {group:"Team GolfKongen",hyzr:50,dart:60},
-      {group:"Frisbee + Dart",hyzr:60,dart:50},
-      {group:"Ansatte (98 % rabatt)",hyzr:1.5,dart:1.2},
-      {group:"Ambassadører",hyzr:50,dart:60},
-      {group:"Frisbeeklubber",hyzr:60,dart:60},
-      {group:"Dartklubber",hyzr:75,dart:50},
-    ];
     return reply({ok:true,...auditDayCatalog({date:day,products:Object.fromEntries(catalogs)}),
-      stagingProducts:stage,proposedHalfhourPrices:proposedHalfhour,
-      pricesApproved:false,checkoutEnabled:false,existingPushoverUntouched:true},200,origin);
+      stagingProducts:stage,pricesControlledInAdmin:true,pricesApproved:false,
+      checkoutEnabled:false,existingPushoverUntouched:true},200,origin);
+  }
+  if(req.method==="GET"&&path==="/admin/price-matrix"){
+    const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
+    return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
   }
   if(req.method!=="POST")return err("method_not_allowed",405,origin);
   const b=await body(req);
@@ -117,9 +111,10 @@ Deno.serve(async (req:Request)=>{
    return reply({ok:true,id:await rpc("gk2_admin_block",{p_actor:a,p_target:b.target,p_from:b.dateFrom,p_to:b.dateTo,p_start:b.start,p_end:b.end,p_label:b.label,p_weekdays:Array.isArray(b.weekdays)?b.weekdays:null})},200,origin);
   }
   if(path==="/admin/unblock")return reply({ok:true,changed:await rpc("gk2_admin_unblock",{p_actor:a,p_id:b.id})},200,origin);
-  if(path==="/admin/price-draft"){
-   if(!Number.isInteger(b.minutes)||!Number.isInteger(b.ore))return err("invalid_price",400,origin);
-   return reply({ok:true,id:await rpc("gk2_admin_price_draft",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_ore:b.ore,p_note:b.note||""}),status:"draft_not_applied_in_quickbutik"},202,origin);
+  if(path==="/admin/price-draft"||path==="/admin/price-save"){
+   if(!Number.isInteger(b.minutes)||!Number.isInteger(b.ore)||b.ore<0||b.ore>10000000)return err("invalid_price",400,origin);
+   const saved=await rpc("gk2_admin_save_price",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_price_ore:b.ore,p_note:b.note||""});
+   return reply({ok:true,...saved,status:"saved_in_staging_not_quickbutik",checkoutEnabled:false},200,origin);
   }
   if(path==="/admin/member-request"){
    return reply({ok:true,id:await rpc("gk2_admin_request_membership",{p_actor:a,p_email:b.email,p_group:b.group,p_action:b.action}),status:"pending_external_sync"},202,origin);
