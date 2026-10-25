@@ -61,3 +61,10 @@ Ingen faktisk produksjonsmigrering er autorisert per nå.
 - Eget GitHub-arbeidsnotat: `booking-v2/MEDLEMSSENTER_KARTLEGGING.md`.
 - **Eksisterende Booking 2.0-forhåndsvisning utvidet** som ny nedlastbar `booking-v2-members-preview.html` + zip `GolfKongen_Booking_2_0_medlemssenter_demo.zip` med admin-fanen `Medlemmer & fordeler` (oversikt, fiktive medlemmer med CRUD, gruppepriser, popup-forhåndsvisning). Testet Chromium desktop/mobil og sikret at HTML fra testmedlemsnavn escapes. Endringer gjelder bare lokal demo, ikke live. Behold dette visuelle oppsettet, ikke bygg en ny separat admin.
 - **Neste reelle steg**: undersøke Cloudflare Worker-koden/Apps Script-mapping, Quickbutik-tilgang til sikre customer groups API, og etablere trygg synkverifisering; må kontrollere ekte kassebeløp før medlemshåndtering kan endre rettigheter live. Ikke bruk usikre nettlesermatcher, og ikke skriv personopplysninger til repo.
+
+## 25.10.2026: pilsett og vilkår – kontrollert og lagt til mobilprototype
+- Oppdatert HTML-prototype i samtalepakken `GolfKongen_Booking_2_0_MOBIL_20261025.zip` med valgfritt 0–6 pilsett à 25 kroner ved dart/hele lokalet, en oppsummering og avkryssing som låser demosendingsknappen inntil vilkår er godkjent.
+- Dette gjenbruker dagens Quickbutik-produkt 1318 og lenke til nåværende bookingvilkår. Pilsett skal følge bookingen i samme betalte ordre. Ingen automatisk tillegg ved bytte til HYZR.
+- Krev serverdokumentasjon av vilkårsgodkjenning (tid/versjon/ordre); dagens dartkode spør bare én gang per dag lokalt.
+- Se `booking-v2/PILSETT_OG_VILKAR_2026-10-25.md` for implementasjon og kontrolltester.
+- Minst **45 dagers** rullerende bookinghorisont var tidligere besluttet; rett eldre 40-dagers forslag før implementering.
