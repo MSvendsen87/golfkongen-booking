@@ -75,7 +75,35 @@ Deno.serve(async (req:Request)=>{
       if(!body?.product||!Array.isArray(body.product.variants))throw Error("invalid_catalog:"+resource);
       return [resource,body.product];
     }));
-    return reply({ok:true,...auditDayCatalog({date:day,products:Object.fromEntries(catalogs)})},200,origin);
+    const stagingIds={hyzr:1474,dart_a:1475,dart_b:1476};
+    const stage=await Promise.all(Object.entries(stagingIds).map(async ([resource,pid])=>{
+      const response=await fetch("https://cold-shadow-36dc.post-cd6.workers.dev/products/"+pid,{
+        headers:{"Accept":"application/json"},signal:AbortSignal.timeout(12000)
+      });
+      if(!response.ok)throw Error("staging_catalog_unavailable:"+resource);
+      const body=await response.json();
+      if(!body?.product||!Array.isArray(body.product.variants))throw Error("invalid_staging_catalog:"+resource);
+      return {resource,productId:pid,productHidden:body.product.visible===false,
+        totalVariants:body.product.variants.length,
+        sampleTestVariantExists:body.product.variants.some(v=>v.sku===day+"-1000-1030" && v.hidden===true && Number(v.stock??v.qty)===0),
+        readyHalfhours:body.product.variants.filter(v=>v.sku?.startsWith(day+"-")
+          && /^\\d{4}-\\d{2}-\\d{2}-\\d{4}-\\d{4}$/.test(v.sku)
+          && v.hidden!==true && Number(v.stock??v.qty)>0).length,
+        checkoutEnabled:false};
+    }));
+    const proposedHalfhour=[ // DRAFT ONLY: based on owner's previously specified hourly rates
+      {group:"Ordinær",hyzr:75,dart:60},
+      {group:"Betalt disc-medlemskap + dartklubb",hyzr:50,dart:50},
+      {group:"Team GolfKongen",hyzr:50,dart:60},
+      {group:"Frisbee + Dart",hyzr:60,dart:50},
+      {group:"Ansatte (98 % rabatt)",hyzr:1.5,dart:1.2},
+      {group:"Ambassadører",hyzr:50,dart:60},
+      {group:"Frisbeeklubber",hyzr:60,dart:60},
+      {group:"Dartklubber",hyzr:75,dart:50},
+    ];
+    return reply({ok:true,...auditDayCatalog({date:day,products:Object.fromEntries(catalogs)}),
+      stagingProducts:stage,proposedHalfhourPrices:proposedHalfhour,
+      pricesApproved:false,checkoutEnabled:false,existingPushoverUntouched:true},200,origin);
   }
   if(req.method!=="POST")return err("method_not_allowed",405,origin);
   const b=await body(req);
