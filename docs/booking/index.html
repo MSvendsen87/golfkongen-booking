@@ -15,9 +15,22 @@
  <label>Dato<input id="gk-v2-day" type="date" required></label>
  <label>Varighet<select id="gk-v2-duration"><option value="30">30 min</option><option value="60" selected>1 time</option><option value="90">1,5 time</option><option value="120">2 timer</option><option value="150">2,5 timer</option><option value="180">3 timer</option><option value="210">3,5 timer</option><option value="240">4 timer</option></select></label>
 </form>
+<div id="gk-v2-dartsets" class="gk-v2-note" hidden style="margin:12px 0">
+  <label for="gk-v2-sets-qty" style="font-weight:700;display:block;margin-bottom:6px">Leie av dartpiler – 25 kr per sett (valgfritt)</label>
+  <select id="gk-v2-sets-qty" style="width:100%;max-width:240px;padding:10px;border:1px solid #547960;border-radius:10px;background:#18271e;color:#f6f8f4">
+    <option value="0">Ingen pilsett – 0 kr</option>
+    <option value="1">1 pilsett – 25 kr</option>
+    <option value="2">2 pilsett – 50 kr</option>
+    <option value="3">3 pilsett – 75 kr</option>
+    <option value="4">4 pilsett – 100 kr</option>
+    <option value="5">5 pilsett – 125 kr</option>
+    <option value="6">6 pilsett – 150 kr</option>
+  </select>
+  <p style="margin:7px 0 0;font-size:13px">Legges til kun hvis du velger pilsett. Gjelder dart og leie av hele lokalet.</p>
+</div>
 <h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Bookingkalenderen oppdateres automatisk hver dag. Minst 45 dager frem.</p><p id="gk-v2-status">Se tilgjengelige tider fra 1. november. Betaling er ikke aktivert.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Prisen for din kundegruppe verifiseres i Quickbutik før betaling. Ingen testpris vises som endelig pris.</div>
 <div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span style="font-weight:700;color:#f8d28f">Booking åpner når kontrollene er godkjent</span></div>
-<div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling senest 20 minutter før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler (ikke toalett).</p><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar vilkårene.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
+<div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling senest 20 minutter før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler (ikke toalett).</p><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener noreferrer" style="color:#f2d18a;text-decoration:underline">bookingvilkårene</a>.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
 <script>
 (function(){'use strict';
 // Public read-only endpoint requires genuine staging API. Keep checkout disabled until Quickbutik adapter is verified.
@@ -45,13 +58,26 @@ function render(a){
  }
  $('gk-v2-times').innerHTML=html;$('gk-v2-status').textContent=a.bookingEnabled?possible+' tilgjengelige starttider':'Forhåndsvisning – booking er foreløpig stengt';
  $('gk-v2-times').querySelectorAll('button:not(:disabled)').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.time);$('gk-v2-times').querySelectorAll('button').forEach(c=>c.classList.toggle('selected',c===b));$('gk-v2-continue').disabled=!(CONF.checkoutVerified&&a.bookingEnabled)});
- if(!CONF.checkoutVerified)$('gk-v2-summary').textContent='Ingen betaling er tilgjengelig før prisregler, bookingkonflikter og varslinger er kontrollert.';
+ updateSummary();
+}
+function updateSummary(){
+  var r=$('gk-v2-resource').value;
+  var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
+  var extras=qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
+  $('gk-v2-summary').textContent='Bookingprisen for din kundegruppe bekreftes i Quickbutik-kassen.'+extras+' Betaling er ikke aktivert i denne forhåndsvisningen.';
+}
+function refreshDartSets(){
+  var show=$('gk-v2-resource').value!=='hyzr';
+  $('gk-v2-dartsets').hidden=!show;
+  if(!show)$('gk-v2-sets-qty').value='0';
+  updateSummary();
 }
 function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),old=Number(d.value);
  var durations=v==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
  d.innerHTML=durations.map(m=>'<option value="'+m+'">'+(m>=60?(m/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' timer':m+' min')+'</option>').join('');
  d.value=String(durations.includes(old)?old:(v==='venue'?240:60));}
-$('gk-v2-resource').onchange=()=>{fillDurations();draw()};
+$('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();draw()};
+$('gk-v2-sets-qty').onchange=updateSummary;
 $('gk-v2-duration').onchange=draw;$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified)return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
 $('gk-v2-accept').onchange=()=>{$('gk-v2-submit').disabled=!$('gk-v2-accept').checked};
@@ -86,6 +112,7 @@ async function verifyServerWindow(){
  }catch(_){/* Booking remains locked; GET /availability and DB hold still enforce dates. */}
 }
 fillDurations();
+refreshDartSets();
 updateRollingWindow({forceDraw:true});
 verifyServerWindow();
 // Update a page left open overnight: no cron needed for the calendar itself.
