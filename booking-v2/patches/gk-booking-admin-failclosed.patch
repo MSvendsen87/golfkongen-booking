@@ -1,0 +1,32 @@
+--- gk-booking-admin-original
++++ gk-booking-admin-failclosed-staging
+@@ -414,6 +414,16 @@
+ /* ------------------------------------------------ */
+ 
+ async function syncMissingVariants({ env, productId, max, apply }) {
++  // Sikkerhet: direkte opprettelse må ikke omgå aktive Supabase-stengeregler.
++  if (apply) {
++    return json({
++      ok: false,
++      mode: "apply-blocked",
++      message: "Direkte opprettelse sperret: bruk regelkontrollert maintain-40-days etter vellykket Supabase-synk."
++    }, 409);
++  }
++
+   const productConfig = getBookingProductConfig(productId);
+@@ -730,6 +740,17 @@
+   if (!productConfigs.length) return unknownProduct(productId);
+ 
+   const rulesConfig = await getPublicBookingRulesConfig();
++
++  // Fail closed: muter aldri bookingprodukter hvis Supabase-reglene mangler.
++  if (!rulesConfig || !rulesConfig.ok || rulesConfig.source !== "supabase") {
++    return json({
++      ok: false,
++      mode: "fail-closed",
++      message: "Vedlikehold stoppet: kunne ikke verifisere gjeldende stengeregler og prisregler i Supabase. Ingen produkter er endret.",
++      error: rulesConfig && rulesConfig.error ? rulesConfig.error : "Rules not verified"
++    }, 503);
++  }
+ 
+   if (rulesConfig && rulesConfig.source === "supabase") {
