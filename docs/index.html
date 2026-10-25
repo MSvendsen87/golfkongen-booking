@@ -37,7 +37,7 @@
 <div class="row">
 <label>Kundegruppe<select id="specialPriceGroup"><option value="all">Alle grupper</option><option value="ansatte">Ansatte</option><option value="betalt_medlem">Betalt medlem + dartklubb</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee + Dart</option><option value="ambassador">Ambassadører</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="dartklubb">Dartklubber</option></select></label>
 <label>Status<select id="specialPriceStatus"><option value="open">Gjenstående</option><option value="all">Alle</option><option value="entered_reported">Lagt inn</option><option value="checkout_verified">Testet i kassen</option></select></label>
-<button id="refreshSpecialPrice" class="alt" type="button" style="width:auto">Oppdater oversikten</button>
+<button id="refreshSpecialPrice" class="alt" type="button" style="width:auto">Oppdater oversikten</button><button id="exportPendingGroupPrices" type="button" class="alt" style="width:auto">Last ned 120 gjenstående (CSV)</button>
 </div>
 <div class="calendarScroll"><div id="specialPriceTable">Laster priser ...</div></div>
 </section>
@@ -209,6 +209,26 @@ async function loadGroupPriceQueue(){
 $('specialPriceGroup').onchange=paintGroupPrices;
 $('specialPriceStatus').onchange=paintGroupPrices;
 $('refreshSpecialPrice').onclick=loadGroupPriceQueue;
+$('exportPendingGroupPrices').onclick=async()=>{
+ try {
+  await loadGroupPriceQueue();
+  const outstanding=groupPriceQueue.filter(x=>x.stage==='pending'||x.stage==='stale_price');
+  const names=Object.fromEntries(tariffGroups);
+  const columns=['Kundegruppe','Kundegruppekode','Quickbutik-produkt-ID','Aktivitet','Minutter','Ordinær pris NOK','Spesifikk pris NOK','Status','Merknad'];
+  const rows=outstanding.map(x=>[
+   names[x.group]||x.group,x.group,x.quickbutikProductId,resourceNames[x.resource],x.minutes,
+   (x.regularOre/100).toFixed(2),(x.expectedOre/100).toFixed(2),x.stage,
+   'Legg inn som spesifikk produktpris for kundegruppen i Quickbutik. Ikke endre ordinær pris, synlighet eller lager.'
+  ]);
+  const esc=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+  const csv='\uFEFF'+[columns,...rows].map(row=>row.map(esc).join(';')).join('\r\n');
+  const objectUrl=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const el=document.createElement('a');el.href=objectUrl;el.download='GolfKongen_Booking2_kundegruppepriser_gjenstaende.csv';
+  document.body.appendChild(el);el.click();el.remove();URL.revokeObjectURL(objectUrl);
+  message('Eksportert '+rows.length+' gjenstående spesialpriser – ingen Quickbutik-endringer.');
+ }catch(e){message('Eksport av gjenstående priser feilet: '+e.message,true);}
+};
+
 
 const message=(txt,error=false)=>{$('message').className=error?'note warn':'success';$('message').textContent=txt};
 const minutes=s=>{const [h,m]=s.split(':').map(Number);return h*60+m},HH=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
