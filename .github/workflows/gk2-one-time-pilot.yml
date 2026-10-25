@@ -1,0 +1,24 @@
+name: Booking 2.0 – One hidden variant pilot
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/gk2-one-time-pilot.yml']
+permissions:
+  contents: read
+jobs:
+  pilot-one-hidden-variant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: booking-v2-preview-2026-10-24
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Add and verify exactly one HIDDEN zero-stock slot – no other products
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+          GK2_PILOT_WRITE: 'true'
+        run: node booking-v2/scripts/pilot-hidden-variant.mjs
