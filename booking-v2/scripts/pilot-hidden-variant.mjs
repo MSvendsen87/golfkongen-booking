@@ -18,9 +18,17 @@ async function request(method,body){
 const get=async()=>{
  const response=await request("GET");
  const p=response?.product??response;
- if(!p||Number(p.id)!==TARGET_PRODUCT||!String(p.title||"").startsWith("Booking 2.0")||
-  !["0","false"].includes(String(p.visible).toLowerCase())||Number(p.price)!==80)
+ const validIdentity=!!p&&Number(p.id)===TARGET_PRODUCT;
+ const validTitle=String(p?.title||"").startsWith("Booking 2.0");
+ const validVisibility=["0","false"].includes(String(p?.visible).toLowerCase());
+ const validPrice=Number(p?.price)===80;
+ if(!validIdentity||!validTitle||!validVisibility||!validPrice){
+  console.log("Read-only pilot diagnostics: productId="+String(p?.id||"absent").slice(0,16)+
+   " titlePrefix="+String(p?.title||"absent").slice(0,30)+
+   " visible="+String(p?.visible)+" price="+String(p?.price)+
+   " checks="+[validIdentity,validTitle,validVisibility,validPrice].join(","));
   throw Error("Pilot product identity, visibility, or price safety check failed");
+ }
  return p;
 };
 function check(p){
