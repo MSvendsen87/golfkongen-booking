@@ -113,6 +113,41 @@ Deno.serve(async (req:Request)=>{
     const queue=await rpc("gk2_admin_group_price_queue",{p_actor:user.email});
     return reply({ok:true,queue,checkoutVerified:false,quickbutikPricesReadable:false},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/price-sync-check"){
+    const resource=u.searchParams.get("resource")||"",group=u.searchParams.get("group")||"";
+    const minutes=Number(u.searchParams.get("minutes")||0);
+    if(!["hyzr","dart_a","dart_b","venue"].includes(resource)||
+      !["public","betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(group)||
+      !Number.isSafeInteger(minutes)||minutes<30||minutes>720)
+      return err("invalid_price_selection",400,origin);
+    const selected=await rpc("gk2_admin_quote_preview",{p_actor:user.email,
+      p_resource:resource,p_group:group,p_minutes:minutes});
+    const prodId=Number(selected.checkoutProductId);
+    if(!Number.isSafeInteger(prodId)||prodId<=0)return err("product_not_mapped",400,origin);
+    if(group==="public"){
+      // Only regular product price can be checked through the supported Quickbutik proxy.
+      // It NEVER exposes a logged-in customer's group-specific price.
+      const resp=await fetch("https://cold-shadow-36dc.post-cd6.workers.dev/products/"+prodId,
+        {headers:{"Accept":"application/json"},signal:AbortSignal.timeout(10000)});
+      if(!resp.ok)return err("quickbutik_price_unavailable",503,origin);
+      const product=(await resp.json())?.product;
+      const rawPrice=product?.price;
+      const shopOre=typeof rawPrice==="number"&&Number.isFinite(rawPrice) ? Math.round(rawPrice*100):null;
+      return reply({ok:true,resource,minutes,group,quickbutikProductId:prodId,
+        booking2PriceOre:selected.priceOre,quickbutikRegularPriceOre:shopOre,
+        regularPriceMatches:shopOre!==null&&shopOre===selected.priceOre,
+        quickbutikUpdated:false,customerGroupPriceVerified:false,
+        reason:"readonly_comparison_not_synchronization"},200,origin);
+    }
+    const entries=await rpc("gk2_admin_group_price_queue",{p_actor:user.email});
+    const record=Array.isArray(entries)?entries.find((p:Record<string,unknown>)=>
+      p.resource===resource&&p.minutes===minutes&&p.group===group):null;
+    return reply({ok:true,resource,minutes,group,quickbutikProductId:prodId,
+      booking2PriceOre:selected.priceOre,specialPriceRequired:!!record,
+      manualStatus:record?.stage||"same_as_regular_or_not_reported",
+      quickbutikUpdated:false,customerGroupPriceVerified:false,
+      reason:"quickbutik_group_price_not_exposed_by_supported_api"},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/price-matrix"){
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
