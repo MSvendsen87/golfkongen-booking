@@ -207,8 +207,8 @@ $('exportTariffs').onclick=async()=>{
   const head=['Kundegruppekode','Kundegruppe','Aktivitet','Varighet minutter','Quickbutik produkt-ID','Pris kroner','Pristype','Godkjent i Quickbutik'];
   const all=tariffRecords.map(p=>[p.group,labels[p.group]||p.group,p.resource,p.minutes,byKey.get(p.resource+'|'+p.minutes)||'',(p.priceOre/100).toFixed(2).replace('.',','),'Spesifikk produktpris','NEI']);
   const quote=x=>'"'+String(x).replace(/"/g,'""')+'"';
-  const csv='sep=;\\r\\n'+[head,...all].map(r=>r.map(quote).join(';')).join('\\r\\n');
-  const url=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  const csv='sep=;\r\n'+[head,...all].map(r=>r.map(quote).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='golfkongen-booking2-quickbutik-gruppepriser.csv';
   document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   message('CSV med '+all.length+' prisrader lastet ned. Ingen Quickbutik-priser ble endret.');
