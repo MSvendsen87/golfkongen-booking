@@ -9,8 +9,10 @@ import {readFileSync} from "node:fs";
 const manifest=JSON.parse(readFileSync(new URL("../data/quickbutik-duration-manifest.json",import.meta.url),"utf8"));
 const key=process.env.GK2_QUICKBUTIK_API_KEY||"";
 const write=process.env.GK2_VARIANT_SYNC_WRITE==="true";
-const maxNew=Math.min(12000,Math.max(1,Number(process.env.GK2_MAX_VARIANTS_PER_RUN||2000)));
-const chunkSize=Math.min(50,Math.max(1,Number(process.env.GK2_BATCH_SIZE||25)));
+const maxNew=Number(process.env.GK2_MAX_VARIANTS_PER_RUN||2000);
+if(!Number.isSafeInteger(maxNew)||maxNew<1||maxNew>12000)throw Error("Unsafe maxNew budget; expected integer 1..12000");
+const chunkSize=Number(process.env.GK2_BATCH_SIZE||25);
+if(!Number.isSafeInteger(chunkSize)||chunkSize<1||chunkSize>50)throw Error("Unsafe batch size 1..50");
 const api="https://api.quickbutik.com/v1/products";
 const resourceNames=new Set(["hyzr","dart_a","dart_b","venue"]);
 const osloDay=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -24,7 +26,7 @@ async function shop(method,query,payload){
  const r=await fetch(url,{method,headers:{"Authorization":basic,"Accept":"application/json",
   ...(payload?{"Content-Type":"application/json"}:{})},body:payload?JSON.stringify(payload):undefined,signal:AbortSignal.timeout(30000)});
  if(!r.ok)throw Error("Quickbutik "+method+" returned HTTP "+r.status+" (no credentials exposed)");
- return r.json();
+ const text=await r.text();return text.trim()?JSON.parse(text):{};
 }
 function validatePlan(p){
  if(!resourceNames.has(p.resource)||!Number.isSafeInteger(p.productId)||p.productId<1400||p.productId>999999
@@ -56,7 +58,11 @@ async function main(){
  for(const p of manifest.products){validatePlan(p);if(seen.has(p.productId)||seen.has(p.resource+"|"+p.minutes))throw Error("Duplicate product manifest");seen.add(p.productId);seen.add(p.resource+"|"+p.minutes);}
  if(!key){console.log("SKIPPED: GK2_QUICKBUTIK_API_KEY is missing in GitHub Secrets. No Quickbutik writes.");return;}
  const today=osloDay(),earliest=today<manifest.firstBookable?manifest.firstBookable:today,latest=advance(today,manifest.minDaysAhead);
+ // Prioritize the newest date on every run, so midnight always gets a new day first.
+ // Spread the API-write quota across ALL 33 resources/durations, not first few products.
  const dates=[];for(let day=earliest;day<=latest;day=advance(day,1))dates.push(day);
+ dates.reverse();
+ const perPlanBudget=Math.max(1,Math.floor(maxNew/manifest.products.length));
  let created=0,missingTotal=0,products=0;
  console.log("Booking2 variants: "+earliest+" through "+latest+" | mode="+(write?"HIDDEN_STOCK_ZERO_WRITE":"DRY_RUN")+" | budget="+maxNew);
  for(const p of manifest.products){
@@ -71,7 +77,7 @@ async function main(){
    throw Error("Invalid product regular price "+p.productId);
   if(!Array.isArray(product.variants))throw Error("Variants missing for "+p.productId);
   // maxNew applies across the whole run. Reread before next run for idempotency.
-  const missing=planVariants(product,dates,p.minutes,Math.min(maxNew-created,5000));
+  const missing=planVariants(product,dates,p.minutes,Math.min(perPlanBudget,maxNew-created));
   missingTotal+=missing.length;products++;
   console.log("Product "+p.productId+" ("+p.resource+" "+p.minutes+" min) missing="+missing.length);
   if(!write)continue;
