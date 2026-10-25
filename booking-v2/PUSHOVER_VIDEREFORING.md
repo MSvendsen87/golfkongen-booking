@@ -34,3 +34,18 @@
 
 ## Prioritet
 **Blokker produksjonslansering dersom Pushover-varsel ved ny bekreftet booking ikke er dokumentert og verifisert.**
+
+## 25.10.2026 – Make-scenario og Worker-spor
+
+Eierens skjermbilde fra eu2.make.com viser 1 av 2 scenarier aktive. Aktivt scenario med navn 'Integration Webhooks, HTTP' har kjeden 'Custom webhook -> HTTP GET' til Cloudflare Worker nameless-feather-dbf3.post-cd6.workers.dev. Historikken viser vellykkede kjøringer blant annet 24., 23. og 19. oktober.
+
+Dette BEVISER IKKE at scenariet faktisk sender Pushover eller at en Quickbutik-ordre er betalt. Pushover-utløser og ordrestatus må fremdeles bekreftes.
+
+Sikker videre kontroll:
+1. Cloudflare: søk etter Worker nameless-feather-dbf3 og vis dens Edit code-kilde read-only. Ingen Deploy, testanrop, URL-GET eller endringer.
+2. Se på routes, ordrestatus, Pushover/andre meldings-API og eventuell Quickbutik-integrasjon, uten å dele hemmelige nøkler, webhook-tokens eller kundedata.
+3. Alternativt åpne HTTP-modulen i Make og inspiser metode og URL-host/path (masker hemmelige query-parametere og headers).
+4. Undersøk også hvilket scenario som er inaktivt, og om det er tidligere bookingvarsling.
+5. Bruk en eksisterende ordre og gammel Make-historikk read-only for å spore utløseren før ny test.
+
+Ingen endringer i dagens Make/Workers/Pushover må gjennomføres før dette er dokumentert.
