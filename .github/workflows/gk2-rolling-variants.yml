@@ -1,8 +1,5 @@
 name: Booking 2.0 – Rolling 45-day variant staging
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/gk2-rolling-variants.yml']
   schedule:
     # Europe/Oslo midnight is 22:00 UTC in summer and 23:00 UTC in winter.
     # Both executions are idempotent; 00:05 local always gets the new last date.
@@ -35,7 +32,7 @@ jobs:
       - name: Audit or create ONLY hidden zero-stock variants
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
-          GK2_VARIANT_SYNC_WRITE: ${{ github.event_name == 'push' && 'false' || vars.GK2_VARIANT_SYNC_WRITE || 'false' }}
+          GK2_VARIANT_SYNC_WRITE: ${{ vars.GK2_VARIANT_SYNC_WRITE || 'false' }}
           GK2_MAX_VARIANTS_PER_RUN: ${{ inputs.max_new_variants || '2000' }}
           GK2_BATCH_SIZE: '25'
         run: node booking-v2/scripts/quickbutik-rolling-sync.mjs
