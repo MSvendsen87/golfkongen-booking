@@ -44,6 +44,12 @@ Deno.serve(async (req:Request)=>{
  try{
   if(req.method==="GET"&&path==="/admin")return new Response(null,{status:302,headers:{"Location":"https://msvendsen87.github.io/golfkongen-booking/","Cache-Control":"no-store"}});
   if(req.method==="GET"&&path==="/health")return reply({ok:true,environment:"staging",bookingEnabled:false,checkout:false},200,origin);
+  if(req.method==="GET"&&path==="/window"){
+    // Derived on every request from Europe/Oslo PostgreSQL clock, no cron required for new dates.
+    const window=await rpc("gk2_booking_window",{});
+    return reply({ok:true,...window,checkoutEnabled:false,
+      explanation:"The 45-day calendar rolls daily; Quickbutik variants and payments must be configured separately."},200,origin);
+  }
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
    if(!validDate(day))return err("invalid_date",400,origin);
@@ -94,6 +100,23 @@ Deno.serve(async (req:Request)=>{
     return reply({ok:true,...auditDayCatalog({date:day,products:Object.fromEntries(catalogs)}),
       stagingProducts:stage,pricesControlledInAdmin:true,pricesApproved:false,
       checkoutEnabled:false,existingPushoverUntouched:true},200,origin);
+  }
+  if(req.method==="GET"&&path==="/admin/integration-readiness"){
+    const window=await rpc("gk2_booking_window",{});
+    const plans=await rpc("gk2_admin_checkout_design",{p_actor:user.email});
+    const queue=await rpc("gk2_admin_group_price_queue",{p_actor:user.email});
+    const stages=Array.isArray(queue)?queue:[];
+    return reply({ok:true,firstBookable:window.firstBookable,lastBookable:window.lastBookable,
+      daysAhead:window.daysAhead,
+      mappedProducts:Array.isArray(plans)?plans.filter((p:Record<string,unknown>)=>Number.isInteger(p.quickbutikProductId)).length:0,
+      readyProducts:Array.isArray(plans)?plans.filter((p:Record<string,unknown>)=>p.isReady===true&&p.publishEnabled===true).length:0,
+      specialPriceRequired:stages.length,
+      specialPriceReported:stages.filter((p:Record<string,unknown>)=>p.stage==="entered_reported").length,
+      specialPriceVerified:stages.filter((p:Record<string,unknown>)=>p.stage==="checkout_verified").length,
+      quickbutikOrderReadKeyConfigured:!!Deno.env.get("GK2_QUICKBUTIK_API_KEY"),
+      webhookPaidVerificationDeployed:false,
+      pushoverPaidFlowValidated:false,legacyBookingsFullyReconciled:false,
+      publicCheckoutEnabled:false,note:"No customer checkout or Quickbutik write while release gates closed."},200,origin);
   }
   if(req.method==="GET"&&path==="/admin/checkout-design"){
     const plans=await rpc("gk2_admin_checkout_design",{p_actor:user.email});
