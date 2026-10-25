@@ -23,3 +23,11 @@
 Booking 2.0 **kan ikke publiseres** før aktivt gruppesystem, alle eksisterende rabatter som gjelder booking, kundeidentifikasjon og prislogikk er kartlagt, implementert og testet i kontrollert betalingsflyt.
 
 **Status:** Krav dokumentert. Dagens rabattregler og medlemskilde er IKKE ennå verifisert i detalj; ingen priser, roller eller integrasjoner er endret i produksjon.
+
+## Verifisert fra Quickbutiks egne brukerveiledninger 25.10.2026
+- `Innstillinger > Kunder og markedsføring` er stedet funksjonen Kundegrupper aktiveres, men eksisterende grupper finnes via `Kunder > Kundegrupper`.
+- Kombinasjonen **Innloggingskonto + Kundegrupper** brukes for individuelle priser og andre kundegruppebegrensninger. Veiledning: https://quickbutik.com/no/hjelp/hvordan-oppretter-jeg-kundegrupper
+- `Rabatter` er en separat menydel. Rabatter kan målrettes etter produkt, kategori eller hele ordre, og kan blant annet utelukke kundegrupper.
+- Quickbutik sier at mer enn én aktiv rabatt på **hele ordren** kombineres; standardrabatt og rabattkode kan ikke kombineres på samme produkt; én rabattkode per ordre; rabatt på én bestemt variant støttes ikke i standard rabattfunksjon. Verifiser faktisk butikkinnstilling før implementering: https://quickbutik.com/no/hjelp/hvordan-oppretter-jeg-rabatter-i-quickbutik
+- Dagens booking-JS legger varer i kassen med `/cart/add` og konkret `product_id` + `variant`, mens den viser pris fra produkt/variant. Frontenden har ikke en tydelig autoritativ kundegruppeutregning. **Ikke anta at synlig forhåndspris automatisk er kundens pris i kassen**.
+- Neste konkrete, sikre steg: Eier viser liste over grupper i kontrollpanelet via skjermbilde (uten kundeopplysninger). Deretter kartlegges prisreglene og `Rabatter` (read-only), og til slutt testes korrekt checkout-beløp med innlogget testkonto.
