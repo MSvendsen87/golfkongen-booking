@@ -64,7 +64,13 @@ $('checkVariants').onclick=async()=>{
   const info=await api('/admin/checkout-preflight?date='+encodeURIComponent(d));
   const labels={hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B'};
   const rows=info.resources.map(r=>'<div class="item"><b>'+html(labels[r.resource])+'</b> — '+html(r.readyHalfhours)+' / '+html(r.expectedHalfhours)+' gyldige halvtimesvarianter · '+html(r.legacyHourVariants)+' eldre timesvarianter'+(r.samples.length?'<div class="sub">Eksempel på avvik: '+r.samples.map(s=>html(s.sku)+' ('+html(s.state)+')').join(', ')+'</div>':'')+'</div>').join('');
-  el.innerHTML='<strong>'+(info.catalogReady?'Variantkatalog klar for videre kassetest.':'Varianter mangler eller må rettes før ny booking kan aktiveres.')+'</strong>'+rows+'<p><b>Betaling: IKKE aktivert.</b> Innloggede kundepriser, gavekort og eksisterende Pushover må fortsatt testes med Quickbutik.</p>';
+  const staging=(info.stagingProducts||[]).map(x=>'<div class="item"><b>'+html(labels[x.resource])+'</b> – nytt skjult produkt '+html(x.productId)+': '+html(x.totalVariants)+' testvarianter, '+html(x.readyHalfhours)+' salgbare halvtimer.'+(x.sampleTestVariantExists?' <strong>Trygg, sperret testvariant bekreftet.</strong>':' Testvariant ikke tilgjengelig for valgt dag.')+'</div>').join('');
+  const draft=(info.proposedHalfhourPrices||[]).map(x=>'<tr><td>'+html(x.group)+'</td><td>'+html(x.hyzr.toLocaleString('nb-NO',{minimumFractionDigits:x.hyzr%1?2:0}))+' kr</td><td>'+html(x.dart.toLocaleString('nb-NO',{minimumFractionDigits:x.dart%1?2:0}))+' kr</td></tr>').join('');
+  el.innerHTML='<strong>'+(info.catalogReady?'Gamle varianter kan testes videre.':'Gamle timeprodukter er ikke klare for halvtimer.')+'</strong>'+rows+
+  '<h3 style="margin-top:16px">Nye Booking 2.0-produkter – skjulte</h3>'+staging+
+  '<h3 style="margin-top:17px">Utkast: kundepris per 30 minutter</h3><p>Regnet forholdsmessig fra de tidligere oppgitte timeprisene. <strong>Ingen av disse prisene er godkjent eller lagt inn i Quickbutik.</strong> Ansattprisene forutsetter at 98 % rabatt kan beregnes korrekt i kassen.</p>'+
+  '<div class="calendarScroll"><table><thead><tr><th>Gruppe</th><th>HYZR</th><th>Dart A/B</th></tr></thead><tbody>'+draft+'</tbody></table></div>'+
+  '<p><b>Betaling: IKKE aktivert.</b> Kunderabatter, gavekort, flervariant-kasse og Pushover må testes før produktene blir synlige.</p>';
  }catch(e){el.textContent='Kontrollen kunne ikke fullføres: '+e.message+'. Ingenting er endret.';}
  };
  $('refresh').onclick=async()=>{try{await refresh();message('Kalender oppdatert')}catch(e){message(e.message,true)}};
