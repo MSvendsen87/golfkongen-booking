@@ -95,6 +95,20 @@ Deno.serve(async (req:Request)=>{
       stagingProducts:stage,pricesControlledInAdmin:true,pricesApproved:false,
       checkoutEnabled:false,existingPushoverUntouched:true},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/checkout-design"){
+    const plans=await rpc("gk2_admin_checkout_design",{p_actor:user.email});
+    return reply({ok:true,plans,readyProducts:0,liveCheckoutEnabled:false,
+      blockers:["Quickbutik duration products missing","Group prices not synced","Paid-order webhook not verified","Pushover not adapted to new product IDs"]},200,origin);
+  }
+  if(req.method==="GET"&&path==="/admin/quote-preview"){
+    const resource=u.searchParams.get("resource")||"",group=u.searchParams.get("group")||"";
+    const minutes=Number(u.searchParams.get("minutes")||0);
+    if(!["hyzr","dart_a","dart_b","venue"].includes(resource) || 
+      !["public","betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(group)
+      || !Number.isInteger(minutes) || minutes<30 || minutes>720)return err("invalid_preview",400,origin);
+    const preview=await rpc("gk2_admin_quote_preview",{p_actor:user.email,p_resource:resource,p_group:group,p_minutes:minutes});
+    return reply({ok:true,...preview},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/price-matrix"){
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
