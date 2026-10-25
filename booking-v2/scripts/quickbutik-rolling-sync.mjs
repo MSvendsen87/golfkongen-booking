@@ -67,9 +67,21 @@ async function main(){
  console.log("Booking2 variants: "+earliest+" through "+latest+" | mode="+(write?"HIDDEN_STOCK_ZERO_WRITE":"DRY_RUN")+" | budget="+maxNew);
  for(const p of manifest.products){
   if(created>=maxNew)break;
-  const payload=await shop("GET",{product_id:String(p.productId)});
-  const product=payload?.product;
-  if(!product||Array.isArray(product)||Number(product.id)!==p.productId)throw Error("Product identity mismatch: requested "+p.productId+"; returned="+String(product?.id??"missing").slice(0,30)+"; titlePrefix="+String(product?.title||"missing").slice(0,45)+"; shape="+(Array.isArray(payload?.product)?"array":typeof payload?.product));
+  let payload,product;
+  // Quickbutik can intermittently return a successful HTTP response without a
+  // single-product payload. Retry READs conservatively, NEVER retry unknown writes.
+  for(let attempt=1;attempt<=3;attempt++){
+    if(attempt>1)await sleep(1200*attempt);
+    payload=await shop("GET",{product_id:String(p.productId),include_details:"true"});
+    product=payload?.product;
+    if(product&&!Array.isArray(product)&&Number(product.id)===p.productId)break;
+    const shape=Array.isArray(payload)?"array":typeof payload;
+    const keys=payload&&typeof payload==="object"?Object.keys(payload).slice(0,8).join(","):"none";
+    console.log("Product read "+p.productId+" retry "+attempt+"/3: expected product object; responseShape="+shape+"; keys="+keys);
+    product=null;
+  }
+  if(!product)throw Error("Product read could not verify exact identity "+p.productId+" after 3 attempts: no writes");
+  await sleep(800);
   if(!(product.visible===false||product.visible===0||product.visible==="0"))
    throw Error("STOP: Product "+p.productId+" is visible; do not touch");
   if(!String(product.title||"").startsWith("Booking 2.0"))throw Error("Not a Booking2 product: "+p.productId);
