@@ -24,3 +24,16 @@ test('maps Quickbutik V1 statuses without authorizing reservations',()=>{
  assert.equal(unknown.orderState,'unknown');
  assert.equal(unknown.paidVerified,false);
 });
+
+test('read-only schema probe exposes only field availability, never customer details',()=>{
+ const raw={...order,customer:{email:'private@example.invalid'},payment:{currency:'NOK',secret:'do-not-show'},refunds:[],total_pay_amount:'10.50',shipping_amount:'0.00'};
+ const result=summarizeV1Order([raw],'3706');
+ assert.equal(result.fieldProbe.hasTotalPayAmount,true);
+ assert.equal(result.fieldProbe.hasShippingAmount,true);
+ assert.equal(result.fieldProbe.hasCurrency,true);
+ assert.equal(result.fieldProbe.hasCustomerEmail,true);
+ assert.equal(result.fieldProbe.hasVariantSkus,true);
+ assert.equal(JSON.stringify(result).includes('private@example.invalid'),false);
+ assert.equal(JSON.stringify(result).includes('do-not-show'),false);
+ assert.equal(result.paidVerified,false);
+});
