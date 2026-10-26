@@ -60,3 +60,13 @@ test('an expired hold cannot be confirmed even if paid',()=>{
 test('unverified order cannot be confirmed',()=>{
  assert.equal(valid({...mkOrder(),paymentStatus:'pending'}).reason,'order_not_verified_paid');
 });
+
+test('reservation without a bound customer cannot be confirmed',()=>{
+ assert.equal(valid(mkOrder(),{reservation:{...reservation,customer_email:null}}).reason,'booking_customer_unbound');
+});
+test('reservation without a hold expiry cannot be confirmed',()=>{
+ assert.equal(valid(mkOrder(),{reservation:{...reservation,hold_expires_at:null}}).reason,'missing_or_invalid_hold_expiry');
+});
+test('reservation with malformed hold expiry cannot be confirmed',()=>{
+ assert.equal(valid(mkOrder(),{reservation:{...reservation,hold_expires_at:'not-a-date'}}).reason,'missing_or_invalid_hold_expiry');
+});
