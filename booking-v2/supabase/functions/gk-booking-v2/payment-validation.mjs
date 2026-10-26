@@ -19,7 +19,9 @@ export function validatePaidQuickbutikOrder(order,{reservation,productId,checkou
  const reject=(reason)=>({eligible:false,reason,verifiedPaidOre:null,orderId:null});
  if(!order||!reservation||typeof order!=='object')return reject('missing_order_or_reservation');
  if(!['held','payment_pending'].includes(reservation.status))return reject('booking_not_in_payable_state');
- if(typeof reservation.hold_expires_at==='string'&&Date.parse(reservation.hold_expires_at)<=Date.now())
+ if(typeof reservation.hold_expires_at!=='string'||!Number.isFinite(Date.parse(reservation.hold_expires_at)))
+  return reject('missing_or_invalid_hold_expiry');
+ if(Date.parse(reservation.hold_expires_at)<=Date.now())
   return reject('hold_expired_manual_review');
  if(order.paymentStatus!=='paid'||!order.paidAt||Number.isNaN(Date.parse(order.paidAt)))
   return reject('order_not_verified_paid');
@@ -45,9 +47,11 @@ export function validatePaidQuickbutikOrder(order,{reservation,productId,checkou
  if(line.sku!==sku)return reject('wrong_slot_sku');
  if(!validInteger(order.amounts?.paid)||!validInteger(checkoutExpectedPaidOre))return reject('missing_effective_checkout_amount');
  if(order.amounts.paid!==checkoutExpectedPaidOre)return reject('discount_or_paid_amount_mismatch');
- if(reservation.customer_email&&
-   reservation.customer_email.trim().toLowerCase()!==String(order.customer?.email||'').trim().toLowerCase())
-   return reject('customer_identity_mismatch');
+ const reservedEmail=typeof reservation.customer_email==='string'?reservation.customer_email.trim().toLowerCase():'';
+ if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(reservedEmail))
+  return reject('booking_customer_unbound');
+ if(reservedEmail!==String(order.customer?.email||'').trim().toLowerCase())
+  return reject('customer_identity_mismatch');
  const refunds=Array.isArray(order.refunds)?order.refunds:[];
  if(refunds.length>0)return reject('order_refunded_or_partially_refunded');
  // The order subtotal is not necessarily its paid amount: discount/customer-group reductions may apply.
