@@ -19,7 +19,7 @@ export function v1NokToOre(value){
 }
 export function checkV1BookingPayment(order, options={}){
  const reject=reason=>({eligible:false,reason});
- const {reservation,expectedProductId,expectedPaidOre,expectedRentalSets=0,nowMs=Date.now()}=options;
+ const {reservation,expectedProductId,expectedPaidOre,expectedRentalSets=0,nowMs=Date.now(),paymentPolicy='exact'}=options;
  if(!order||typeof order!=='object'||!reservation)return reject('missing_authoritative_data');
  if(!['held','payment_pending','confirmed'].includes(reservation.status))return reject('reservation_not_payable');
  if(!id(reservation.quickbutik_order_id)||id(order.order_id)!==id(reservation.quickbutik_order_id))
@@ -35,30 +35,39 @@ export function checkV1BookingPayment(order, options={}){
  const reservedEmail=email(reservation.customer_email);
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
  if(reservedEmail!==email(order.customer?.email))return reject('customer_mismatch');
+ if(paymentPolicy!=='exact'&&paymentPolicy!=='trusted_status')return reject('invalid_payment_policy');
+ let paid=null;
+ if(paymentPolicy==='exact'){
  if(!validOre(expectedPaidOre))return reject('missing_server_authorized_total');
- // For some Quickbutik V1 orders total_pay_amount is absent. V1 also
- // exposes total_amount and (sometimes) discount_amount. Never mistake gross
- // order amount for the actual charge, especially with 98% discounts.
- const hasExplicitPaid=order.total_pay_amount!==undefined&&order.total_pay_amount!==null;
- let paid;
- if(hasExplicitPaid){
-  paid=v1NokToOre(order.total_pay_amount);
-  if(paid===null)return reject('authoritative_total_missing_or_invalid');
-  // Check arithmetic coherence when BOTH gross and discount are supplied.
-  if(order.total_amount!==undefined&&order.discount_amount!==undefined){
-   const gross=v1NokToOre(order.total_amount),discount=v1NokToOre(order.discount_amount);
-   if(gross===null||discount===null||gross-discount!==paid)
-    return reject('payment_amount_fields_conflict');
+  // For some Quickbutik V1 orders total_pay_amount is absent. V1 also
+  // exposes total_amount and (sometimes) discount_amount. Never mistake gross
+  // order amount for the actual charge, especially with 98% discounts.
+  const hasExplicitPaid=order.total_pay_amount!==undefined&&order.total_pay_amount!==null;
+ 
+  if(hasExplicitPaid){
+   paid=v1NokToOre(order.total_pay_amount);
+   if(paid===null)return reject('authoritative_total_missing_or_invalid');
+   // Check arithmetic coherence when BOTH gross and discount are supplied.
+   if(order.total_amount!==undefined&&order.discount_amount!==undefined){
+    const gross=v1NokToOre(order.total_amount),discount=v1NokToOre(order.discount_amount);
+    if(gross===null||discount===null||gross-discount!==paid)
+     return reject('payment_amount_fields_conflict');
+   }
+  }else{
+   const gross=v1NokToOre(order.total_amount);
+   const discount=v1NokToOre(order.discount_amount);
+   // Without explicit gross+discount fields, the paid amount cannot be proved.
+   if(gross===null||discount===null)return reject('paid_amount_unverifiable');
+   if(discount>gross)return reject('invalid_discount_exceeds_total');
+   paid=gross-discount;
   }
- }else{
-  const gross=v1NokToOre(order.total_amount);
-  const discount=v1NokToOre(order.discount_amount);
-  // Without explicit gross+discount fields, the paid amount cannot be proved.
-  if(gross===null||discount===null)return reject('paid_amount_unverifiable');
-  if(discount>gross)return reject('invalid_discount_exceeds_total');
-  paid=gross-discount;
+  if(paid!==expectedPaidOre)return reject('paid_total_mismatch');
+ 
  }
- if(paid!==expectedPaidOre)return reject('paid_total_mismatch');
+ // With trusted_status Quickbutik remains the price authority. We do not
+ // misrepresent V1 gross total_amount as actual paid_ore. The server must have
+ // a prior bound hold, verify order status and exact booking SKU, and use the
+ // separate amount-neutral confirmation RPC (never the legacy amount RPC).
  const shipping=v1NokToOre(order.shipping_amount);
  if(shipping===null||shipping!==0)return reject('unexpected_booking_shipping');
  // V1 refunds may be null, [], or empty object; anything else needs review.
@@ -83,5 +92,6 @@ export function checkV1BookingPayment(order, options={}){
  if(expectedRentalSets&&
     (extras.length!==1||productId(extras[0]?.product_id)!==1318||qty(extras[0]?.qty)!==expectedRentalSets))
   return reject('rental_sets_mismatch');
- return {eligible:true,reason:'payment_matches_bound_hold',orderId:id(order.order_id),paidOre:paid,slotSku:sku,rentalSets:expectedRentalSets};
+ return {eligible:true,reason:'payment_matches_bound_hold',orderId:id(order.order_id),
+  paidOre:paid,amountVerified:paymentPolicy==='exact',slotSku:sku,rentalSets:expectedRentalSets};
 }
