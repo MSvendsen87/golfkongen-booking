@@ -36,19 +36,21 @@ export function checkV1BookingPayment(order, options={}){
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
  if(reservedEmail!==email(order.customer?.email))return reject('customer_mismatch');
  if(!validOre(expectedPaidOre))return reject('missing_server_authorized_total');
- // Quickbutik V1 documents total_amount; total_pay_amount is NOT a documented
- // required field. Never accept the product list/gross price as a substitute.
- // A fallback is valid ONLY if the amount matches the server-bound final total.
+ // For some Quickbutik V1 orders total_pay_amount is absent. V1 also
+ // exposes total_amount and (sometimes) discount_amount. Never mistake gross
+ // order amount for the actual charge, especially with 98% discounts.
  const hasExplicitPaid=order.total_pay_amount!==undefined&&order.total_pay_amount!==null;
- const amountField=hasExplicitPaid?'total_pay_amount':'total_amount';
- const paid=v1NokToOre(order[amountField]);
- if(paid===null)return reject('authoritative_total_missing_or_invalid');
- if(hasExplicitPaid&&order.total_amount!==undefined&&order.total_amount!==null){
-  const grossOrTotal=v1NokToOre(order.total_amount);
-  if(grossOrTotal===null)return reject('authoritative_total_missing_or_invalid');
-  // The two optional fields may encode different amounts in some API versions.
-  // Do not guess which one represents the final charge.
-  if(grossOrTotal!==paid)return reject('payment_amount_fields_conflict');
+ let paid;
+ if(hasExplicitPaid){
+  paid=v1NokToOre(order.total_pay_amount);
+  if(paid===null)return reject('authoritative_total_missing_or_invalid');
+ }else{
+  const gross=v1NokToOre(order.total_amount);
+  const discount=v1NokToOre(order.discount_amount);
+  // Without explicit gross+discount fields, the paid amount cannot be proved.
+  if(gross===null||discount===null)return reject('paid_amount_unverifiable');
+  if(discount>gross)return reject('invalid_discount_exceeds_total');
+  paid=gross-discount;
  }
  if(paid!==expectedPaidOre)return reject('paid_total_mismatch');
  const shipping=v1NokToOre(order.shipping_amount);
