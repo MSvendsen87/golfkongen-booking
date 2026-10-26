@@ -26,6 +26,11 @@
 <button id="checkQuote" class="alt" type="button" style="width:auto">Hent sikker pris</button>
 </div>
 <div id="quoteResult" class="note" role="status">Dette er kun en admin-forhåndsvisning. Kundens reelle gruppe skal kontrolleres mot Quickbutik før kjøp.</div>
+<h3 style="margin-top:22px">Verifiser Quickbutik-ordre (kun lesing)</h3>
+<p>Kontrollen krever eierinnlogging. Den endrer ikke ordre, kalender, betaling eller Pushover.</p>
+<div class="row"><label>Ordrenummer<input id="qbAuditOrder" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9" placeholder="3706" autocomplete="off"></label>
+<button id="qbAuditButton" class="alt" type="button" style="width:auto">Les ordrestatus</button></div>
+<div id="qbAuditResult" class="note" role="status">Kun kontroll – ingen booking bekreftes.</div>
 </div>
  <div id="calendar" class="panel"><h2>Kalender for HYZR, dart A og dart B</h2><div id="rollingDaysStatus" class="note" role="status">Henter 45-dagers bookingvindu ...</div><label>Dato <input type="date" id="day"></label><button id="refresh" class="alt" style="width:auto">Oppdater</button><div id="calendarStatus" class="note" role="status" style="margin:11px 0"></div><div class="calendarScroll"><div id="calendarGrid" class="cal"></div></div><div class="note">Dette er Booking 2.0-kalenderen i separat databaseområde. Den eldre bookingen 31. oktober er importert. Øvrige fremtidige bookinger og regler må kvalitetssikres før åpning.</div></div>
  <div id="blocks" class="panel hidden"><h2>Sperr tider eller åpne igjen</h2><div class="grid"><form id="blockForm"><label>Ressurs<select name="target"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue_only">Kun leie hele lokalet</option><option value="all">Steng alle ressurser</option></select></label><label>Fra dato<input name="dateFrom" type="date" required></label><label>Til dato<input name="dateTo" type="date" required></label><label>Fra kl.<input name="startTime" type="time" step="1800" value="10:00" required></label><label>Til kl.<input name="endTime" type="time" step="1800" value="11:00" required></label><label>Årsak<input name="label" maxlength="140" required></label><button type="submit">Lagre sperring</button></form><div><h3>Gjeldende sperringer for datoen</h3><div id="blockList"></div></div></div></div>
@@ -219,6 +224,18 @@ $('checkDesign').onclick=async()=>{
   el.innerHTML='<strong>Betaling fortsatt sperret: '+ready+' / '+plans.length+' klare og publiserte varighetsprodukter</strong>'+grouped+
    '<div class="note">Før salg må alle gruppepriser kontrolleres i Quickbutik, varianter for dato og starttid settes opp, betalt ordre knyttes til én booking og eksisterende Pushover tilpasses.</div>';
  }catch(e){el.textContent='Kontroll feilet: '+e.message+'. Ingen endringer utført.';}
+};
+$('qbAuditButton').onclick=async()=>{
+ const out=$('qbAuditResult'),order=String($('qbAuditOrder').value||'').trim();
+ if(!/^[1-9][0-9]{0,8}$/.test(order)){out.textContent='Skriv inn kun ordrenummer, for eksempel 3706.';return;}
+ out.textContent='Leser Quickbutik-ordre '+order+' direkte fra serveren ...';
+ try{
+  const r=await api('/admin/order-audit?order='+encodeURIComponent(order));
+  out.textContent='Ordre '+r.orderNumber+' · rå Quickbutik-status: '+r.legacyStatus+
+   ' · varelinjer: '+r.products.map(p=>p.productId+' ('+p.sku+')').join(', ')+
+   '. Ingen reservasjon bekreftet og ingen Pushover sendt. Dette er ikke en betalingsgodkjenning.';
+ }catch(e){out.textContent='Ordrekontroll feilet: '+e.message+
+  '. Kontroller under «automatikk og betalingsklarhet» om Quickbutik API-nøkkel finnes på staging. Ingen booking er endret.';}
 };
 $('checkQuote').onclick=async()=>{
  const el=$('quoteResult');el.textContent='Henter pris direkte fra Booking 2.0 ...';
