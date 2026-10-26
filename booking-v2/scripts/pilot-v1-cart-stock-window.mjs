@@ -22,6 +22,10 @@ async function read(expectedVisible,expectedStock){
  if(Number(p?.id)!==pid||!String(p?.title||"").startsWith("Booking 2.0")||
  Number(p?.price)!==price||[1,"1",true].includes(p?.visible))throw Error("unsafe_parent");
  const v=(p.variants||[]).filter(x=>x.id==id&&x.sku===sku);
+ console.log("READBACK target="+sku+" expectedVisible="+expectedVisible+" expectedStock="+expectedStock+
+   " matching="+v.length+" observedHidden="+String(v[0]?.hidden)+
+   " observedQty="+String(v[0]?.qty??v[0]?.stock)+
+   " observedPrice="+String(v[0]?.price));
  if(v.length!==1||Number(v[0].qty??v[0].stock)!==expectedStock
  ||Number(v[0].price)!==price||String(v[0].hidden)!==String(expectedVisible?0:1))
   throw Error("variant_readback_failed");
