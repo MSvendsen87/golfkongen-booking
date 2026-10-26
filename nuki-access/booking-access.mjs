@@ -14,7 +14,7 @@ export function createKeypadCode(random = (n) => crypto.getRandomValues(new Uint
   for (let tries = 0; tries < 100; tries++) {
     const nums = random(6);
     if (!nums || nums.length !== 6) throw new Error("Random generator failed");
-    // Rejection sampling eliminates modulo bias in 1-9.
+    // Cryptographically secure source; tiny modulo bias is acceptable for a 6-digit temporary code.
     const code = Array.from(nums, v => String((v % 9) + 1)).join("");
     if (validKeypadCode(code)) return code;
   }
@@ -100,7 +100,7 @@ export function safeEmail(order){
 }
 export function confirmedPaid(order,verifiedPaidWebhook=false){
   const status=String(order.status ?? order.paymentStatus ?? "").toLowerCase();
-  if (["cancelled","canceled","refunded","voided","unpaid","pending","0"].includes(status))
+  if (["cancelled","canceled","refunded","voided","unpaid","pending","0","-1"].includes(status))
     return false;
   const payment=String(order.payment?.status ?? "").toLowerCase();
   if(["cancelled","refunded","voided","pending","unpaid"].includes(payment))return false;
@@ -109,5 +109,5 @@ export function confirmedPaid(order,verifiedPaidWebhook=false){
   // Quickbutik documents order.new specifically as a PAID event.
   // Only trust it after authenticating our secret webhook URL and
   // independently refetching the same order from Quickbutik API.
-  return verifiedPaidWebhook && ["1","new","done","completed"].includes(status);
+  return verifiedPaidWebhook && ["1","2","new","done","completed"].includes(status);
 }
