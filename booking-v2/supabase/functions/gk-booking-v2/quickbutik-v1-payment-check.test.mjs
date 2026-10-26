@@ -111,3 +111,34 @@ test('invalid price strings and over-discounting never authorize',()=>{
  assert.equal(verify({...raw,status:'0'}).reason,'order_not_currently_paid');
  assert.equal(verify({...raw,status:'-1'}).reason,'order_not_currently_paid');
 });
+
+test('status-only policy verifies a genuine V1 paid order with no net amount fields',()=>{
+ const order={...base,total_amount:'800.00'};
+ delete order.total_pay_amount;
+ const v=verify(order,{paymentPolicy:'trusted_status'});
+ assert.equal(v.eligible,true);
+ assert.equal(v.amountVerified,false);
+ assert.equal(v.paidOre,null);
+});
+test('status-only still rejects unpaid, cancelled, wrong product, wrong slot and customer',()=>{
+ const order={...base,total_amount:'800.00'};
+ delete order.total_pay_amount;
+ const opts={paymentPolicy:'trusted_status'};
+ for(const status of ['0','-1','3']){
+  assert.equal(verify({...order,status},opts).reason,'order_not_currently_paid');
+ }
+ assert.equal(verify({...order,order_id:'9999'},opts).reason,'order_not_bound_to_reservation');
+ assert.equal(verify({...order,customer:{email:'attacker@invalid.example'}},opts).reason,'customer_mismatch');
+ assert.equal(verify({...order,products:[{...base.products[0],sku:'2026-11-01-1100-1200'}]},opts).reason,'wrong_variant_sku_or_quantity');
+ assert.equal(verify({...order,products:[{...base.products[0],product_id:'1477'}]},opts).reason,'booking_product_missing_or_duplicate');
+});
+test('status-only denies unexpected shipping, refunds, extra goods and duplicate booking lines',()=>{
+ const order={...base};delete order.total_pay_amount;
+ const opts={paymentPolicy:'trusted_status'};
+ assert.equal(verify({...order,shipping_amount:'59.00'},opts).reason,'unexpected_booking_shipping');
+ assert.equal(verify({...order,refunds:[{id:'x'}]},opts).reason,'refunded_or_unknown_refund_state');
+ assert.equal(verify({...order,products:[...order.products,...order.products]},opts).reason,'unexpected_order_lines');
+});
+test('unknown amount policy never confirms a booking',()=>{
+ assert.equal(verify(base,{paymentPolicy:'whatever'}).reason,'invalid_payment_policy');
+});
