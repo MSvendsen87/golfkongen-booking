@@ -124,6 +124,40 @@ Deno.serve(async (req:Request)=>{
       return err("webhook_processing_failed",503,origin);
     }
   }
+  if(req.method==="POST"&&path==="/internal/relock-expired"){
+    // Private maintenance endpoint. No user or browser may trigger door/booking
+    // operations or disclose reservation identifiers.
+    const expected=Deno.env.get("GK2_CART_CLEANUP_TOKEN")||"";
+    if(expected.length<32||req.headers.get("x-gk2-cart-cleanup-token")!==expected)
+      return err("unauthorized_maintenance",403,origin);
+    const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
+    let leases:Record<string,unknown>[];
+    try{
+      const taken=await rpc("gk2_take_expired_cart_leases",{p_limit:10});
+      leases=Array.isArray(taken)?taken:[];
+    }catch(_e){return err("cleanup_unavailable",503,origin)}
+    let closed=0,failed=0;
+    for(const lease of leases){
+      const reservationId=String(lease.reservationId||"");
+      try{
+        await mutateHeldCartVariant({
+          productId:Number(lease.productId),sku:String(lease.sku||""),
+          action:"close",apiKey
+        });
+        await rpc("gk2_finish_cart_variant_relock",{
+          p_reservation:reservationId,p_success:true
+        });
+        closed++;
+      }catch(_e){
+        failed++;
+        try{await rpc("gk2_finish_cart_variant_relock",{
+          p_reservation:reservationId,p_success:false
+        })}catch(_other){/* leave lease for owner to inspect */}
+      }
+    }
+    return reply({ok:true,processed:leases.length,closed,failed},200,origin);
+  }
   if(req.method==="POST"&&path==="/hold"){
     // Unified old-style Quickbutik checkout: DB hold -> product variant cart.
     // This stays OFF until full release testing. Browser price/group is never
