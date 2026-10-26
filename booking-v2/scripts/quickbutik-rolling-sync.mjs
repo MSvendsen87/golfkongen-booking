@@ -9,17 +9,12 @@ import {readFileSync} from "node:fs";
 const manifest=JSON.parse(readFileSync(new URL("../data/quickbutik-duration-manifest.json",import.meta.url),"utf8"));
 const key=process.env.GK2_QUICKBUTIK_API_KEY||"";
 const writeRequested=process.env.GK2_VARIANT_SYNC_WRITE==="true";
-// Verified 25.10.2026: Quickbutik variants.add does NOT preserve hidden=true.
-// The raw API may return visible:null after a PUT even for a hidden parent.
-// Stock=0 and a hidden parent are useful safeguards, but do not establish a
-// supported, verified hidden-variant bulk-write protocol. Keep reads working
-// while rejecting write mode BEFORE the first product/API write.
-// Re-enable only after a tested adapter explicitly verifies both product and
-// per-variant visibility/stock, with a safe recovery procedure.
-if (writeRequested) {
-  throw Error("SAFETY STOP: Booking2 bulk Quickbutik variants.add disabled. New variants default hidden=false; implement a verified hide/readback flow and repeat the single-hidden-variant pilot before any bulk write.");
-}
-const write=false;
+// Old live booking uses V1 variants.add for date/time SKUs.
+// Verified 26 Oct on Booking2 product 1474: variants.add creates SKU/qty0;
+// a second V1 PUT with variant_id+visible:0 hides that exact variant.
+// Every staged variant must pass readback BEFORE the job continues.
+// Parents stay hidden and all writes are opt-in; default is DRY_RUN.
+const write=writeRequested;
 const maxNew=Number(process.env.GK2_MAX_VARIANTS_PER_RUN||2000);
 if(!Number.isSafeInteger(maxNew)||maxNew<1||maxNew>12000)throw Error("Unsafe maxNew budget; expected integer 1..12000");
 const chunkSize=Number(process.env.GK2_BATCH_SIZE||25);
@@ -38,6 +33,48 @@ async function shop(method,query,payload){
   ...(payload?{"Content-Type":"application/json"}:{})},body:payload?JSON.stringify(payload):undefined,signal:AbortSignal.timeout(30000)});
  if(!r.ok)throw Error("Quickbutik "+method+" returned HTTP "+r.status+" (no credentials exposed)");
  const text=await r.text();return text.trim()?JSON.parse(text):{};
+}
+function hiddenVariant(v){return [true,1,"1"].includes(v?.hidden);}
+function zeroVariant(v){return Number(v?.qty??v?.stock)===0;}
+function goodStaged(v,expectedSku,expectedPrice){
+ return v&&String(v.sku)===expectedSku&&hiddenVariant(v)&&zeroVariant(v)
+  &&Number(v.price)===Number(expectedPrice)&&Number.isSafeInteger(Number(v.id))&&Number(v.id)>0;
+}
+async function rereadProduct(productId){
+ let product=null;
+ for(let attempt=0;attempt<3;attempt++){
+  if(attempt)await sleep(700*attempt);
+  const payload=await shop("GET",{product_id:String(productId),include_details:"true"});
+  const candidate=payload?.product??payload;
+  if(candidate&&Number(candidate.id)===productId&&Array.isArray(candidate.variants)){
+   product=candidate;break;
+  }
+ }
+ if(!product||!String(product.title||"").startsWith("Booking 2.0"))
+  throw Error("STOP: exact product readback failed for "+productId);
+ // Quickbutik V1 sometimes reports visible:null for a hidden parent.
+ if([1,"1",true].includes(product.visible))
+  throw Error("STOP: Booking2 parent became visible: "+productId);
+ return product;
+}
+async function hideStagedVariants(productId,expectedVariants){
+ if(!expectedVariants.length)return;
+ // Batch PUT is the same /v1/products endpoint already used by the old booking.
+ const updates=expectedVariants.map(v=>{
+  if(!Number.isSafeInteger(Number(v.id))||Number(v.id)<1)
+   throw Error("STOP: missing exact variant ID");
+  return {product_id:productId,variant_id:Number(v.id),visible:0,stock:0,disable_minusqty:"1"};
+ });
+ const result=await shop("PUT",null,updates);
+ if(result?.success===0||result?.error)throw Error("STOP: V1 hide rejected");
+ const fresh=await rereadProduct(productId);
+ for(const wanted of expectedVariants){
+  const same=fresh.variants.filter(v=>String(v.sku)===String(wanted.sku));
+  if(same.length!==1||!goodStaged(same[0],wanted.sku,wanted.price))
+   throw Error("STOP: hide/readback verification failed for "+productId+"/"+wanted.sku+
+     " – no further writes; parent must remain hidden");
+ }
+ return fresh;
 }
 function validatePlan(p){
  if(!resourceNames.has(p.resource)||!Number.isSafeInteger(p.productId)||p.productId<1400||p.productId>999999
@@ -98,7 +135,10 @@ async function main(){
    // Quickbutik V1 sometimes reports visible:null even for an actually hidden
    // product. In DRY RUN we can report missing variants safely, but only a
    // separately verified hidden parent may ever be modified.
-   if(write)throw Error("STOP: Product "+p.productId+" visibility unverified; do not write");
+   if(write&&[1,true,"1"].includes(product.visible))
+    throw Error("STOP: Product "+p.productId+" is visible; do not write");
+   // V1 visible:null was independently verified on hidden staging parents.
+   // The V1 PUT always keeps visible=0 and the post-write SKU is hidden.
    console.warn("READ-ONLY WARNING: Product "+p.productId+
      " V1 visibility is "+String(product.visible)+"; this does NOT authorize any write");
   }
@@ -117,15 +157,38 @@ async function main(){
   missingTotal+=missing.length;products++;
   console.log("Product "+p.productId+" ("+p.resource+" "+p.minutes+" min) missing="+missing.length);
   if(!write)continue;
+  // Repair any zero-stock variants created by an interrupted prior run.
+  // Never modify variants with stock > 0 (could be real customer slots).
+  const repair=product.variants.filter(v=>v.sku&&
+   /^20\\d{2}-\\d{2}-\\d{2}-\\d{4}-\\d{4}$/.test(String(v.sku))&&
+   dates.some(d=>String(v.sku).startsWith(d+"-"))&&
+   !hiddenVariant(v)&&zeroVariant(v));
+  if(repair.length>0){
+   console.log("Repairing "+repair.length+" unhidden zero-stock staged variants for "+p.productId);
+   for(let i=0;i<repair.length;i+=chunkSize)
+    await hideStagedVariants(p.productId,repair.slice(i,i+chunkSize));
+  }
   for(let i=0;i<missing.length;i+=chunkSize){
    const variants=missing.slice(i,i+chunkSize);
-   await shop("PUT",null,[{
+   // Legacy variants.add generates the date and time option values.
+   const result=await shop("PUT",null,[{
      product_id:p.productId,visible:0,disable_minusqty:"1",
      variants:{add:variants}
    }]);
+   if(result?.success===0||result?.error)throw Error("STOP: V1 variant add rejected");
+   // CRITICAL: never retry an uncertain write; first read back to resolve IDs.
+   const now=await rereadProduct(p.productId);
+   const added=variants.map(v=>{
+    const matches=now.variants.filter(x=>x.sku===v.sku);
+    if(matches.length!==1||Number(matches[0].price)!==Number(v.price)||
+       !zeroVariant(matches[0]))
+     throw Error("STOP: V1 add could not verify exact SKU/zero stock "+v.sku);
+    return matches[0];
+   });
+   await hideStagedVariants(p.productId,added);
    created+=variants.length;
-   // Conservative request pacing; stop after an error instead of retrying unknown writes.
-   await sleep(850);
+   console.log("CREATED_HIDDEN_VERIFIED product="+p.productId+" count="+variants.length);
+   await sleep(650);
   }
  }
  console.log(JSON.stringify({date:today,firstBookable:earliest,lastBookable:latest,scanned:products,
