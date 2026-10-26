@@ -4,6 +4,7 @@ on:
     paths:
       - 'booking-v2/supabase/functions/gk-booking-v2/payment-validation*.mjs'
       - '.github/workflows/gk2-payment-validation-tests.yml'
+      - 'booking-v2/cloudflare/booking-v2-pushover-map*.mjs'
 permissions:
   contents: read
 jobs:
@@ -15,4 +16,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs
+      - run: node --test booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs booking-v2/cloudflare/booking-v2-pushover-map.test.mjs
