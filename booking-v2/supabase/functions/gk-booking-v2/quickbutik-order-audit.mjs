@@ -36,9 +36,9 @@ export function summarizeV1Order(payload, id){
     hasVariantSkus:items.length>0&&items.every(x=>typeof x?.sku==='string'&&x.sku.length>0)
   }),
   totalAmount:typeof order.total_amount==='string' ? order.total_amount : null,
-  discountAmount:typeof order.discount_amount==='string' && /^\\d{1,9}(?:\\.\\d{1,2})?$/.test(order.discount_amount)
+  discountAmount:typeof order.discount_amount==='string' && /^\d{1,9}(?:\.\d{1,2})?$/.test(order.discount_amount)
     ?order.discount_amount:null,
-  explicitPaidAmount:typeof order.total_pay_amount==='string' && /^\\d{1,9}(?:\\.\\d{1,2})?$/.test(order.total_pay_amount)
+  explicitPaidAmount:typeof order.total_pay_amount==='string' && /^\d{1,9}(?:\.\d{1,2})?$/.test(order.total_pay_amount)
     ?order.total_pay_amount:null,
   containsBooking2Product:items.some(x=>Number(x?.product_id)>=1474&&Number(x?.product_id)<=1506),
   products:items.slice(0,12).map(x=>({productId:Number(x?.product_id)||null,sku:String(x?.sku||'').slice(0,90),quantity:Number(x?.qty)||0})),
