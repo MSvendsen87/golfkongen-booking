@@ -48,7 +48,7 @@ export function validatePaidQuickbutikOrder(order,{reservation,productId,checkou
  if(!validInteger(order.amounts?.paid)||!validInteger(checkoutExpectedPaidOre))return reject('missing_effective_checkout_amount');
  if(order.amounts.paid!==checkoutExpectedPaidOre)return reject('discount_or_paid_amount_mismatch');
  const reservedEmail=typeof reservation.customer_email==='string'?reservation.customer_email.trim().toLowerCase():'';
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(reservedEmail))
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))
   return reject('booking_customer_unbound');
  if(reservedEmail!==String(order.customer?.email||'').trim().toLowerCase())
   return reject('customer_identity_mismatch');
