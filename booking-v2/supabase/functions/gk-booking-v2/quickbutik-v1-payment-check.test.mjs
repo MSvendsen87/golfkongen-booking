@@ -71,3 +71,9 @@ test('HYZR cannot sneak in dart sets',()=>{
 test('requires a server-recorded terms version',()=>{
  assert.equal(verify(base,{reservation:{...reservation,terms_version:null}}).reason,'terms_version_missing');
 });
+
+test('verified confirmed booking supports idempotent late webhook replay',()=>{
+ const alreadyConfirmed={...reservation,status:'confirmed',hold_expires_at:'2020-01-01T00:00:00Z'};
+ assert.equal(verify(base,{reservation:alreadyConfirmed}).eligible,true);
+ assert.equal(verify({...base,status:'-1'},{reservation:alreadyConfirmed}).reason,'order_not_currently_paid');
+});
