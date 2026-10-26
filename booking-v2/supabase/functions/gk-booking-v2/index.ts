@@ -74,10 +74,31 @@ Deno.serve(async (req:Request)=>{
     const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
     if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
     try{
-      const [rawOrder,hold]=await Promise.all([
-        loadV1OrderRecord(verified.orderNumber,{apiKey}),
-        rpc("gk2_get_bound_checkout",{p_order:verified.orderNumber})
-      ]);
+      const rawOrder=await loadV1OrderRecord(verified.orderNumber,{apiKey});
+      if(!["1","2"].includes(String(rawOrder.status)))
+        return err("order_is_not_paid",409,origin);
+      let hold=await rpc("gk2_get_bound_checkout",{p_order:verified.orderNumber});
+      if(!hold){
+        // Same trusted cart-first pattern as legacy booking. A Quickbutik
+        // order number does not exist BEFORE the customer opens checkout.
+        // Find only an already-held slot with matching customer/product/SKU.
+        const bookingLines=(Array.isArray(rawOrder.products)?rawOrder.products:[])
+          .filter((x:Record<string,unknown>)=>{
+            const pid=Number(x?.product_id);
+            return Number.isSafeInteger(pid)&&pid>=1474&&pid<=1506;
+          });
+        if(bookingLines.length!==1||Number(bookingLines[0]?.qty)!==1)
+          return err("order_has_no_unique_booking_line",409,origin);
+        const matched=await rpc("gk2_match_paid_order_to_hold",{
+          p_order:verified.orderNumber,
+          p_product_id:Number(bookingLines[0].product_id),
+          p_sku:String(bookingLines[0].sku||""),
+          p_customer_email:String(rawOrder.customer?.email||"")
+        });
+        if(!matched?.matched)
+          return err("no_active_matching_precheckout_hold_manual_review",409,origin);
+        hold=await rpc("gk2_get_bound_checkout",{p_order:verified.orderNumber});
+      }
       if(!hold||!Number.isInteger(Number(hold.checkout_product_id)))
         return err("order_not_bound_to_a_checkout",409,origin);
       const payment=checkV1BookingPayment(rawOrder,{
