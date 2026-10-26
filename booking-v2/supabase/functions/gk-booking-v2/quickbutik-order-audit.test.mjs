@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {summarizeV1Order,auditQuickbutikOrder} from './quickbutik-order-audit.mjs';
+const order={order_id:'3706',status:'2',total_amount:'10.50',products:[{product_id:1477,sku:'2026-11-01-1000-1100',qty:1}]};
+test('safe read-only result cannot authorize payment',()=>{const s=summarizeV1Order([order],'3706');assert.equal(s.orderNumber,'3706');assert.equal(s.paidVerified,false);assert.equal(s.containsBooking2Product,true);assert.equal(s.products.length,1)});
+test('rejects nonmatching order',()=>assert.throws(()=>summarizeV1Order([order],'3707'),/order_not_found/));
+test('rejects duplicate ambiguous records',()=>assert.throws(()=>summarizeV1Order([order,order],'3706'),/ambiguous_order/));
+test('rejects injected identifiers',()=>assert.throws(()=>summarizeV1Order([order],'3706&limit=20'),/invalid_order_number/));
+test('supports prefixed order identifiers',()=>assert.equal(summarizeV1Order({orders:[order]},'ord_3706').orderNumber,'3706'));
+test('empty sku and items are sanitized',()=>{const s=summarizeV1Order([{...order,products:null}],'3706');assert.equal(s.products.length,0)});
+test('missing secret fails closed before network access',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:''}),/quickbutik_key_not_configured/)});
+test('uses v1 official URL Basic credentials and returns sanitized data',async()=>{let calls=0;const s=await auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async(url,options)=>{calls++;assert.equal(url,'https://api.quickbutik.com/v1/orders?order_id=3706&include_details=true&limit=2');assert.match(options.headers.Authorization,/^Basic /);assert.equal(Buffer.from(options.headers.Authorization.slice(6),'base64').toString(),'test_fake_123456789:test_fake_123456789');return {ok:true,json:async()=>[order]}}});assert.equal(calls,1);assert.equal(s.paidVerified,false);assert.equal(s.totalAmount,'10.50')});
+test('API 401/404 fails closed',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async()=>({ok:false,status:401})}),/api_unavailable/)});
