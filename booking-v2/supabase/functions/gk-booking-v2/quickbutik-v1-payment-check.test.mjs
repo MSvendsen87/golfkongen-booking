@@ -77,3 +77,32 @@ test('verified confirmed booking supports idempotent late webhook replay',()=>{
  assert.equal(verify(base,{reservation:alreadyConfirmed}).eligible,true);
  assert.equal(verify({...base,status:'-1'},{reservation:alreadyConfirmed}).reason,'order_not_currently_paid');
 });
+
+test('verified paid V1 order uses documented total_amount when total_pay_amount is absent',()=>{
+ const order={...base,total_amount:'120.00'};
+ delete order.total_pay_amount;
+ assert.equal(verify(order).eligible,true);
+ assert.equal(verify(order).paidOre,12000);
+});
+test('discounted real-world total requires exact server-authorized final charge',()=>{
+ const order={...base,total_amount:'16.00'};
+ delete order.total_pay_amount;
+ assert.equal(verify(order,{expectedPaidOre:1600}).eligible,true);
+ assert.equal(verify(order,{expectedPaidOre:80000}).reason,'paid_total_mismatch');
+});
+test('never infer a paid total from line prices or a gross order sum',()=>{
+ const order={...base,total_amount:'800.00'};
+ delete order.total_pay_amount;
+ assert.equal(verify(order,{expectedPaidOre:1600}).reason,'paid_total_mismatch');
+ delete order.total_amount;
+ assert.equal(verify(order).reason,'authoritative_total_missing_or_invalid');
+});
+test('rejects conflicting documented and optional payment amount fields',()=>{
+ assert.equal(verify({...base,total_amount:'800.00',total_pay_amount:'16.00'},{expectedPaidOre:1600}).reason,'payment_amount_fields_conflict');
+});
+test('refuses malformed total_amount and no real payment despite nominal status',()=>{
+ const raw={...base,total_amount:'1e6'};delete raw.total_pay_amount;
+ assert.equal(verify(raw).reason,'authoritative_total_missing_or_invalid');
+ assert.equal(verify({...raw,status:'0'}).reason,'order_not_currently_paid');
+ assert.equal(verify({...raw,status:'-1'}).reason,'order_not_currently_paid');
+});
