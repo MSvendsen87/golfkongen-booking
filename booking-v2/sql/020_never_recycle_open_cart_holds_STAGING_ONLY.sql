@@ -63,7 +63,7 @@ BEGIN
   END LOOP;
  END LOOP;
  RETURN jsonb_build_object('id',v_id,'status','held','hold_expires_at',v_exp);
-END; $function$
+END; $function$;
 
 CREATE OR REPLACE FUNCTION public.gk2_abort_precheckout_hold(p_reservation uuid)
  RETURNS boolean
@@ -86,7 +86,7 @@ BEGIN
  UPDATE gk2_private.reservations SET status='expired',hold_expires_at=now(),updated_at=now()
  WHERE id=r.id;
  RETURN true;
-END;$function$
+END;$function$;
 
 REVOKE ALL ON FUNCTION public.gk2_hold_slot(uuid,date,text,integer,integer,text) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.gk2_abort_precheckout_hold(uuid) FROM PUBLIC,anon,authenticated;
