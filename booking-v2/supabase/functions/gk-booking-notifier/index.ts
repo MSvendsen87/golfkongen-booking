@@ -234,13 +234,18 @@ async function dispatchOne(){
 }
 Deno.serve(async req=>{
  const pathname=new URL(req.url).pathname;
+ const configured=["NUKI_API_TOKEN","RESEND_API_KEY","GK2_CODE_KEY_BASE64",
+   "GK2_PUSHOVER_APP_TOKEN","GK2_PUSHOVER_USER_KEY",
+   "GK2_QUICKBUTIK_API_KEY"].every(k=>env(k).length>0)
+   &&env("NUKI_LOCK_ID")===String(LOCK_ID);
+ const enabled=env("GK2_NOTIFIER_ENABLED")==="true";
  if(req.method==="GET"&&pathname.endsWith("/health"))
   return json({ok:true,service:"GolfKongen Booking2 notifier",
-   enabled:env("GK2_NOTIFIER_ENABLED")==="true"});
+   enabled,configured});
  if(req.method!=="POST"||!pathname.endsWith("/internal/dispatch"))
   return json({ok:false,code:"not_found"},404);
- if(env("GK2_NOTIFIER_ENABLED")!=="true")
-  return json({ok:false,code:"notifier_disabled"},503);
+ if(!enabled)return json({ok:false,code:"notifier_disabled"},503);
+ if(!configured)return json({ok:false,code:"notifier_credentials_incomplete"},503);
  const valid=await verifyDispatchRequest({
   apiKey:env("GK2_QUICKBUTIK_API_KEY"),
   timestamp:req.headers.get("x-gk2-dispatch-timestamp")||"",
