@@ -1,0 +1,18 @@
+name: Booking 2.0 payment verifier (no deployment)
+on:
+  pull_request:
+    paths:
+      - 'booking-v2/supabase/functions/gk-booking-v2/payment-validation*.mjs'
+      - '.github/workflows/gk2-payment-validation-tests.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs
