@@ -85,7 +85,8 @@ export function makeNukiAuthorization(booking,code){
     type:13,code:Number(code),
     remoteAllowed:false,smartActionsEnabled:false,
     allowedFromDate:window.allowedFromDate,
-    allowedUntilDate:window.allowedUntilDate
+    allowedUntilDate:window.allowedUntilDate,
+    allowedWeekDays:127,allowedFromTime:0,allowedUntilTime:0
   };
 }
 export function safeEmail(order){
