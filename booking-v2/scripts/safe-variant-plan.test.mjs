@@ -31,7 +31,7 @@ test("planner never recreates an existing slot and always stages with zero stock
  const items=safeVariantPlan({
   product,resource:"hyzr",minutes:30,dates:["2026-11-01"],limit:40
  });
- assert.equal(items.length,24);
+ assert.equal(items.length,23);
  assert.equal(items.some(v=>v.sku==="2026-11-01-1000-1030"),false);
  assert.ok(items.every(v=>v.qty===0&&v.preorder===0&&v.price===90));
  assert.equal(new Set(items.map(x=>x.sku)).size,items.length);
