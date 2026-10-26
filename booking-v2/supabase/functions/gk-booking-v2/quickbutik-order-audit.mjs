@@ -22,6 +22,19 @@ export function summarizeV1Order(payload, id){
   orderState,
   paidVerified:false,
   paymentStatusFromV1Only:orderState==='paid'||orderState==='fulfilled',
+  // Only booleans/types; never leak customer/payment details to the admin UI.
+  fieldProbe:Object.freeze({
+    hasTotalAmount:typeof order.total_amount==='string',
+    hasTotalPayAmount:typeof order.total_pay_amount==='string',
+    hasShippingAmount:typeof order.shipping_amount==='string',
+    hasCurrency:typeof order.currency==='string'||typeof order.payment?.currency==='string',
+    hasCustomerEmail:typeof order.customer?.email==='string'
+      ||typeof order.customer?.email_address==='string'
+      ||typeof order.customer_email==='string',
+    hasRefunds:order.refunds!==undefined,
+    hasPaymentDetails:!!order.payment&&typeof order.payment==='object',
+    hasVariantSkus:items.length>0&&items.every(x=>typeof x?.sku==='string'&&x.sku.length>0)
+  }),
   totalAmount:typeof order.total_amount==='string' ? order.total_amount : null,
   containsBooking2Product:items.some(x=>Number(x?.product_id)>=1474&&Number(x?.product_id)<=1506),
   products:items.slice(0,12).map(x=>({productId:Number(x?.product_id)||null,sku:String(x?.sku||'').slice(0,90),quantity:Number(x?.qty)||0})),
