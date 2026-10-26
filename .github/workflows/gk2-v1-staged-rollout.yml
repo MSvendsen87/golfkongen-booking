@@ -11,7 +11,7 @@ concurrency:
   group: gk2-variants-safe-rollout
   cancel-in-progress: false
 jobs:
-  pilot-one-per-product:
+  pilot-ten-per-product:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -19,10 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Stage one future time per hidden product, then hide and verify SKU
+      - name: Stage at most ten future times per hidden product, then hide and verify SKU
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
           GK2_VARIANT_SYNC_WRITE: 'true'
-          GK2_MAX_VARIANTS_PER_RUN: '33'
-          GK2_BATCH_SIZE: '1'
+          GK2_MAX_VARIANTS_PER_RUN: '330'
+          GK2_BATCH_SIZE: '10'
         run: node booking-v2/scripts/quickbutik-rolling-sync.mjs
