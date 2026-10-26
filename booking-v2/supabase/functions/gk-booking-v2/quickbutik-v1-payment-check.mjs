@@ -36,8 +36,21 @@ export function checkV1BookingPayment(order, options={}){
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
  if(reservedEmail!==email(order.customer?.email))return reject('customer_mismatch');
  if(!validOre(expectedPaidOre))return reject('missing_server_authorized_total');
- const paid=v1NokToOre(order.total_pay_amount);
- if(paid===null||paid!==expectedPaidOre)return reject('paid_total_mismatch');
+ // Quickbutik V1 documents total_amount; total_pay_amount is NOT a documented
+ // required field. Never accept the product list/gross price as a substitute.
+ // A fallback is valid ONLY if the amount matches the server-bound final total.
+ const hasExplicitPaid=order.total_pay_amount!==undefined&&order.total_pay_amount!==null;
+ const amountField=hasExplicitPaid?'total_pay_amount':'total_amount';
+ const paid=v1NokToOre(order[amountField]);
+ if(paid===null)return reject('authoritative_total_missing_or_invalid');
+ if(hasExplicitPaid&&order.total_amount!==undefined&&order.total_amount!==null){
+  const grossOrTotal=v1NokToOre(order.total_amount);
+  if(grossOrTotal===null)return reject('authoritative_total_missing_or_invalid');
+  // The two optional fields may encode different amounts in some API versions.
+  // Do not guess which one represents the final charge.
+  if(grossOrTotal!==paid)return reject('payment_amount_fields_conflict');
+ }
+ if(paid!==expectedPaidOre)return reject('paid_total_mismatch');
  const shipping=v1NokToOre(order.shipping_amount);
  if(shipping===null||shipping!==0)return reject('unexpected_booking_shipping');
  // V1 refunds may be null, [], or empty object; anything else needs review.
