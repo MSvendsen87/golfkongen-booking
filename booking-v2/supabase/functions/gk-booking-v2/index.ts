@@ -1,4 +1,5 @@
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
+import {auditQuickbutikOrder} from "./quickbutik-order-audit.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -64,6 +65,15 @@ Deno.serve(async (req:Request)=>{
   }
   if(!path.startsWith("/admin/"))return err("not_found",404,origin);
   const user=await admin(req);if(!user)return err("admin_forbidden",403,origin);
+  if(req.method==="GET"&&path==="/admin/order-audit"){
+    // Read-only diagnostic, always after owner-only JWT + allowlist check.
+    const order=u.searchParams.get("order")||"";
+    if(!/^[1-9][0-9]{0,8}$/.test(order))return err("invalid_order_number",400,origin);
+    const key=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!key)return err("quickbutik_key_not_configured",503,origin);
+    const audit=await auditQuickbutikOrder(order,{apiKey:key});
+    return reply({ok:true,...audit,bookingConfirmed:false,notificationSent:false},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/health")return reply({ok:true,email:user.email,status:"isolated_staging"},200,origin);
   if(req.method==="GET"&&path==="/admin/snapshot"){
     const day=u.searchParams.get("date")||"";if(!validDate(day))return err("invalid_date",400,origin);
