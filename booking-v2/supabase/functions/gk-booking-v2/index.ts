@@ -3,6 +3,7 @@ import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.m
 import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
 import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
+import {verifyCleanupRequest} from "./cleanup-auth.mjs";
 import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
@@ -127,11 +128,12 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="POST"&&path==="/internal/relock-expired"){
     // Private maintenance endpoint. No user or browser may trigger door/booking
     // operations or disclose reservation identifiers.
-    const expected=Deno.env.get("GK2_CART_CLEANUP_TOKEN")||"";
-    if(expected.length<32||req.headers.get("x-gk2-cart-cleanup-token")!==expected)
-      return err("unauthorized_maintenance",403,origin);
     const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
-    if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
+    if(!await verifyCleanupRequest({
+      apiKey,
+      timestamp:req.headers.get("x-gk2-cleanup-timestamp")||"",
+      signature:req.headers.get("x-gk2-cleanup-signature")||""
+    }))return err("unauthorized_maintenance",403,origin);
     let leases:Record<string,unknown>[];
     try{
       const taken=await rpc("gk2_take_expired_cart_leases",{p_limit:10});
