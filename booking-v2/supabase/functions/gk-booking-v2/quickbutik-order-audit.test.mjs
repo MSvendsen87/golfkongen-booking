@@ -37,3 +37,18 @@ test('read-only schema probe exposes only field availability, never customer det
  assert.equal(JSON.stringify(result).includes('do-not-show'),false);
  assert.equal(result.paidVerified,false);
 });
+
+test('owner-only diagnostic reports only numeric safe totals, never raw payment object',()=>{
+ const z={...order,total_amount:'800.00',discount_amount:'784.00',payment:{secret:'do-not-return'}};
+ const a=summarizeV1Order([z],'3706');
+ assert.equal(a.totalAmount,'800.00');
+ assert.equal(a.discountAmount,'784.00');
+ assert.equal(a.explicitPaidAmount,null);
+ assert.equal(JSON.stringify(a).includes('do-not-return'),false);
+});
+test('malformed discount and paid amount are never reflected back',()=>{
+ const z={...order,discount_amount:'<script>',total_pay_amount:'hello@example.invalid'};
+ const a=summarizeV1Order([z],'3706');
+ assert.equal(a.discountAmount,null);
+ assert.equal(a.explicitPaidAmount,null);
+});
