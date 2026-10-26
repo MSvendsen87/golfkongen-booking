@@ -1,0 +1,42 @@
+name: Booking 2.0 – Confirmed booking Nuki and Pushover
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gk2-notification-dispatch
+  cancel-in-progress: false
+jobs:
+  verified-confirmed-bookings:
+    if: ${{ vars.GK2_CUSTOMER_CHECKOUT_LIVE == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Deliver idempotent booking events to secure backend
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {createHmac} from 'node:crypto';
+          const key=process.env.GK2_QUICKBUTIK_API_KEY||'';
+          if(key.length<20)throw Error('Quickbutik key secret not configured');
+          const ts=String(Math.floor(Date.now()/1000));
+          const derived=createHmac('sha256',key)
+            .update('gk2-booking-confirmed-notifications-key-v1').digest();
+          const sig=createHmac('sha256',derived)
+            .update('POST:/internal/dispatch:'+ts).digest('hex');
+          const response=await fetch(
+            'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-notifier/internal/dispatch',
+            {method:'POST',headers:{
+              'x-gk2-dispatch-timestamp':ts,
+              'x-gk2-dispatch-signature':sig,
+              'Content-Type':'application/json'
+            },body:'{}',signal:AbortSignal.timeout(45000)}
+          );
+          if(!response.ok)throw Error('Booking notifier HTTP '+response.status);
+          const result=await response.json();
+          console.log('Booking notifications processed:',result.processed);
+          if(result.ok!==true)throw Error('Booking notifications need manual review');
+          NODE
