@@ -45,13 +45,13 @@ async function nuki(env,method,path,body){
   return raw?JSON.parse(raw):null;
 }
 async function authorizations(env){
-  const data=await nuki(env,"GET","/smartlock/"+encodeURIComponent(must(env,"NUKI_LOCK_ID"))+"/auth");
+  const data=await nuki(env,"GET","/smartlock/auth?types=13");
   if(Array.isArray(data))return data;
   if(Array.isArray(data?.data))return data.data;
   throw new Error("Unexpected Nuki authorizations response");
 }
 function findAuth(list,row,code){
-  return list.find(a=>a.type==13 && String(a.name)===row.auth_name &&
+  return list.find(a=>a.type==13 && String(a.smartlockId)===String(row.nuki_lock_id) && String(a.name)===row.auth_name &&
     String(a.code)===String(code));
 }
 // Web API global auth id, never the lock-local authId.
@@ -125,7 +125,7 @@ async function sendCode(env,row,code){
 }
 async function ensureCreated(env,row,list){
   const code=await decryptCode(env,row.code_ciphertext);
-  const existing=findAuth(list,row,code);
+  const existing=findAuth(list,{...row,nuki_lock_id:must(env,"NUKI_LOCK_ID")},code);
   if(existing){
     await env.DB.prepare("UPDATE booking_access SET status='verifying',nuki_auth_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_key=?")
       .bind(String(authIdentifier(existing)??""),row.booking_key).run();
@@ -142,19 +142,18 @@ async function ensureCreated(env,row,list){
   const booking={
     bookingKey:row.booking_key,startUtc:row.start_utc,endUtc:row.end_utc
   };
-  const payload=makeNukiAuthorization(booking,code);
-  await nuki(env,"PUT","/smartlock/"+encodeURIComponent(must(env,"NUKI_LOCK_ID"))+"/auth",payload);
+  const payload={...makeNukiAuthorization(booking,code),smartlockIds:[Number(must(env,"NUKI_LOCK_ID"))]};
+  await nuki(env,"PUT","/smartlock/auth",payload);
   await env.DB.prepare("UPDATE booking_access SET status='verifying',updated_at=CURRENT_TIMESTAMP WHERE booking_key=?")
     .bind(row.booking_key).run();
 }
 async function revoke(env,row,list){
   const code=await decryptCode(env,row.code_ciphertext);
-  const auth=findAuth(list,row,code);
+  const auth=findAuth(list,{...row,nuki_lock_id:must(env,"NUKI_LOCK_ID")},code);
   if(auth){
     const id=authIdentifier(auth);
     if(id===undefined)throw new Error("Nuki auth ID unavailable for revocation");
-    await nuki(env,"DELETE","/smartlock/"+encodeURIComponent(must(env,"NUKI_LOCK_ID"))+
-      "/auth/"+encodeURIComponent(id));
+    await nuki(env,"DELETE","/smartlock/auth",[String(id)]);
     await env.DB.prepare("UPDATE booking_access SET status='revoking',updated_at=CURRENT_TIMESTAMP WHERE booking_key=?")
       .bind(row.booking_key).run();
   }else{
