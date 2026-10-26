@@ -81,7 +81,7 @@ export function makeNukiAuthorization(booking,code){
   if (!validKeypadCode(code)) throw new Error("Invalid Nuki Keypad code");
   const window=bookingWindow(booking);
   return {
-    name:("GK "+booking.bookingKey).slice(0,32),
+    name:("GK "+booking.bookingKey).slice(0,20),
     type:13,code:Number(code),
     remoteAllowed:false,smartActionsEnabled:false,
     allowedFromDate:window.allowedFromDate,
