@@ -28,7 +28,7 @@ export function summarizeV1Order(payload, id){
   notice:'Read-only audit. Raw V1 status is NOT booking authorization. Never use this result to confirm a reservation.'
  });
 }
-export async function auditQuickbutikOrder(orderNumber,{apiKey,fetchImpl=fetch}={}){
+export async function loadV1OrderRecord(orderNumber,{apiKey,fetchImpl=fetch}={}){
  const m=ORDER_ID_RE.exec(String(orderNumber||''));
  if(!m)throw new Error('invalid_order_number');
  if(typeof apiKey!=='string'||apiKey.length<10)throw new Error('quickbutik_key_not_configured');
@@ -40,5 +40,11 @@ export async function auditQuickbutikOrder(orderNumber,{apiKey,fetchImpl=fetch}=
  },redirect:'error',signal:AbortSignal.timeout(12000)});
  if(!response.ok)throw new Error('quickbutik_order_api_unavailable');
  const body=await response.json();
- return summarizeV1Order(body,m[1]);
+ const rows=extractRows(body).filter(r=>r&&String(r.order_id)===m[1]);
+ if(rows.length!==1)throw new Error(rows.length?'ambiguous_order':'order_not_found');
+ return rows[0]; // SERVER ONLY: contains customer identity, never expose to client.
+}
+export async function auditQuickbutikOrder(orderNumber,options={}){
+ const record=await loadV1OrderRecord(orderNumber,options);
+ return summarizeV1Order(record,orderNumber);
 }
