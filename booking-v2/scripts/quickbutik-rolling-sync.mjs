@@ -94,8 +94,14 @@ async function main(){
   }
   if(!product)throw Error("Product read could not verify exact identity "+p.productId+" after 3 attempts: no writes");
   await sleep(800);
-  if(!(product.visible===false||product.visible===0||product.visible==="0"))
-   throw Error("STOP: Product "+p.productId+" is visible; do not touch");
+  if(!(product.visible===false||product.visible===0||product.visible==="0")){
+   // Quickbutik V1 sometimes reports visible:null even for an actually hidden
+   // product. In DRY RUN we can report missing variants safely, but only a
+   // separately verified hidden parent may ever be modified.
+   if(write)throw Error("STOP: Product "+p.productId+" visibility unverified; do not write");
+   console.warn("READ-ONLY WARNING: Product "+p.productId+
+     " V1 visibility is "+String(product.visible)+"; this does NOT authorize any write");
+  }
   if(!String(product.title||"").startsWith("Booking 2.0"))throw Error("Not a Booking2 product: "+p.productId);
   if(!Number.isFinite(Number(product.price))||Number(product.price)<=0)
    throw Error("Invalid product regular price "+p.productId);
