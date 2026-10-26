@@ -52,8 +52,9 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="GET"&&path==="/window"){
     // Derived on every request from Europe/Oslo PostgreSQL clock, no cron required for new dates.
     const window=await rpc("gk2_booking_window",{});
-    return reply({ok:true,...window,checkoutEnabled:false,
-      explanation:"The 45-day calendar rolls daily; Quickbutik variants and payments must be configured separately."},200,origin);
+    return reply({ok:true,...window,
+      checkoutEnabled:Deno.env.get("GK2_CHECKOUT_ENABLED")==="true"&&window.bookingEnabled===true,
+      explanation:"The 45-day calendar rolls daily; Quickbutik checkout follows the server release gates."},200,origin);
   }
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
