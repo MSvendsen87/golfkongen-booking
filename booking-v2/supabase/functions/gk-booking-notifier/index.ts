@@ -137,6 +137,44 @@ async function nukiBooking(event,booking){
   throw e;
  }
 }
+async function revokeCancelledBooking(booking){
+ const row=await rpc("gk2_get_existing_nuki_access",{p_reservation:booking.bookingId});
+ if(!row){
+  await rpc("gk2_finish_revoked_booking",{p_reservation:booking.bookingId});
+  return {revoked:true};
+ }
+ if(row.status==="revoked"){
+  await rpc("gk2_finish_revoked_booking",{p_reservation:booking.bookingId});
+  return {revoked:true};
+ }
+ const auths=await safeDeviceAndAuthList();
+ let code="";
+ try{code=await decryptAccessCode(row.ciphertext,env("GK2_CODE_KEY_BASE64"))}
+ catch(_e){throw Error("cannot_decrypt_nuki_code_for_revocation_manual_review")}
+ const found=auths.find(x=>Number(x.type)===13&&
+   String(x.smartlockId)===String(LOCK_ID)&&x.name===row.name&&
+   (String(x.id)===String(row.authId)||String(x.code)===String(Number(code))));
+ if(found){
+  if(row.status!=="revoking"){
+   // Nuki DELETE is asynchronous; do not claim access was revoked until
+   // a subsequent GET proves the authorization has disappeared.
+   await setAccess(booking,"revoking",String(found.id));
+   await nuki("DELETE","/smartlock/auth",[String(found.id)]);
+  }
+  return {revoked:false,phase:"waiting_for_nuki_revoke"};
+ }
+ // If a creation is still pending, absence from the cloud list might be
+ // temporary. Never free a booked slot based on that uncertain absence.
+ if(row.status==="creating_unknown"||row.status==="verifying"){
+  throw Error("nuki_creation_unresolved_manual_review");
+ }
+ await setAccess(booking,"revoked");
+ const released=await rpc("gk2_finish_revoked_booking",{
+  p_reservation:booking.bookingId
+ });
+ if(released!==true)throw Error("slot_claim_release_requires_review");
+ return {revoked:true};
+}
 async function dispatchOne(){
  const event=await rpc("gk2_claim_confirmed_notification");
  if(!event)return {done:true};
@@ -149,6 +187,22 @@ async function dispatchOne(){
    const requestId=await pushover(booking);
    await complete(event,"sent",requestId);
    return {done:false,sent:"pushover"};
+  }
+  if(event.kind==="booking_cancelled"){
+   if(!env("NUKI_API_TOKEN")||!env("GK2_CODE_KEY_BASE64"))
+    throw Error("revocation_credentials_missing");
+   const state=await revokeCancelledBooking(booking);
+   if(!state.revoked){
+    await complete(event,"pending",null,state.phase);
+    return {done:false,sent:"revocation_pending"};
+   }
+   // Pushover cancellation notice is an independent outbox event. A Nuki
+   // failure cannot cause a duplicate booking-confirmed Pushover message.
+   if(!env("GK2_PUSHOVER_APP_TOKEN")||!env("GK2_PUSHOVER_USER_KEY"))
+    throw Error("pushover_credentials_missing");
+   const receipt=await pushover({...booking,title:"Avbestilt: "+booking.title});
+   await complete(event,"sent",receipt);
+   return {done:false,sent:"revoked_and_notified"};
   }
   if(event.kind==="nuki_access_requested"){
    const required=["NUKI_API_TOKEN","RESEND_API_KEY","GK2_CODE_KEY_BASE64"];
