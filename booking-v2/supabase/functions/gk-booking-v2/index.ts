@@ -151,6 +151,7 @@ Deno.serve(async (req:Request)=>{
     const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
     if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
     let heldId="";
+    let leaseStarted=false;
     try{
       const held=await rpc("gk2_hold_slot",{
         p_key:key,p_day:day,p_resource:resource,p_start:start,
@@ -163,8 +164,15 @@ Deno.serve(async (req:Request)=>{
         p_rental_sets:rentalSets,p_terms_accepted:true
       });
       const sku=expectedSlotSku(day,start,start+minutes);
+      await rpc("gk2_mark_cart_variant_opening",{
+        p_reservation:heldId,p_product:Number(productId),p_sku:sku
+      });
+      leaseStarted=true;
       const variant=await mutateHeldCartVariant({
         productId:Number(productId),sku,action:"open",apiKey
+      });
+      await rpc("gk2_mark_cart_variant_open",{
+        p_reservation:heldId,p_variant_id:variant.variantId
       });
       return reply({ok:true,holdId:heldId,holdExpiresAt:held.hold_expires_at,
         productId:Number(productId),variantId:variant.variantId,
@@ -172,14 +180,27 @@ Deno.serve(async (req:Request)=>{
     }catch(_e){
       if(heldId){
         try{
-          // Never release the DB hold if the variant cannot first be safely
-          // relocked; an uncertain state is kept for manual review.
-          const sku=expectedSlotSku(day,start,start+minutes);
-          await mutateHeldCartVariant({
-            productId:Number(productId),sku,action:"close",apiKey
-          });
-          await rpc("gk2_abort_precheckout_hold",{p_reservation:heldId});
-        }catch(_cleanupError){return err("checkout_manual_review_required",503,origin)}
+          if(leaseStarted){
+            // If checkout creation fails, Quickbutik must be relocked first.
+            // Failed relocking leaves DB claims held for manual recovery.
+            const sku=expectedSlotSku(day,start,start+minutes);
+            await mutateHeldCartVariant({
+              productId:Number(productId),sku,action:"close",apiKey
+            });
+            await rpc("gk2_finish_cart_variant_relock",{
+              p_reservation:heldId,p_success:true
+            });
+          }
+          const aborted=await rpc("gk2_abort_precheckout_hold",{p_reservation:heldId});
+          if(aborted!==true)return err("checkout_hold_retained_for_review",503,origin);
+        }catch(_cleanupError){
+          if(leaseStarted){
+            try{await rpc("gk2_finish_cart_variant_relock",{
+              p_reservation:heldId,p_success:false
+            })}catch(_logErr){/* mark remains opening/failed for periodic recovery */}
+          }
+          return err("checkout_manual_review_required",503,origin)
+        }
       }
       return err("hold_checkout_failed",503,origin);
     }
