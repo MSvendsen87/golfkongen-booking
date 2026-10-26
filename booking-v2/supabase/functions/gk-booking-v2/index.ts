@@ -73,12 +73,23 @@ Deno.serve(async (req:Request)=>{
     if(gates!==true)return err("webhook_release_gates_closed",503,origin);
     const verified=await verifyQuickbutikWebhook(u.toString(),Deno.env.get("GK2_WEBHOOK_SECURITYHASH")||"");
     if(!verified.ok)return err("webhook_source_rejected",403,origin);
-    if(verified.eventType!=="order.new")
-      return err("cancellation_webhook_not_ready",503,origin);
     const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
     if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
     try{
       const rawOrder=await loadV1OrderRecord(verified.orderNumber,{apiKey});
+      if(verified.eventType==="order.cancelled"){
+        // Never revoke door access solely from a caller's order number.
+        // Quickbutik must independently confirm the order is cancelled.
+        if(String(rawOrder.status)!=="-1")
+          return err("cancellation_not_verified_by_quickbutik",409,origin);
+        const cancellation=await rpc("gk2_cancel_verified_paid_order",{
+          p_order:verified.orderNumber
+        });
+        return reply({ok:true,cancellationQueued:cancellation?.queuedRevocation===true,
+          alreadyCancelled:cancellation?.alreadyCancelled===true},200,origin);
+      }
+      if(verified.eventType!=="order.new")
+        return err("unsupported_webhook_event",400,origin);
       if(!["1","2"].includes(String(rawOrder.status)))
         return err("order_is_not_paid",409,origin);
       let hold=await rpc("gk2_get_bound_checkout",{p_order:verified.orderNumber});
