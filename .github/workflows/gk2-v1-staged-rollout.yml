@@ -1,5 +1,6 @@
 name: Booking 2.0 – Old-style V1 hidden variant rollout
 on:
+  workflow_dispatch:
   push:
     branches:
       - booking-v2-preview-2026-10-24
