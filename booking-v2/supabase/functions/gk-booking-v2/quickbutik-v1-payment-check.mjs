@@ -12,7 +12,7 @@ const id=s=>/^[1-9][0-9]{0,8}$/.test(String(s||''))?String(s):null;
 
 // Quickbutik V1 monetary fields use strings in NOK, not integer minor units.
 export function v1NokToOre(value){
- if(typeof value!=='string'||!/^\\d{1,9}(?:\\.\\d{1,2})?$/.test(value))return null;
+ if(typeof value!=='string'||!/^\d{1,9}(?:\.\d{1,2})?$/.test(value))return null;
  const [whole,frac='']=value.split('.');
  const ore=Number(whole)*100+Number(frac.padEnd(2,'0'));
  return validOre(ore)?ore:null;
@@ -33,7 +33,7 @@ export function checkV1BookingPayment(order, options={}){
  if(typeof reservation.terms_version!=='string'||!/^gk-v[0-9][a-z0-9.-]{0,48}$/.test(reservation.terms_version))
   return reject('terms_version_missing');
  const reservedEmail=email(reservation.customer_email);
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
  if(reservedEmail!==email(order.customer?.email))return reject('customer_mismatch');
  if(!validOre(expectedPaidOre))return reject('missing_server_authorized_total');
  const paid=v1NokToOre(order.total_pay_amount);
