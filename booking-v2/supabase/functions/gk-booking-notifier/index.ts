@@ -50,8 +50,12 @@ async function complete(event,state,external=null,detail=null){
  return rpc("gk2_complete_confirmed_notification",{
   p_event:event.eventId,p_state:state,p_external_id:external,p_error:detail});
 }
-async function pushover(booking){
- const msg=bookedNotice(booking);
+async function pushover(booking,{cancelled=false}={}){
+ const msg=cancelled?{
+  title:"GolfKongen – booking avbestilt",
+  message:[booking.title,booking.day,booking.from+"–"+booking.to,
+   "Ordre: "+booking.orderId,"Referanse: "+booking.bookingId.slice(0,8)].join("\\n")
+ }:bookedNotice(booking);
  const params=new URLSearchParams({
   token:env("GK2_PUSHOVER_APP_TOKEN"),user:env("GK2_PUSHOVER_USER_KEY"),
   title:msg.title,message:msg.message,priority:"0"
@@ -200,7 +204,7 @@ async function dispatchOne(){
    // failure cannot cause a duplicate booking-confirmed Pushover message.
    if(!env("GK2_PUSHOVER_APP_TOKEN")||!env("GK2_PUSHOVER_USER_KEY"))
     throw Error("pushover_credentials_missing");
-   const receipt=await pushover({...booking,title:"Avbestilt: "+booking.title});
+   const receipt=await pushover(booking,{cancelled:true});
    await complete(event,"sent",receipt);
    return {done:false,sent:"revoked_and_notified"};
   }
