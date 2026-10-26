@@ -232,7 +232,8 @@ async function runCron(env){
   if(env.ACTIVE!=="true")return;
   const recent=await quickbutikRecent(env);
   for(const order of recent.slice(0,100)){
-    try{await queuePaidOrder(env,order,false);}
+    try{// Query is restricted to paid_at records by Quickbutik itself.
+      await queuePaidOrder(env,order,true);}
     catch(e){console.error("Booking ingest error",String(e.message||e));}
   }
   // Correct independently-confirmed cancelled/refunded orders, even if a webhook was missed.
