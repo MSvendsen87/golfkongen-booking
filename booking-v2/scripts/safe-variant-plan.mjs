@@ -45,6 +45,7 @@ export function safeVariantPlan({
   throw Error("staging_product_visibility_not_verified");
  const price=Number(product.price);
  if(!Number.isFinite(price)||price<=0||price>100000)throw Error("invalid_staging_price");
+ if(limit===0)return [];
  const variants=Array.isArray(product.variants)?product.variants:[];
  const known=new Set(variants.map(v=>String(v.sku||"")).filter(Boolean));
  const newVariants=[];
