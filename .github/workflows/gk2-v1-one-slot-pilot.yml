@@ -1,4 +1,4 @@
-name: Booking 2.0 – One old-style V1 SKU pilot
+name: Booking 2.0 – One old-style V1 variant visibility pilot
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: gk2-one-slot-pilot-1474-20261103
+  group: gk2-one-slot-pilot-1474-20261104
   cancel-in-progress: false
 jobs:
   one-time-old-style-pilot:
@@ -23,4 +23,4 @@ jobs:
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
           GK2_PILOT_WRITE: 'true'
-        run: node booking-v2/scripts/pilot-old-variant-add-20261103.mjs
+        run: node booking-v2/scripts/pilot-v1-variant-visibility-20261104.mjs
