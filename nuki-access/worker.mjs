@@ -222,6 +222,9 @@ async function processWebhook(env,event,id){
     const order=await quickbutikOrder(env,orderId);
     await queuePaidOrder(env,order,true);
     await reconcile(env);
+    // Nuki authorization registration is asynchronous. Recheck without sending before verification.
+    await new Promise(resolve=>setTimeout(resolve,2500));
+    await reconcile(env);
   }else if(event==="order.cancelled")await cancelOrder(env,orderId);
 }
 async function runCron(env){
