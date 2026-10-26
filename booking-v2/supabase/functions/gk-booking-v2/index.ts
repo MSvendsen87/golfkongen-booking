@@ -142,7 +142,7 @@ Deno.serve(async (req:Request)=>{
        !Number.isInteger(start)||start%30!==0||
        !Number.isInteger(minutes)||minutes%30!==0||minutes<30||
        !Number.isInteger(rentalSets)||rentalSets<0||rentalSets>6||
-       data?.acceptedTerms!==true||!/^\\S+@\\S+\\.\\S+$/.test(email))
+       data?.acceptedTerms!==true||!/^\S+@\S+\.\S+$/.test(email))
       return err("invalid_hold_payload",400,origin);
     const productId=await rpc("gk2_checkout_product_for",{p_resource:resource,p_minutes:minutes});
     if(!Number.isSafeInteger(Number(productId))||Number(productId)<1474||Number(productId)>1506)
