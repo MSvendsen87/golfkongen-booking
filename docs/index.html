@@ -242,7 +242,9 @@ $('qbAuditButton').onclick=async()=>{
   out.textContent='Ordre '+r.orderNumber+' · status: '+(r.orderState||r.legacyStatus)+
    ' · varelinjer: '+r.products.map(p=>p.productId+' ('+p.sku+')').join(', ')+
    '. Quickbutik ordrefelt: '+format+
-   '. Kun feltkontroll, ingen bookingbekreftelse, Pushover eller Nuki.';
+   '. Rå total_amount: '+(r.totalAmount??'mangler')+
+   ' NOK (dette er IKKE bevist betalt beløp).'+
+   ' Kun feltkontroll, ingen bookingbekreftelse, Pushover eller Nuki.';
  }catch(e){out.textContent='Ordrekontroll feilet: '+e.message+
   '. Kontroller under «automatikk og betalingsklarhet» om Quickbutik API-nøkkel finnes på staging. Ingen booking er endret.';}
 };
