@@ -82,12 +82,15 @@ Deno.serve(async (req:Request)=>{
         return err("order_not_bound_to_a_checkout",409,origin);
       const payment=checkV1BookingPayment(rawOrder,{
         reservation:hold,expectedProductId:hold.checkout_product_id,
-        expectedPaidOre:hold.quoted_ore,expectedRentalSets:hold.rental_sets_count
+        expectedPaidOre:hold.quoted_ore,expectedRentalSets:hold.rental_sets_count,
+        // Quickbutik calculates and charges customer prices/discounts.
+        // V1 gross 'total_amount' is NOT the actual paid net after coupons.
+        paymentPolicy:"trusted_status"
       });
       if(!payment.eligible)return err("order_did_not_pass_payment_verification",409,origin);
-      const confirmed=await rpc("gk2_confirm_paid_slot",{
+      const confirmed=await rpc("gk2_confirm_paid_order_status",{
         p_reservation:hold.id,p_order:verified.orderNumber,
-        p_amount_ore:payment.paidOre,p_event_id:"qb.order.new:"+verified.orderNumber
+        p_event_id:"qb.order.new:"+verified.orderNumber
       });
       if(!["confirmed","paid_unallocated"].includes(confirmed?.status))
         return err("booking_not_confirmed",503,origin);
