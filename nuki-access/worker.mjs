@@ -54,7 +54,8 @@ function findAuth(list,row,code){
   return list.find(a=>a.type==13 && String(a.name)===row.auth_name &&
     String(a.code)===String(code));
 }
-function authIdentifier(auth){return auth?.id ?? auth?.authId;}
+// Web API global auth id, never the lock-local authId.
+function authIdentifier(auth){return auth?.id;}
 async function encryptCode(env,code){
   const raw=Uint8Array.from(atob(must(env,"CODE_KEY_BASE64")),c=>c.charCodeAt(0));
   if(raw.length!==32)throw new Error("Encryption key must be 32 bytes");
