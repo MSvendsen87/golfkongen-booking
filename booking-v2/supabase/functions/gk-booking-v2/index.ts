@@ -1,5 +1,7 @@
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
-import {auditQuickbutikOrder} from "./quickbutik-order-audit.mjs";
+import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.mjs";
+import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
+import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -57,6 +59,43 @@ Deno.serve(async (req:Request)=>{
    const result=await rpc("gk2_day_availability",{p_day:day});
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
+  }
+  if(req.method==="GET"&&path==="/webhook/quickbutik"){
+    // Dual release lock: env + 8 database gates. Until BOTH pass, never
+    // acknowledge a paid Quickbutik event or modify a reservation.
+    if(Deno.env.get("GK2_WEBHOOK_ENABLED")!=="true")
+      return err("webhook_not_enabled",503,origin);
+    const gates=await rpc("gk2_release_gates_satisfied",{});
+    if(gates!==true)return err("webhook_release_gates_closed",503,origin);
+    const verified=await verifyQuickbutikWebhook(u.toString(),Deno.env.get("GK2_WEBHOOK_SECURITYHASH")||"");
+    if(!verified.ok)return err("webhook_source_rejected",403,origin);
+    if(verified.eventType!=="order.new")
+      return err("cancellation_webhook_not_ready",503,origin);
+    const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
+    try{
+      const [rawOrder,hold]=await Promise.all([
+        loadV1OrderRecord(verified.orderNumber,{apiKey}),
+        rpc("gk2_get_bound_checkout",{p_order:verified.orderNumber})
+      ]);
+      if(!hold||!Number.isInteger(Number(hold.checkout_product_id)))
+        return err("order_not_bound_to_a_checkout",409,origin);
+      const payment=checkV1BookingPayment(rawOrder,{
+        reservation:hold,expectedProductId:hold.checkout_product_id,
+        expectedPaidOre:hold.quoted_ore,expectedRentalSets:hold.rental_sets_count
+      });
+      if(!payment.eligible)return err("order_did_not_pass_payment_verification",409,origin);
+      const confirmed=await rpc("gk2_confirm_paid_slot",{
+        p_reservation:hold.id,p_order:verified.orderNumber,
+        p_amount_ore:payment.paidOre,p_event_id:"qb.order.new:"+verified.orderNumber
+      });
+      if(!["confirmed","paid_unallocated"].includes(confirmed?.status))
+        return err("booking_not_confirmed",503,origin);
+      return reply({ok:true,bookingStatus:confirmed.status,
+        notificationQueued:confirmed.status==="confirmed"},200,origin);
+    }catch(_e){
+      return err("webhook_processing_failed",503,origin);
+    }
   }
   if(path==="/hold"||path==="/checkout"||path.startsWith("/webhook/")){
    // A working checkout must be verified against Quickbutik with protected server-side price
