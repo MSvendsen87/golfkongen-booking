@@ -5,6 +5,7 @@ on:
       - booking-v2-preview-2026-10-24
     paths:
       - '.github/workflows/gk2-cart-stock-pilot.yml'
+      - 'booking-v2/scripts/pilot-v1-cart-stock-window.mjs'
 permissions:
   contents: read
 concurrency:
