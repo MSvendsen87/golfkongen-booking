@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {v1NokToOre,checkV1BookingPayment} from './quickbutik-v1-payment-check.mjs';
+
+const until='2099-01-01T00:00:00Z';
+const reservation={status:'held',quickbutik_order_id:'3777',slot_date:'2026-11-01',
+ resource:'dart_a',start_min:600,end_min:660,hold_expires_at:until,
+ customer_email:'person@example.invalid',terms_version:'gk-v1'};
+const base={order_id:'3777',status:'1',currency:'NOK',total_pay_amount:'120.00',
+ shipping_amount:'0.00',customer:{email:'PERSON@example.invalid'},refunds:[],
+ products:[{product_id:'1486',sku:'2026-11-01-1000-1100',qty:'1'}]};
+const verify=(order=base,opts={})=>checkV1BookingPayment(order,{
+ reservation,expectedProductId:1486,expectedPaidOre:12000,...opts});
+
+test('exact V1 NOK conversion (no float rounding)',()=>{
+ assert.equal(v1NokToOre('10.50'),1050);
+ assert.equal(v1NokToOre('10.5'),1050);
+ assert.equal(v1NokToOre('0'),0);
+ for(const s of ['1e6','12.345','-1','12,3',12.34,'NaN']) assert.equal(v1NokToOre(s),null);
+});
+test('accepts matching paid order with bound active hold',()=>{
+ const result=verify();assert.equal(result.eligible,true);assert.equal(result.paidOre,12000);
+});
+test('accepts status 2 already fulfilled after payment',()=>{
+ assert.equal(verify({...base,status:'2'}).eligible,true);
+});
+test('rejects cancelled, unpaid and unknown statuses',()=>{
+ for(const status of ['-1','0','paid',null,'3'])assert.equal(verify({...base,status}).reason,'order_not_currently_paid');
+});
+test('rejects order mismatch and missing prior checkout order binding',()=>{
+ assert.equal(verify({...base,order_id:'3778'}).reason,'order_not_bound_to_reservation');
+ assert.equal(verify(base,{reservation:{...reservation,quickbutik_order_id:null}}).reason,'order_not_bound_to_reservation');
+});
+test('rejects expired and missing hold',()=>{
+ assert.equal(verify(base,{reservation:{...reservation,hold_expires_at:'2020-01-01T00:00:00Z'}}).reason,'hold_expired_manual_review');
+ assert.equal(verify(base,{reservation:{...reservation,hold_expires_at:null}}).reason,'hold_expiry_missing');
+});
+test('rejects missing and wrong identity',()=>{
+ assert.equal(verify({...base,customer:{email:'other@example.invalid'}}).reason,'customer_mismatch');
+ assert.equal(verify(base,{reservation:{...reservation,customer_email:null}}).reason,'customer_not_bound');
+});
+test('rejects prices changed by coupons without server-authorized paid total',()=>{
+ const discounted={...base,total_pay_amount:'10.50'};
+ assert.equal(verify(discounted).reason,'paid_total_mismatch');
+ assert.equal(verify(discounted,{expectedPaidOre:1050}).eligible,true);
+ assert.equal(verify(base,{expectedPaidOre:null}).reason,'missing_server_authorized_total');
+});
+test('rejects 45 NOK shipping charge even if total matched',()=>{
+ assert.equal(verify({...base,shipping_amount:'45.00'}).reason,'unexpected_booking_shipping');
+});
+test('rejects wrong slot, booking product or duplicate lines',()=>{
+ assert.equal(verify({...base,products:[{...base.products[0],sku:'2026-11-01-1100-1200'}]}).reason,'wrong_variant_sku_or_quantity');
+ assert.equal(verify({...base,products:[{...base.products[0],product_id:1477}]}).reason,'booking_product_missing_or_duplicate');
+ assert.equal(verify({...base,products:[base.products[0],base.products[0]]}).reason,'unexpected_order_lines');
+});
+test('rejects refunds even when status looks paid',()=>{
+ assert.equal(verify({...base,refunds:[{id:1}]}).reason,'refunded_or_unknown_refund_state');
+ assert.equal(verify({...base,refunds:{id:1}}).reason,'refunded_or_unknown_refund_state');
+});
+test('allows 2 optional dart sets only when expected and in the same order',()=>{
+ const withSets={...base,total_pay_amount:'170.00',
+ products:[...base.products,{product_id:'1318',sku:'1318',qty:'2'}]};
+ assert.equal(verify(withSets,{expectedRentalSets:2,expectedPaidOre:17000}).eligible,true);
+ assert.equal(verify(withSets,{expectedRentalSets:1,expectedPaidOre:17000}).reason,'rental_sets_mismatch');
+ assert.equal(verify(withSets,{expectedPaidOre:17000}).reason,'unexpected_order_lines');
+});
+test('HYZR cannot sneak in dart sets',()=>{
+ const hyzrRes={...reservation,resource:'hyzr'};
+ assert.equal(verify(base,{reservation:hyzrRes,expectedRentalSets:2}).reason,'hyzr_does_not_allow_rental');
+});
+test('requires a server-recorded terms version',()=>{
+ assert.equal(verify(base,{reservation:{...reservation,terms_version:null}}).reason,'terms_version_missing');
+});
