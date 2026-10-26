@@ -2,7 +2,8 @@
 // Internal server only. Caller MUST have an atomic, active, single-slot DB hold
 // and server-mapped product ID BEFORE calling open. All numbers come from DB.
 // No browser price / product / variant IDs may be trusted.
-const num=v=>Number.isSafeInteger(Number(v))?Number(v):null;
+const num=v=>v===null||v===undefined||v===""?null:
+ Number.isSafeInteger(Number(v))?Number(v):null;
 const active=v=>[null,undefined,false,0,"0"].includes(v);
 const hidden=v=>[true,1,"1"].includes(v);
 export function stateFromV1(raw,sku){
@@ -48,6 +49,7 @@ export async function mutateHeldCartVariant({
   if(!before.v.hidden||before.v.stock!==0)throw Error("variant_not_safely_staged");
  }else{
   if(before.v.hidden&&before.v.stock===0)return {variantId:before.v.id,sku,alreadyClosed:true};
+  if(before.v.stock<0||before.v.stock>1)throw Error("unexpected_variant_inventory");
  }
  // Exactly one old-style V1 update against a verified SKU/variant ID.
  // A timed out/ambiguous PUT is NEVER blindly retried.
