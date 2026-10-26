@@ -160,7 +160,7 @@ async function main(){
   // Repair any zero-stock variants created by an interrupted prior run.
   // Never modify variants with stock > 0 (could be real customer slots).
   const repair=product.variants.filter(v=>v.sku&&
-   /^20\\d{2}-\\d{2}-\\d{2}-\\d{4}-\\d{4}$/.test(String(v.sku))&&
+   /^20\d{2}-\d{2}-\d{2}-\d{4}-\d{4}$/.test(String(v.sku))&&
    dates.some(d=>String(v.sku).startsWith(d+"-"))&&
    !hiddenVariant(v)&&zeroVariant(v));
   if(repair.length>0){
