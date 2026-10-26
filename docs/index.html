@@ -231,9 +231,18 @@ $('qbAuditButton').onclick=async()=>{
  out.textContent='Leser Quickbutik-ordre '+order+' direkte fra serveren ...';
  try{
   const r=await api('/admin/order-audit?order='+encodeURIComponent(order));
-  out.textContent='Ordre '+r.orderNumber+' · rå Quickbutik-status: '+r.legacyStatus+
+  const probe=r.fieldProbe||{};
+  const required=[['Sum (total_amount)',probe.hasTotalAmount],
+    ['Sum betalt (total_pay_amount)',probe.hasTotalPayAmount],
+    ['Frakt (shipping_amount)',probe.hasShippingAmount],
+    ['Valuta',probe.hasCurrency],
+    ['Kunde-e-post',probe.hasCustomerEmail],
+    ['Variant/SKU',probe.hasVariantSkus]];
+  const format=required.map(([label,exists])=>label+': '+(exists?'JA':'NEI')).join(' · ');
+  out.textContent='Ordre '+r.orderNumber+' · status: '+(r.orderState||r.legacyStatus)+
    ' · varelinjer: '+r.products.map(p=>p.productId+' ('+p.sku+')').join(', ')+
-   '. Ingen reservasjon bekreftet og ingen Pushover sendt. Dette er ikke en betalingsgodkjenning.';
+   '. Quickbutik ordrefelt: '+format+
+   '. Kun feltkontroll, ingen bookingbekreftelse, Pushover eller Nuki.';
  }catch(e){out.textContent='Ordrekontroll feilet: '+e.message+
   '. Kontroller under «automatikk og betalingsklarhet» om Quickbutik API-nøkkel finnes på staging. Ingen booking er endret.';}
 };
