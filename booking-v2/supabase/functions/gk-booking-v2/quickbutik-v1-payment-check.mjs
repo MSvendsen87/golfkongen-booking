@@ -44,6 +44,12 @@ export function checkV1BookingPayment(order, options={}){
  if(hasExplicitPaid){
   paid=v1NokToOre(order.total_pay_amount);
   if(paid===null)return reject('authoritative_total_missing_or_invalid');
+  // Check arithmetic coherence when BOTH gross and discount are supplied.
+  if(order.total_amount!==undefined&&order.discount_amount!==undefined){
+   const gross=v1NokToOre(order.total_amount),discount=v1NokToOre(order.discount_amount);
+   if(gross===null||discount===null||gross-discount!==paid)
+    return reject('payment_amount_fields_conflict');
+  }
  }else{
   const gross=v1NokToOre(order.total_amount);
   const discount=v1NokToOre(order.discount_amount);
