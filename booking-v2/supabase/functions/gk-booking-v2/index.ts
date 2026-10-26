@@ -1,6 +1,8 @@
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
 import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.mjs";
 import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
+import {expectedSlotSku} from "./payment-validation.mjs";
+import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
@@ -119,6 +121,66 @@ Deno.serve(async (req:Request)=>{
         notificationQueued:confirmed.status==="confirmed"},200,origin);
     }catch(_e){
       return err("webhook_processing_failed",503,origin);
+    }
+  }
+  if(req.method==="POST"&&path==="/hold"){
+    // Unified old-style Quickbutik checkout: DB hold -> product variant cart.
+    // This stays OFF until full release testing. Browser price/group is never
+    // used; Quickbutik computes and charges the correct customer group price.
+    if(!origin||!origins.has(origin))return err("forbidden_checkout_origin",403,origin);
+    if(Deno.env.get("GK2_CHECKOUT_ENABLED")!=="true")
+      return err("checkout_not_enabled",503,origin);
+    if(await rpc("gk2_release_gates_satisfied",{})!==true)
+      return err("checkout_release_gates_closed",503,origin);
+    const data=await body(req);
+    const key=String(data?.idempotencyKey||""),
+      day=String(data?.date||""),resource=String(data?.resource||""),
+      start=Number(data?.startMin),minutes=Number(data?.duration),
+      rentalSets=Number(data?.rentalSets??0),email=String(data?.email||"");
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)||
+       !validDate(day)||!["hyzr","dart_a","dart_b","venue"].includes(resource)||
+       !Number.isInteger(start)||start%30!==0||
+       !Number.isInteger(minutes)||minutes%30!==0||minutes<30||
+       !Number.isInteger(rentalSets)||rentalSets<0||rentalSets>6||
+       data?.acceptedTerms!==true||!/^\\S+@\\S+\\.\\S+$/.test(email))
+      return err("invalid_hold_payload",400,origin);
+    const productId=await rpc("gk2_checkout_product_for",{p_resource:resource,p_minutes:minutes});
+    if(!Number.isSafeInteger(Number(productId))||Number(productId)<1474||Number(productId)>1506)
+      return err("booking_product_not_approved",503,origin);
+    const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
+    let heldId="";
+    try{
+      const held=await rpc("gk2_hold_slot",{
+        p_key:key,p_day:day,p_resource:resource,p_start:start,
+        p_duration:minutes,p_terms:"gk-v1"
+      });
+      if(held?.status!=="held"||!held?.id)return err("hold_unavailable",409,origin);
+      heldId=String(held.id);
+      await rpc("gk2_prepare_cart_intent",{
+        p_reservation:heldId,p_email:email,
+        p_rental_sets:rentalSets,p_terms_accepted:true
+      });
+      const sku=expectedSlotSku(day,start,start+minutes);
+      const variant=await mutateHeldCartVariant({
+        productId:Number(productId),sku,action:"open",apiKey
+      });
+      return reply({ok:true,holdId:heldId,holdExpiresAt:held.hold_expires_at,
+        productId:Number(productId),variantId:variant.variantId,
+        sku,rentalSets,checkoutEnabled:true},200,origin);
+    }catch(_e){
+      if(heldId){
+        try{
+          // Never release the DB hold if the variant cannot first be safely
+          // relocked; an uncertain state is kept for manual review.
+          const sku=expectedSlotSku(day,start,start+minutes);
+          await mutateHeldCartVariant({
+            productId:Number(productId),sku,action:"close",apiKey
+          });
+          await rpc("gk2_abort_precheckout_hold",{p_reservation:heldId});
+        }catch(_cleanupError){return err("checkout_manual_review_required",503,origin)}
+      }
+      return err("hold_checkout_failed",503,origin);
     }
   }
   if(path==="/hold"||path==="/checkout"||path.startsWith("/webhook/")){
