@@ -28,3 +28,12 @@
 3. Tilpass Pushover til ett varsel **per bekreftet booking** og unngå meldinger for kassetester. Bekreft riktig kalenderstatus og betalt orden.
 4. Bookingkasse: velg «Ingen frakt – digital booking» eller dokumentert tjenesteshipping; bookingtilpasset takk-side; korrekt MVA; valgfri pilsett à 25 kr og vilkårsbekreftelse.
 5. Test samtidig en kasse med **ingen ekstra rabattkode** via å fjerne den aktive koden i handlekurven; kun nødvendig å gå frem til ordresammendrag – **ikke et nytt betalt kjøp** før stagingkoblingen er klar.
+
+## Ny kontroll av ordrestatus senere 26.10.2026 — viktig
+- Oppslått **direkte i Quickbutik** gjennom `get_order`, ikke ut fra skjermbilder eller gammel internkopi.
+- Ordre 3706 har nå `paymentStatus=voided` og `fulfillmentStatus=cancelled`.
+- `paidAt=2026-10-26T00:45:50Z` er fortsatt utfylt, og registrert `amounts.paid=1050` øre er bevart. **Betalingsdato og beløpsfelt beviser ikke at ordren fortsatt er aktiv.**
+- Ordrehistorikken viser `cancelled` kl. **2026-10-26T00:56:11Z**. `refunds=[]`; dette beviser IKKE at penger er tilbakeført eller ikke tilbakeført. Kvittering/Vipps/Kasse må vurderes separat ved behov.
+- Ordren må forbli ekskludert fra live booking, kalender og booking-push; den var dessuten eksplisitt testkjøp uten hold.
+- Testvare 1477 ble satt `visible=false` gjennom Quickbutik MCP, og ny `get_product` bekreftet at den er skjult. De andre 32 Booking 2.0-produktene ble også kontrollert: alle 33 skjult per 26.10.
+- Ekte kassetest dokumenterte at kundegruppepris 15 kroner **ble vist/benyttet på tidspunktet for kjøpet**, men en testordre som senere annulleres er IKKE end-to-end-verifikasjon av booking. Ingen grunn til å ta et nytt betalt kjøp før ordrebekreftelse/hold/Pushover er koblet.
