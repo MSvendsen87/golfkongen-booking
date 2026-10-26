@@ -21,7 +21,7 @@ export function checkV1BookingPayment(order, options={}){
  const reject=reason=>({eligible:false,reason});
  const {reservation,expectedProductId,expectedPaidOre,expectedRentalSets=0,nowMs=Date.now()}=options;
  if(!order||typeof order!=='object'||!reservation)return reject('missing_authoritative_data');
- if(!['held','payment_pending'].includes(reservation.status))return reject('reservation_not_payable');
+ if(!['held','payment_pending','confirmed'].includes(reservation.status))return reject('reservation_not_payable');
  if(!id(reservation.quickbutik_order_id)||id(order.order_id)!==id(reservation.quickbutik_order_id))
   return reject('order_not_bound_to_reservation');
  if(!['1','2'].includes(String(order.status)))return reject('order_not_currently_paid');
@@ -29,7 +29,7 @@ export function checkV1BookingPayment(order, options={}){
  const expires=Date.parse(reservation.hold_expires_at);
  if(typeof reservation.hold_expires_at!=='string'||!Number.isFinite(expires)||!Number.isFinite(nowMs))
   return reject('hold_expiry_missing');
- if(expires<=nowMs)return reject('hold_expired_manual_review');
+ if(reservation.status!=='confirmed'&&expires<=nowMs)return reject('hold_expired_manual_review');
  if(typeof reservation.terms_version!=='string'||!/^gk-v[0-9][a-z0-9.-]{0,48}$/.test(reservation.terms_version))
   return reject('terms_version_missing');
  const reservedEmail=email(reservation.customer_email);
