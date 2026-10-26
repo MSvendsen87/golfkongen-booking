@@ -13,11 +13,15 @@ export function summarizeV1Order(payload, id){
  const rows=extractRows(payload).filter(r=>r && String(r.order_id)===m[1]);
  if(rows.length!==1)throw new Error(rows.length?'ambiguous_order':'order_not_found');
  const order=rows[0], items=Array.isArray(order.products)?order.products:[];
+ const state=Object.freeze({'-1':'cancelled','0':'unpaid','1':'paid','2':'fulfilled'});
+ const orderState=state[String(order.status)]||'unknown';
  return Object.freeze({
   orderNumber:m[1],
-  // API V1's numerical status MUST NOT be translated to 'paid' without explicit status mapping.
+  // V1 numeric state uses the documented map, but state alone NEVER authorizes a booking.
   legacyStatus:String(order.status??'unknown'),
+  orderState,
   paidVerified:false,
+  paymentStatusFromV1Only:orderState==='paid'||orderState==='fulfilled',
   totalAmount:typeof order.total_amount==='string' ? order.total_amount : null,
   containsBooking2Product:items.some(x=>Number(x?.product_id)>=1474&&Number(x?.product_id)<=1506),
   products:items.slice(0,12).map(x=>({productId:Number(x?.product_id)||null,sku:String(x?.sku||'').slice(0,90),quantity:Number(x?.qty)||0})),
