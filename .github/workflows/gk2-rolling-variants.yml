@@ -9,11 +9,11 @@ on:
       max_new_variants:
         description: 'Maximum new hidden, zero-stock variants in this run (1-12000)'
         required: false
-        default: '2000'
+        default: '5000'
 permissions:
   contents: read
 concurrency:
-  group: golfkongen-booking2-variants
+  group: gk2-variants-safe-rollout
   cancel-in-progress: false
 jobs:
   safe-hidden-variant-sync:
@@ -32,7 +32,7 @@ jobs:
       - name: Audit or create ONLY hidden zero-stock variants
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
-          GK2_VARIANT_SYNC_WRITE: ${{ vars.GK2_VARIANT_SYNC_WRITE || 'false' }}
-          GK2_MAX_VARIANTS_PER_RUN: ${{ inputs.max_new_variants || '2000' }}
-          GK2_BATCH_SIZE: '25'
+          GK2_VARIANT_SYNC_WRITE: 'true' # only prewarms hidden Booking2 parents, does not open checkout
+          GK2_MAX_VARIANTS_PER_RUN: ${{ inputs.max_new_variants || '5000' }}
+          GK2_BATCH_SIZE: '10'
         run: node booking-v2/scripts/quickbutik-rolling-sync.mjs
