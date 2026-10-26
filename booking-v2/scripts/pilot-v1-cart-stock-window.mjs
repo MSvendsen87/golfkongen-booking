@@ -26,8 +26,11 @@ async function read(expectedVisible,expectedStock){
    " matching="+v.length+" observedHidden="+String(v[0]?.hidden)+
    " observedQty="+String(v[0]?.qty??v[0]?.stock)+
    " observedPrice="+String(v[0]?.price));
+ const visibilityMatches=v.length===1&&(expectedVisible?
+   [null,undefined,false,0,"0"].includes(v[0].hidden):
+   [true,1,"1"].includes(v[0].hidden));
  if(v.length!==1||Number(v[0].qty??v[0].stock)!==expectedStock
- ||Number(v[0].price)!==price||String(v[0].hidden)!==String(expectedVisible?0:1))
+ ||Number(v[0].price)!==price||!visibilityMatches)
   throw Error("variant_readback_failed");
  return v[0];
 }
