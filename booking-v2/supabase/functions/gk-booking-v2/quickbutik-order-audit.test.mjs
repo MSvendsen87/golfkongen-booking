@@ -11,3 +11,16 @@ test('empty sku and items are sanitized',()=>{const s=summarizeV1Order([{...orde
 test('missing secret fails closed before network access',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:''}),/quickbutik_key_not_configured/)});
 test('uses v1 official URL Basic credentials and returns sanitized data',async()=>{let calls=0;const s=await auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async(url,options)=>{calls++;assert.equal(url,'https://api.quickbutik.com/v1/orders?order_id=3706&include_details=true&limit=2');assert.match(options.headers.Authorization,/^Basic /);assert.equal(Buffer.from(options.headers.Authorization.slice(6),'base64').toString(),'test_fake_123456789:test_fake_123456789');return {ok:true,json:async()=>[order]}}});assert.equal(calls,1);assert.equal(s.paidVerified,false);assert.equal(s.totalAmount,'10.50')});
 test('API 401/404 fails closed',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async()=>({ok:false,status:401})}),/api_unavailable/)});
+
+test('maps Quickbutik V1 statuses without authorizing reservations',()=>{
+ const expected={'-1':'cancelled','0':'unpaid','1':'paid','2':'fulfilled'};
+ for(const [raw,state] of Object.entries(expected)){
+  const audit=summarizeV1Order([{...order,status:raw}],'3706');
+  assert.equal(audit.orderState,state);
+  assert.equal(audit.paymentStatusFromV1Only,['paid','fulfilled'].includes(state));
+  assert.equal(audit.paidVerified,false);
+ }
+ const unknown=summarizeV1Order([{...order,status:'999'}],'3706');
+ assert.equal(unknown.orderState,'unknown');
+ assert.equal(unknown.paidVerified,false);
+});
