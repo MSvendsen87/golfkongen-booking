@@ -16,7 +16,8 @@ test('exact V1 NOK conversion (no float rounding)',()=>{
  assert.equal(v1NokToOre('10.50'),1050);
  assert.equal(v1NokToOre('10.5'),1050);
  assert.equal(v1NokToOre('0'),0);
- for(const s of ['1e6','12.345','-1','12,3',12.34,'NaN']) assert.equal(v1NokToOre(s),null);
+ assert.equal(v1NokToOre(12.34),1234); // V1 may emit an exact numeric NOK amount.
+ for(const s of ['1e6','12.345','-1','12,3',12.345,'NaN']) assert.equal(v1NokToOre(s),null);
 });
 test('accepts matching paid order with bound active hold',()=>{
  const result=verify();assert.equal(result.eligible,true);assert.equal(result.paidOre,12000);
