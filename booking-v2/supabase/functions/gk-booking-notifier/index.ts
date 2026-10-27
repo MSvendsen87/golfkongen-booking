@@ -235,6 +235,16 @@ async function dispatchOne(){
 }
 Deno.serve(async req=>{
  const pathname=new URL(req.url).pathname;
+ const origin=req.headers.get("origin")||"";
+ const ownerOrigin=origin==="https://msvendsen87.github.io";
+ const cors=ownerOrigin?{
+  "Access-Control-Allow-Origin":origin,
+  "Access-Control-Allow-Headers":"authorization,content-type",
+  "Access-Control-Allow-Methods":"POST,OPTIONS",
+  "Vary":"Origin"}:{};
+ if(req.method==="OPTIONS"&&pathname.endsWith("/internal/diagnose")){
+  return new Response(null,{status:ownerOrigin?204:403,headers:cors});
+ }
  const configured=["NUKI_API_TOKEN","RESEND_API_KEY","GK2_CODE_KEY_BASE64",
    "GK2_PUSHOVER_APP_TOKEN","GK2_PUSHOVER_USER_KEY",
    "GK2_QUICKBUTIK_API_KEY"].every(k=>env(k).length>0)
@@ -245,12 +255,22 @@ Deno.serve(async req=>{
    enabled,configured});
  if(req.method==="POST"&&pathname.endsWith("/internal/diagnose")){
   // Safe diagnostics can run before launch. HMAC is separate from dispatch.
-  const allowed=await verifyDiagnosticRequest({
+  let allowed=await verifyDiagnosticRequest({
    apiKey:env("GK2_QUICKBUTIK_API_KEY"),
    timestamp:req.headers.get("x-gk2-diagnostic-timestamp")||"",
    signature:req.headers.get("x-gk2-diagnostic-signature")||""
   });
-  if(!allowed)return json({ok:false,code:"forbidden"},403);
+  if(!allowed&&ownerOrigin&&db){
+   const bearer=req.headers.get("authorization")||"";
+   if(bearer.startsWith("Bearer ")&&bearer.length<7000){
+    const {data,error}=await db.auth.getUser(bearer.slice(7));
+    const user=data?.user;
+    allowed=!error&&!!user?.email_confirmed_at&&
+      user?.email?.toLowerCase()==="kristoffer.mrk@gmail.com";
+   }
+  }
+  if(!allowed)return new Response(JSON.stringify({ok:false,code:"forbidden"}),{
+   status:403,headers:{"content-type":"application/json",...cors}});
   if(!configured)return json({ok:false,code:"credentials_incomplete"},503);
   let nukiDevice=false,nukiAuths=false,pushoverUser=false;
   try{
@@ -276,11 +296,14 @@ Deno.serve(async req=>{
   }catch(_e){/* bool only */ }
   // Resend sending-only keys cannot perform read API checks.
   // Real mail delivery requires an explicitly authorized test email.
-  return json({ok:nukiDevice&&nukiAuths&&pushoverUser,
+  const report={ok:nukiDevice&&nukiAuths&&pushoverUser,
    nukiDevice,nukiAuthorizations:nukiAuths,pushoverRecipient:pushoverUser,
    resendKeyConfigured:env("RESEND_API_KEY").length>0,
-   emailDeliveryTested:false,notifierEnabled:enabled
-  },nukiDevice&&nukiAuths&&pushoverUser?200:503);
+   emailDeliveryTested:false,notifierEnabled:enabled};
+  return new Response(JSON.stringify(report),{
+   status:report.ok?200:503,headers:{"content-type":"application/json",
+    "cache-control":"no-store",...cors}
+  });
  }
  if(req.method!=="POST"||!pathname.endsWith("/internal/dispatch"))
   return json({ok:false,code:"not_found"},404);
