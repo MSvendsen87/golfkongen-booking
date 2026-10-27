@@ -1,4 +1,4 @@
-name: Booking 2.0 – Validate Pushover without sending
+name: Booking 2.0 – Validate Golfkongen Pushover group (read only)
 on:
   push:
     branches:
@@ -41,7 +41,7 @@ jobs:
           console.log('Nuki device:',report?.nukiDevice===true?'OK':'not confirmed');
           console.log('Nuki authorizations:',report?.nukiAuthorizations===true?'OK':'not confirmed');
           console.log('Resend configured:',report?.resendKeyConfigured===true?'OK':'not confirmed');
-          console.log('Pushover:',report?.pushoverRecipient===true?'OK':'not confirmed');
+          console.log('Pushover Golfkongen group:',report?.pushoverRecipient===true?'OK':'not confirmed');
           console.log('Pushover reason:',reasons.includes(report?.pushoverReason)?report.pushoverReason:'no_safe_reason');
           console.log('HTTP:',response.status);
           if(response.status===403)throw Error('Diagnostic signature rejected; verify GitHub and Supabase signing keys');
