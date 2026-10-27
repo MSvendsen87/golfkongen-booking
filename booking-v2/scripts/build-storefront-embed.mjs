@@ -38,7 +38,7 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
  }
  var preview=new URLSearchParams(location.search).get('booking2')==='preview';
  var publicActivities=(location.pathname.endsWith('/')?location.pathname.slice(0,-1):location.pathname)==='/aktiviteter';
- if(preview||publicActivities){host.hidden=false;var note=document.createElement('p');note.textContent='Du kan se aktiviteter og ledige tider. Bestilling åpner snart.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';note.id='gk2-checkout-locked-note';host.prepend(note);}
+ if(preview||publicActivities){host.hidden=false;}
  fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2/window',{cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('window unavailable');return r.json()})
  .then(function(w){
