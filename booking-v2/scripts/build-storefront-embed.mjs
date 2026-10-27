@@ -19,6 +19,12 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
  // Customer-facing Quickbutik page: remove internal development notes.
  if((location.pathname.endsWith('/')?location.pathname.slice(0,-1):location.pathname)==='/aktiviteter'){
    var activities=document.getElementById('gk-aktiviteter');
+   // Retire duplicate older activity-card/CTA panel after the replacement
+   // Booking 2.0 widget has mounted. Fail safe: keep old content if not mounted.
+   if(activities&&host.querySelector('#gk-booking-v2-livewidget')){
+     var oldPanel=activities.querySelector(':scope > .gka-panel');
+     if(oldPanel)oldPanel.remove();
+   }
    var section=document.getElementById('gk2-booking-section');
    var kicker=section&&section.querySelector('.gka-booking-kicker');
    var heading=section&&section.querySelector('.gka-booking-head p');
