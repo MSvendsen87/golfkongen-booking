@@ -497,14 +497,21 @@ $('ownerDoorTestStart').addEventListener('click',async()=>{
  if(!session?.access_token){$('ownerDoorTestResult').textContent='Logg inn som eier først.';return;}
  const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
  const parts=Object.fromEntries(fmt.formatToParts(new Date()).filter(x=>x.type==='hour'||x.type==='minute').map(x=>[x.type,Number(x.value)]));
- const start=Math.ceil((parts.hour*60+parts.minute+15)/30)*30;
+ let start=Math.ceil((parts.hour*60+parts.minute+15)/30)*30;
  const resource=$('ownerTestResource').value;
  const osloDay=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- if(start>1290){$('ownerDoorTestResult').textContent='Dagens testvindu er stengt. Velg en tidligere test neste gang.';return;}
- const cacheName='gk2_owner_door_test_'+osloDay+'_'+resource+'_'+start;
+ const prefix='gk2_owner_door_test_'+osloDay+'_'+resource+'_';
+ const nowMinutes=parts.hour*60+parts.minute;
+ const existingKeys=Object.keys(sessionStorage).filter(k=>k.startsWith(prefix)).map(k=>({k,minute:Number(k.slice(prefix.length))}))
+  .filter(x=>Number.isInteger(x.minute)&&x.minute>=nowMinutes-30&&x.minute<=nowMinutes+90)
+  .sort((a,b)=>a.minute-b.minute);
+ const reuse=existingKeys.length>0;
+ if(reuse)start=existingKeys[0].minute;
+ if(start>1290){$('ownerDoorTestResult').textContent='Dagens testvindu er stengt.';return;}
+ const cacheName=prefix+start;
  let key=sessionStorage.getItem(cacheName);
  if(!key){key=crypto.randomUUID();sessionStorage.setItem(cacheName,key);}
- if(!confirm('Opprette gratis eiertest av '+resource+' kl. '+String(Math.floor(start/60)).padStart(2,'0')+':'+String(start%60).padStart(2,'0')+' i dag og sende automatisk Nuki-kode?'))return;
+ if(!confirm((reuse?'Fortsette eksisterende testbooking':'Opprette gratis eiertest')+' av '+resource+' kl. '+String(Math.floor(start/60)).padStart(2,'0')+':'+String(start%60).padStart(2,'0')+' og kontrollere Nuki-koden?'))return;
  ownerTestRunning=true;
  $('ownerDoorTestStart').disabled=true;
  const endpoint=C.apiUrl.replace('/gk-booking-v2','/gk-booking-notifier')+'/owner/door-test';
