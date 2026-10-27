@@ -17,7 +17,7 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
  anchor.appendChild(host);host.innerHTML=${JSON.stringify(markup)};
  var init=document.createElement('script');init.textContent=${JSON.stringify(script)};host.appendChild(init);
  var preview=new URLSearchParams(location.search).get('booking2')==='preview';
- var publicActivities=location.pathname.replace(/\\/$/,'')==='/aktiviteter';
+ var publicActivities=(location.pathname.endsWith('/')?location.pathname.slice(0,-1):location.pathname)==='/aktiviteter';
  if(preview||publicActivities){host.hidden=false;var note=document.createElement('p');note.textContent='Booking 2.0 vises nå på aktivitetssiden. Betaling åpner når de siste kontrollene er godkjent.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';note.id='gk2-checkout-locked-note';host.prepend(note);}
  fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2/window',{cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('window unavailable');return r.json()})
