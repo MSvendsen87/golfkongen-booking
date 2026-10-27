@@ -17,12 +17,14 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
  anchor.appendChild(host);host.innerHTML=${JSON.stringify(markup)};
  var init=document.createElement('script');init.textContent=${JSON.stringify(script)};host.appendChild(init);
  var preview=new URLSearchParams(location.search).get('booking2')==='preview';
- if(preview){host.hidden=false;var note=document.createElement('p');note.textContent='Forhåndsvisning av ny booking – betaling er ikke aktivert.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';host.prepend(note);}
+ var publicActivities=location.pathname.replace(/\\/$/,'')==='/aktiviteter';
+ if(preview||publicActivities){host.hidden=false;var note=document.createElement('p');note.textContent='Booking 2.0 vises nå på aktivitetssiden. Betaling åpner når de siste kontrollene er godkjent.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';note.id='gk2-checkout-locked-note';host.prepend(note);}
  fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2/window',{cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('window unavailable');return r.json()})
  .then(function(w){
   var live=w.ok===true&&w.bookingEnabled===true&&w.checkoutEnabled===true;
-  if(!live&&!preview)return;host.hidden=false;
+  if(!live&&!preview&&!publicActivities)return;host.hidden=false;
+  if(live&&document.getElementById('gk2-checkout-locked-note'))document.getElementById('gk2-checkout-locked-note').remove();
   var mapping={'/sider/disc-booking':'hyzr','/sider/dart-booking':'dart_a','/sider/leie-hele-lokalet':'venue'};
   document.querySelectorAll('#gk-aktiviteter a[href]').forEach(function(a){
    var path=new URL(a.href,location.href).pathname,resource=mapping[path];if(!resource)return;
