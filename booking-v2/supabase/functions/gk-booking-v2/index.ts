@@ -5,6 +5,7 @@ import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyCleanupRequest} from "./cleanup-auth.mjs";
 import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
+import {loadClubCapacity} from "./club-priority.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -35,6 +36,16 @@ async function rpc(method:string,args:Record<string,unknown>){
  if(error)throw new Error("rpc_failed:"+method+":"+error.code);
  return data;
 }
+async function refreshClub(day:string){
+ if(new Date(day+'T12:00:00Z').getUTCDay()!==4)return true;
+ const started=new Date().toISOString();
+ try{
+  const state=await loadClubCapacity(day,{apiKey:Deno.env.get('GK2_QUICKBUTIK_API_KEY')||''});
+  await rpc('gk2_record_club_capacity',{p_day:day,p_remaining:state.remaining,
+   p_variant:state.variantId,p_started:started});
+  return true;
+ }catch{return false;}
+}
 Deno.serve(async (req:Request)=>{
  const origin=req.headers.get("origin")||"";
  if(origin&&!origins.has(origin))return err("forbidden_origin",403,origin);
@@ -60,8 +71,11 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
    if(!validDate(day))return err("invalid_date",400,origin);
+   // Unknown/stale external status must never release club priority.
+   const clubKnown=await refreshClub(day);
    const result=await rpc("gk2_day_availability",{p_day:day});
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
+   if(!clubKnown)safeBlocks.push({target:'dart_a',start_min:1140,end_min:1320},{target:'dart_b',start_min:1140,end_min:1320});
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
   if(req.method==="GET"&&path==="/webhook/quickbutik"){
@@ -200,6 +214,8 @@ Deno.serve(async (req:Request)=>{
     let heldId="";
     let leaseStarted=false;
     try{
+      if(resource!=='hyzr'&&start<1320&&start+minutes>1140&&!await refreshClub(day))
+        return err('club_status_unavailable',503,origin);
       const held=await rpc("gk2_hold_slot",{
         p_key:key,p_day:day,p_resource:resource,p_start:start,
         p_duration:minutes,p_terms:"gk-v1"

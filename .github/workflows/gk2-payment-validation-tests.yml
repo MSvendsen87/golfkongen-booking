@@ -10,6 +10,7 @@ on:
       - 'booking-v2/supabase/functions/gk-booking-v2/quickbutik-webhook-guard*.mjs'
       - 'booking-v2/supabase/functions/gk-booking-v2/quickbutik-cart-variant*.mjs'
       - 'booking-v2/supabase/functions/gk-booking-v2/cleanup-auth*.mjs'
+      - 'booking-v2/supabase/functions/gk-booking-v2/club-priority*.mjs'
       - 'booking-v2/supabase/functions/gk-booking-notifier/*.mjs'
       - '.github/workflows/gk2-payment-validation-tests.yml'
       - 'booking-v2/cloudflare/booking-v2-pushover-map*.mjs'
@@ -25,4 +26,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test booking-v2/storefront-source.test.mjs booking-v2/cart-response.test.mjs booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs booking-v2/cloudflare/booking-v2-pushover-map.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-order-audit.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-v1-payment-check.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-webhook-guard.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-cart-variant.test.mjs booking-v2/supabase/functions/gk-booking-v2/cleanup-auth.test.mjs booking-v2/scripts/safe-variant-plan.test.mjs booking-v2/supabase/functions/gk-booking-notifier/notify-core.test.mjs booking-v2/supabase/functions/gk-booking-notifier/diagnostic-auth.test.mjs booking-v2/supabase/functions/gk-booking-notifier/pushover-diagnostic.test.mjs booking-v2/supabase/functions/gk-booking-notifier/pushover-group.test.mjs
+      - run: node --test booking-v2/supabase/functions/gk-booking-v2/club-priority.test.mjs booking-v2/storefront-source.test.mjs booking-v2/cart-response.test.mjs booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs booking-v2/cloudflare/booking-v2-pushover-map.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-order-audit.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-v1-payment-check.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-webhook-guard.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-cart-variant.test.mjs booking-v2/supabase/functions/gk-booking-v2/cleanup-auth.test.mjs booking-v2/scripts/safe-variant-plan.test.mjs booking-v2/supabase/functions/gk-booking-notifier/notify-core.test.mjs booking-v2/supabase/functions/gk-booking-notifier/diagnostic-auth.test.mjs booking-v2/supabase/functions/gk-booking-notifier/pushover-diagnostic.test.mjs booking-v2/supabase/functions/gk-booking-notifier/pushover-group.test.mjs
