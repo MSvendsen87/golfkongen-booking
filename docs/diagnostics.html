@@ -46,6 +46,22 @@ el("run").onclick=async()=>{
    const b=document.createElement("strong");b.className=valid?"ok":"bad";b.textContent=valid?"OK":"MÅ SJEKKES";
    row.append(a,b);return row;
   }));
+  if(result.pushoverRecipient!==true){
+   const hints={
+    key_format_invalid:"En av Pushover-nøklene har feil format. Sjekk at du har kopiert hele User Key og Application API Token, og ikke e-postadressen.",
+    invalid_app_token:"Application API Token er ugyldig. Sjekk at GK2_PUSHOVER_APP_TOKEN er tokenet fra GolfKongen Booking 2.0-appen.",
+    invalid_user_key:"User Key er ugyldig. Sjekk GK2_PUSHOVER_USER_KEY mot Your User Key på Pushover-hovedsiden.",
+    no_active_device:"Pushover-kontoen mangler en aktiv mottakerenhet. Åpne Pushover-appen og kontroller registrerte enheter.",
+    invalid_recipient_or_no_device:"Pushover godkjenner ikke mottakeren eller finner ingen aktiv enhet. Kontroller User Key og registrerte enheter.",
+    rate_limited:"Pushover har begrenset antall forespørsler. Vent med nye tester.",
+    provider_unavailable:"Pushover-tjenesten er midlertidig utilgjengelig.",
+    network_error:"Kunne ikke kontakte Pushover fra Supabase.",
+    provider_rejected:"Pushover avviste testen uten en kjent feilkategori."
+   };
+   const note=document.createElement("p");note.className="bad";
+   note.textContent=hints[result.pushoverReason]||"Pushover-feil kunne ikke klassifiseres. Oppdater siden og prøv igjen.";
+   el("report").append(note);
+  }
  }catch(e){el("report").textContent="Kontrollen kunne ikke fullføres: "+e.message}
  finally{el("run").disabled=false}
 };
