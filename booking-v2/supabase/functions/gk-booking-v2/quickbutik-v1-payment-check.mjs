@@ -8,6 +8,12 @@ const validOre=n=>Number.isSafeInteger(n)&&n>=0&&n<=100000000;
 const productId=v=>{const n=Number(v);return Number.isSafeInteger(n)&&n>0?n:null};
 const qty=v=>{const n=Number(v);return Number.isSafeInteger(n)&&n>=1?n:null};
 const email=s=>typeof s==='string'?s.trim().toLowerCase():'';
+export function verifiedV1CustomerEmail(order){
+ const options=[order?.customer?.email,order?.customer?.email_address,order?.customer_email]
+   .filter(x=>typeof x==='string'&&x.trim()).map(email);
+ const unique=[...new Set(options)];
+ return unique.length===1&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(unique[0])?unique[0]:'';
+}
 const id=s=>/^[1-9][0-9]{0,8}$/.test(String(s||''))?String(s):null;
 
 // Quickbutik V1 monetary fields use strings in NOK, not integer minor units.
@@ -34,7 +40,7 @@ export function checkV1BookingPayment(order, options={}){
   return reject('terms_version_missing');
  const reservedEmail=email(reservation.customer_email);
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservedEmail))return reject('customer_not_bound');
- if(reservedEmail!==email(order.customer?.email))return reject('customer_mismatch');
+ if(reservedEmail!==verifiedV1CustomerEmail(order))return reject('customer_mismatch');
  if(paymentPolicy!=='exact'&&paymentPolicy!=='trusted_status')return reject('invalid_payment_policy');
  let paid=null;
  if(paymentPolicy==='exact'){
