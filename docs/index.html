@@ -12,7 +12,7 @@
  <p>Kun eier: oppretter en faktisk 30-minutters testreservasjon i dag, lager en unik Nuki-kode og sender den til e-posten du er innlogget med. <strong>Dette er en gratis teknisk test uten Quickbutik-betaling.</strong></p>
  <div class="row"><label style="min-width:160px">Aktivitet<select id="ownerTestResource"><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="hyzr">HYZR</option></select></label>
  <button id="ownerDoorTestStart" type="button" style="width:auto;background:#e2bf77">Opprett testbooking og Nuki-kode</button></div>
- <p id="ownerDoorTestResult" role="status">Testen starter på neste halvtime med minst 15 minutter til start. Dørkoden blir gyldig fem minutter før start.</p>
+ <p id="ownerDoorTestResult" role="status">Testen starter på neste halvtime med minst 15 minutter til start. Nuki aktiverer koden 15 minutter før, og kunden får beskjed om 10 minutter før start.</p>
 </section>
  <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button><a href="./booking/" target="_blank" rel="noopener" style="padding:10px;border:1px solid #637961;border-radius:9px;color:#d7bf78;font-weight:800;text-decoration:none">Se kundesiden (test)</a></div>
  <div id="checkout" class="panel hidden"><h2>Kassekontroll – 30-minuttersvarianter</h2><p>Sjekker eksisterende Quickbutik-produkter for HYZR, Dart A og Dart B. <strong>Dette oppretter ingen produkter eller ordre og åpner ikke booking.</strong></p><div class="row"><label>Dato <input type="date" id="checkDay"></label><button id="checkVariants" class="alt" style="width:auto">Kontroller Quickbutik-varianter</button></div><div id="checkResult" class="note" role="status">Velg en dato og trykk «Kontroller». Status for kunderabatter og Pushover må testes separat.</div>
@@ -524,7 +524,7 @@ $('ownerDoorTestStart').addEventListener('click',async()=>{
    const result=await res.json();
    if(!res.ok||result.ok!==true){last=result.code||'Kunne ikke fullføre testen';throw Error(last);}
    if(result.emailSent===true){
-    $('ownerDoorTestResult').textContent='Booking opprettet! Nuki-kode er sendt til din innloggede e-post. '+result.day+' '+result.from+'–'+result.to+'. Test koden på Keypad fra fem minutter før start.';
+    $('ownerDoorTestResult').textContent='Booking opprettet! Nuki-kode er sendt til din innloggede e-post. '+result.day+' '+result.from+'–'+result.to+'. Test koden på Keypad fra ti minutter før start.';
     return;
    }
    await new Promise(resolve=>setTimeout(resolve,4000));
