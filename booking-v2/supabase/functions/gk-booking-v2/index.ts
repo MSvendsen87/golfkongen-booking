@@ -64,6 +64,33 @@ Deno.serve(async (req:Request)=>{
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
+  if(req.method==="POST"&&path==="/club/hold"){
+    // No browser-supplied customer ID. Membership identity is the verified Supabase Auth user UUID.
+    if(!origin||!origins.has(origin))return err("forbidden_checkout_origin",403,origin);
+    if(Deno.env.get("GK2_CHECKOUT_ENABLED")!=="true"||
+       Deno.env.get("GK2_CLUB_CHECKOUT_ENABLED")!=="true")
+      return err("club_checkout_not_enabled",503,origin);
+    if(await rpc("gk2_release_gates_satisfied",{})!==true)
+      return err("checkout_release_gates_closed",503,origin);
+    const token=req.headers.get("authorization")||"";
+    if(!token.startsWith("Bearer ")||token.length>7000)return err("login_required",401,origin);
+    const {data:authData,error:authError}=await db.auth.getUser(token.slice(7));
+    const member=authData?.user;
+    if(authError||!member?.id||!member.email_confirmed_at)return err("verified_login_required",401,origin);
+    const input=await body(req);
+    const key=String(input?.idempotencyKey||""),day=String(input?.date||"");
+    const seats=Number(input?.seats);
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)
+       ||!validDate(day)||new Date(day+"T12:00:00Z").getUTCDay()!==4
+       ||!Number.isInteger(seats)||seats<1||seats>10||input?.acceptedTerms!==true)
+       return err("invalid_club_request",400,origin);
+    // Hold alone does not create payment confirmation or door authorization.
+    const held=await rpc("gk2_hold_club_seats",{
+      p_key:key,p_day:day,p_customer:member.id,p_seats:seats
+    });
+    return reply({ok:true,holdId:held.id,status:held.status,remaining:held.remaining,
+      paymentReady:false,checkoutEnabled:false},200,origin);
+  }
   if(req.method==="GET"&&path==="/club/availability"){
     const day=u.searchParams.get("date")||"";
     if(!validDate(day)||new Date(day+"T12:00:00Z").getUTCDay()!==4)
