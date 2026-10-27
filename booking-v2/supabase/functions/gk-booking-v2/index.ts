@@ -6,6 +6,7 @@ import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyCleanupRequest} from "./cleanup-auth.mjs";
 import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
+import {signDispatchRequest} from "./dispatch-auth.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -35,6 +36,21 @@ async function rpc(method:string,args:Record<string,unknown>){
  const {data,error}=await db.rpc(method,args);
  if(error)throw new Error("rpc_failed:"+method+":"+error.code);
  return data;
+}
+// Dispatch queued confirmations immediately after a verified paid order.
+// The outbox is the source of truth; failure leaves events retryable by the scheduler.
+async function dispatchConfirmedBookingOutbox(){
+ const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+ const base=Deno.env.get("SUPABASE_URL")||"";
+ if(apiKey.length<20||!base.startsWith("https://"))throw Error("notification_dispatch_not_configured");
+ const timestamp=String(Math.floor(Date.now()/1000));
+ const signature=await signDispatchRequest(apiKey,timestamp);
+ const response=await fetch(base.replace(/\\/$/,"")+"/functions/v1/gk-booking-notifier/internal/dispatch",{
+  method:"POST",headers:{"content-type":"application/json",
+   "x-gk2-dispatch-timestamp":timestamp,"x-gk2-dispatch-signature":signature},
+  body:"{}",signal:AbortSignal.timeout(50000)
+ });
+ if(!response.ok)throw Error("notification_dispatch_http_"+response.status);
 }
 Deno.serve(async (req:Request)=>{
  const origin=req.headers.get("origin")||"";
@@ -215,6 +231,11 @@ Deno.serve(async (req:Request)=>{
       });
       if(!["confirmed","paid_unallocated"].includes(confirmed?.status))
         return err("booking_not_confirmed",503,origin);
+      if(confirmed.status==="confirmed"){
+        EdgeRuntime.waitUntil(dispatchConfirmedBookingOutbox().catch((error)=>{
+          console.error("booking2_notification_dispatch_deferred",String(error?.message||"unknown").slice(0,80));
+        }));
+      }
       return reply({ok:true,bookingStatus:confirmed.status,
         notificationQueued:confirmed.status==="confirmed"},200,origin);
     }catch(_e){
