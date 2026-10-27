@@ -83,7 +83,18 @@ $('gk-v2-duration').onchange=draw;$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
 $('gk-v2-accept').onchange=()=>{$('gk-v2-submit').disabled=!$('gk-v2-accept').checked};
 $('gk-v2-cancel').onclick=()=>{$('gk-v2-terms').hidden=true};
-async function quickbutikAddProduct(productId,variantId,qty){
+function validateQuickbutikCartAdd(cart,productId,variantId,qty,sku){
+ if(!cart||cart.success!==1||!Array.isArray(cart.items)||!sku)
+  throw Error('Varen ble ikke bekreftet i handlekurven.');
+ const matches=cart.items.filter(line=>String(line?.item?.sku||'')===String(sku));
+ const line=matches[0];
+ if(matches.length!==1||Number(line?.qty)!==qty||
+    ![Number(productId),Number(variantId||productId)].includes(Number(line?.item?.raw_id))||
+    Boolean(Number(line?.is_variant))!==Boolean(variantId))
+  throw Error('Handlekurven inneholder ikke riktig vare, tidspunkt og antall. Kontroller handlekurven før du prøver igjen.');
+ return true;
+}
+async function quickbutikAddProduct(productId,variantId,qty,sku){
  var data='product_id='+encodeURIComponent(String(productId))+
   (variantId?'&variant='+encodeURIComponent(String(variantId)):'')+
   '&qty='+encodeURIComponent(String(qty))+
@@ -93,10 +104,10 @@ async function quickbutikAddProduct(productId,variantId,qty){
   'X-Requested-With':'XMLHttpRequest'
  },body:data,redirect:'error'});
  if(!response.ok)throw Error('Quickbutik kunne ikke legge til bookingproduktet i handlekurven.');
- // IMPORTANT: Quickbutik can return HTTP 200 for a failed add in some themes.
- // Until this response is validated in a real storefront checkout test,
- // the server release gates and CONF.checkoutVerified remain disabled.
- return true;
+ // HTTP 200 alone does not prove a successful add. Require the actual SKU
+ // and exact quantity in Quickbutik's authoritative cart response.
+ const cart=await response.json();
+ return validateQuickbutikCartAdd(cart,productId,variantId,qty,sku);
 }
 $('gk-v2-submit').onclick=async()=>{
  if(!$('gk-v2-accept').checked||!CONF.checkoutVerified||
@@ -120,8 +131,8 @@ $('gk-v2-submit').onclick=async()=>{
   const hold=await response.json();
   if(!hold?.ok||!hold.productId||!hold.variantId||!hold.holdId)
    throw Error('Ugyldig reservasjonsbekreftelse.');
-  await quickbutikAddProduct(hold.productId,hold.variantId,1);
-  if(rentalSets>0)await quickbutikAddProduct(1318,null,rentalSets);
+  await quickbutikAddProduct(hold.productId,hold.variantId,1,hold.sku);
+  if(rentalSets>0)await quickbutikAddProduct(1318,null,rentalSets,'1318');
   // Quickbutik controls discounts, group prices, shipping and payment.
   // The DB hold will be bound to exactly this SKU/email by paid webhook.
   sessionStorage.setItem('gk_booking2_recent_hold',JSON.stringify({
