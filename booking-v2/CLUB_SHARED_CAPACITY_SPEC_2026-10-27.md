@@ -5,8 +5,14 @@
 - **Begge veier, atomisk:** Dersom noen har gyldig hold/betalt booking for dart A eller dart B som overlapper torsdag 19–22, skal klubbkveld ikke kunne reserveres/betales. Dersom minst én klubbplass er gyldig hold/betalt, skal dart A og B samt venue være utilgjengelig i dette tidsrommet. HYZR alene kan fortsatt bookes.
 - **Klubbkveld:** Hver torsdag kl 19–22, maks 10 deltakere, **50 NOK per person**. 1–10 plasser må reserveres atomisk og allokeres mot samme daglås som ordinære claims. Bekreftede seter skal ikke mistes ved utløp av andre holds.
 - **Kun adgangsberettigede kunder** skal kunne bestille klubbkveld. Admin for eier må kunne se, legge til, deaktivere og endre hvem som er berettiget, med revisionslogg, sikker verifisering av kundens ID og uten at kundeliste eksponeres i offentlig API.
-- **Ingen opprinnelig legacy-Quickbutik-klubbkasse trenger å gjøres om** per eier. Men dersom denne fortsatt er offentlig tilgjengelig og tar betalt uten felles claim, kan **ingen teknisk garanti gis for tverrsystem-dobbeltbooking**. Ikke steng eller endre gammel løsning uten eget oppdrag; opplyst produksjonsrisiko skal fremgå eksplisitt.
+- **Én eneste bestillingsmotor: Booking 2.0.** Eieren har nå eksplisitt besluttet at gammel klubbkasse/gamle bookinglenker skal avvikles fra offentlig kjøpsflyt ved kontrollert cutover. Alle ordinære dartbookinger og klubbpåmeldinger bruker de samme atomiske kravene og den samme Quickbutik-betalingsbindingen. Første servergodkjente, aktive hold vinner – ikke første klikk eller senere fullført betaling. Hold må beskyttes mens betalingsforsøket er aktivt; avbrutt/utløpt hold frigjør plassen trygt. Eksisterende betalte bookinger skal bevares/migreres som blokkeringer før gammel kasse fjernes. Ingen blind sletting av ordre/produkt/historikk.
 - Ikke åpne Booking 2.0 eller endre Min Bag-produksjon før følgende er verifisert.
+
+## Kontrollert omkobling av offentlig booking
+- Finn alle aktive eldre bookinglenker og klubbprodukter; sørg for at de ikke kan kjøpes via direkte handlekurvlenker etter cutover. Ikke bare skjul en knapp.
+- Les og migrer/registrer alle fremtidige bekreftede gamle reservasjoner som konfliktblokker før ny betaling aktiveres.
+- Bytt alle lenker på /aktiviteter og andre bookinginnganger til Booking 2.0 først etter at ende-til-ende betaling og bekreftelse er testet; steng gammel kjøpsvei atomisk eller bruk vedlikeholdssperre i overgangsvinduet.
+- Ikke fjern tidligere ordre, historikk eller medlemskilde. Gamle Quickbutik-varianter må ikke forbli direkte kjøpbare etter omkobling.
 
 ## Teknisk implementasjonskrav
 1. Fjern den statiske `club_priority_blocked` fra de nye kalendervurderingene og holdreglene **samtidig som** atomiske seter/claims håndheves. Aldri fjern statisk blokk før en pålitelig erstatning eksisterer.
