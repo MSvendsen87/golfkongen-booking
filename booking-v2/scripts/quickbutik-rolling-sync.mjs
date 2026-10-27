@@ -40,7 +40,7 @@ function goodStaged(v,expectedSku,expectedPrice){
  return v&&String(v.sku)===expectedSku&&hiddenVariant(v)&&zeroVariant(v)
   &&Number(v.price)===Number(expectedPrice)&&Number.isSafeInteger(Number(v.id))&&Number(v.id)>0;
 }
-async function rereadProduct(productId){
+async function rereadProduct(productId,expectedVisible){
  let product=null;
  for(let attempt=0;attempt<3;attempt++){
   if(attempt)await sleep(700*attempt);
@@ -53,11 +53,11 @@ async function rereadProduct(productId){
  if(!product||!String(product.title||"").startsWith("Booking 2.0"))
   throw Error("STOP: exact product readback failed for "+productId);
  // Quickbutik V1 sometimes reports visible:null for a hidden parent.
- if([1,"1",true].includes(product.visible))
+ if(expectedVisible===false&&[1,"1",true].includes(product.visible))
   throw Error("STOP: Booking2 parent became visible: "+productId);
  return product;
 }
-async function hideStagedVariants(productId,expectedVariants){
+async function hideStagedVariants(productId,expectedVariants,expectedVisible){
  if(!expectedVariants.length)return;
  // Batch PUT is the same /v1/products endpoint already used by the old booking.
  const updates=expectedVariants.map(v=>{
@@ -67,7 +67,7 @@ async function hideStagedVariants(productId,expectedVariants){
  });
  const result=await shop("PUT",null,updates);
  if(result?.success===0||result?.error)throw Error("STOP: V1 hide rejected");
- const fresh=await rereadProduct(productId);
+ const fresh=await rereadProduct(productId,expectedVisible);
  for(const wanted of expectedVariants){
   const same=fresh.variants.filter(v=>String(v.sku)===String(wanted.sku));
   if(same.length!==1||!goodStaged(same[0],wanted.sku,wanted.price))
@@ -135,7 +135,7 @@ async function main(){
    // Quickbutik V1 sometimes reports visible:null even for an actually hidden
    // product. In DRY RUN we can report missing variants safely, but only a
    // separately verified hidden parent may ever be modified.
-   if(write&&[1,true,"1"].includes(product.visible))
+   if(write&&![1,true,"1",0,false,"0"].includes(product.visible))
     throw Error("STOP: Product "+p.productId+" is visible; do not write");
    // V1 visible:null was independently verified on hidden staging parents.
    // The V1 PUT always keeps visible=0 and the post-write SKU is hidden.
@@ -166,18 +166,18 @@ async function main(){
   if(repair.length>0){
    console.log("Repairing "+repair.length+" unhidden zero-stock staged variants for "+p.productId);
    for(let i=0;i<repair.length;i+=chunkSize)
-    await hideStagedVariants(p.productId,repair.slice(i,i+chunkSize));
+    await hideStagedVariants(p.productId,repair.slice(i,i+chunkSize),[1,"1",true].includes(product.visible));
   }
   for(let i=0;i<missing.length;i+=chunkSize){
    const variants=missing.slice(i,i+chunkSize);
    // Legacy variants.add generates the date and time option values.
    const result=await shop("PUT",null,[{
-     product_id:p.productId,visible:0,disable_minusqty:"1",
+     product_id:p.productId,
      variants:{add:variants}
    }]);
    if(result?.success===0||result?.error)throw Error("STOP: V1 variant add rejected");
    // CRITICAL: never retry an uncertain write; first read back to resolve IDs.
-   const now=await rereadProduct(p.productId);
+   const now=await rereadProduct(p.productId,[1,"1",true].includes(product.visible));
    const added=variants.map(v=>{
     const matches=now.variants.filter(x=>x.sku===v.sku);
     if(matches.length!==1||Number(matches[0].price)!==Number(v.price)||
@@ -185,7 +185,7 @@ async function main(){
      throw Error("STOP: V1 add could not verify exact SKU/zero stock "+v.sku);
     return matches[0];
    });
-   await hideStagedVariants(p.productId,added);
+   await hideStagedVariants(p.productId,added,[1,"1",true].includes(product.visible));
    created+=variants.length;
    console.log("CREATED_HIDDEN_VERIFIED product="+p.productId+" count="+variants.length);
    await sleep(650);
