@@ -126,7 +126,7 @@ Deno.serve(async (req:Request)=>{
         const clubLine=clubLines[0];
         const quantity=Number(clubLine.qty),sku=String(clubLine.sku||"");
         if(!Number.isSafeInteger(quantity)||quantity<1||quantity>10||
-           !/^GK2-CLUB-\\d{4}-\\d{2}-\\d{2}$/.test(sku))
+           !/^GK2-CLUB-[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(sku))
           return err("invalid_club_variant",409,origin);
         if(verified.eventType==="order.cancelled"){
           if(String(rawOrder.status)!=="-1")return err("club_cancellation_not_verified",409,origin);
@@ -147,6 +147,12 @@ Deno.serve(async (req:Request)=>{
             const gross=v1NokToOre(rawOrder.total_amount),discount=v1NokToOre(rawOrder.discount_amount);
             return gross===null||discount===null||discount>gross?null:gross-discount;
           })();
+        if(rawOrder.total_pay_amount!==undefined&&rawOrder.total_pay_amount!==null&&
+           rawOrder.total_amount!==undefined&&rawOrder.discount_amount!==undefined){
+          const gross=v1NokToOre(rawOrder.total_amount),discount=v1NokToOre(rawOrder.discount_amount);
+          if(gross===null||discount===null||discount>gross||gross-discount!==paid)
+            return err("club_payment_amount_fields_conflict",409,origin);
+        }
         if(paid!==quantity*5000)return err("club_total_paid_mismatch",409,origin);
         const result=await rpc("gk2_match_club_paid_order",{
           p_order:verified.orderNumber,p_sku:sku,
