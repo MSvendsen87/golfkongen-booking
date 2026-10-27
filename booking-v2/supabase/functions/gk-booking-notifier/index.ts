@@ -5,6 +5,7 @@ import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 import {verifyDispatchRequest} from "./dispatch-auth.mjs";
 import {verifyDiagnosticRequest} from "./diagnostic-auth.mjs";
 import {classifyPushoverValidation,pushoverKeyFormat} from "./pushover-diagnostic.mjs";
+import {resolveGolfkongenDeliveryGroup,GROUP_NAME} from "./pushover-group.mjs";
 import {checkedBooking,nukiPayload,matchingNukiAuth,bookedNotice,accessMail,
  encryptAccessCode,decryptAccessCode,createKeypadCode,LOCK_ID} from "./notify-core.mjs";
 const env=(k)=>Deno.env.get(k)||"";
@@ -58,8 +59,14 @@ async function pushover(booking,{cancelled=false}={}){
   message:[booking.title,booking.day,booking.from+"–"+booking.to,
    "Ordre: "+booking.orderId,"Referanse: "+booking.bookingId.slice(0,8)].join("\\n")
  }:bookedNotice(booking);
+ // The existing legacy GolfKongen notification app delivers to the
+ // "Golfkongen" group. Resolve/validate the same group for Booking 2.0.
+ // Do not fall back to the owner account, which has no registered devices.
+ const token=env("GK2_PUSHOVER_APP_TOKEN").trim();
+ const target=await resolveGolfkongenDeliveryGroup(token);
+ if(!target.ok)throw Error("pushover_delivery_group_"+target.reason);
  const params=new URLSearchParams({
-  token:env("GK2_PUSHOVER_APP_TOKEN").trim(),user:env("GK2_PUSHOVER_USER_KEY").trim(),
+  token,user:target.key,
   title:msg.title,message:msg.message,priority:"0"
  });
  const r=await fetch("https://api.pushover.net/1/messages.json",{
@@ -284,28 +291,14 @@ Deno.serve(async req=>{
    nukiAuths=Array.isArray(result)||Array.isArray(result?.data);
   }catch(_e){/* bool only */ }
   const appToken=env("GK2_PUSHOVER_APP_TOKEN").trim();
-  const userKey=env("GK2_PUSHOVER_USER_KEY").trim();
-  let push=classifyPushoverValidation({keyFormatValid:false});
-  if(pushoverKeyFormat(appToken,userKey)){
-   try{
-    const res=await fetch("https://api.pushover.net/1/users/validate.json",{
-     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
-     body:new URLSearchParams({token:appToken,user:userKey}),
-     signal:AbortSignal.timeout(12000)
-    });
-    let data=null;
-    try{data=await res.json()}catch(_ignored){/* no provider data exposed */}
-    push=classifyPushoverValidation({httpStatus:res.status,body:data});
-   }catch(_e){
-    push=classifyPushoverValidation({failedFetch:true});
-   }
-  }
-  pushoverUser=push.ok===true;
+  const target=await resolveGolfkongenDeliveryGroup(appToken);
+  const pushoverUser=target.ok===true;
+  const push=pushoverUser?{reason:"ok"}:{reason:target.reason};
   // Resend sending-only keys cannot perform read API checks.
   // Real mail delivery requires an explicitly authorized test email.
   const report={ok:nukiDevice&&nukiAuths&&pushoverUser,
    nukiDevice,nukiAuthorizations:nukiAuths,pushoverRecipient:pushoverUser,
-   pushoverReason:push.reason,
+   pushoverReason:push.reason,pushoverTarget:GROUP_NAME,
    resendKeyConfigured:env("RESEND_API_KEY").length>0,
    emailDeliveryTested:false,notifierEnabled:enabled};
   return new Response(JSON.stringify(report),{
