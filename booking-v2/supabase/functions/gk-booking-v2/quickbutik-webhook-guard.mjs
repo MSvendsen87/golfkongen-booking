@@ -6,7 +6,7 @@ const ORDER=/^[1-9][0-9]{0,8}$/;
 const EVENTS=new Set(['order.new','order.cancelled']);
 export async function verifyQuickbutikWebhook(urlString, secret){
  const deny=(reason)=>({ok:false,reason});
- if(typeof secret!=='string'||secret.length<16)return deny('webhook_secret_not_configured');
+ if(typeof secret!=='string'||!(/^\d{8,20}$/).test(secret))return deny('webhook_secret_not_configured');
  let url;
  try{url=new URL(urlString)}catch{return deny('invalid_url')}
  const params=url.searchParams;
