@@ -18,6 +18,13 @@ const id=s=>/^[1-9][0-9]{0,8}$/.test(String(s||''))?String(s):null;
 
 // Quickbutik V1 monetary fields use strings in NOK, not integer minor units.
 export function v1NokToOre(value){
+ // V1 documents string NOK amounts, but some endpoints can return numbers.
+ // Accept only exact cents; never round a floating payment amount silently.
+ if(typeof value==='number'){
+  if(!Number.isFinite(value)||value<0)return null;
+  const ore=Math.round(value*100);
+  return Math.abs(value*100-ore)<1e-7&&validOre(ore)?ore:null;
+ }
  if(typeof value!=='string'||!/^\d{1,9}(?:\.\d{1,2})?$/.test(value))return null;
  const [whole,frac='']=value.split('.');
  const ore=Number(whole)*100+Number(frac.padEnd(2,'0'));
