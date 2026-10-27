@@ -280,7 +280,7 @@ Deno.serve(async req=>{
   if(!allowed)return new Response(JSON.stringify({ok:false,code:"forbidden"}),{
    status:403,headers:{"content-type":"application/json",...cors}});
   if(!configured)return json({ok:false,code:"credentials_incomplete"},503);
-  let nukiDevice=false,nukiAuths=false,pushoverUser=false;
+  let nukiDevice=false,nukiAuths=false;
   try{
    const device=await nuki("GET","/smartlock/"+LOCK_ID);
    nukiDevice=String(device?.smartlockId??device?.id)===String(LOCK_ID)&&
