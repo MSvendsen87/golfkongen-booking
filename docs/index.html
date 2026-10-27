@@ -7,6 +7,13 @@
 <section id="unconfigured" class="panel"><h2>Klart for sikker tilkobling</h2><div class="note">Ny Booking 2.0-admin koblet til det isolerte test-API-et. Ekte booking og Quickbutik-synk er deaktivert.</div></section>
 <section id="loginPanel" class="panel hidden" style="max-width:470px"><h2>Administratortilgang</h2><p>Innlogging er bare mulig for de to godkjente kontoene. Sikker tilgang kontrolleres også av serveren.</p><form id="loginForm"><label>E-post<input id="email" type="email" autocomplete="username" required></label><label>Passord<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Logg inn</button></form><p id="loginMsg" role="status"></p></section>
 <section id="app" class="hidden">
+<section class="panel" id="ownerDoorTestPanel" style="border-color:#b89b59">
+ <h2>Test Booking 2.0 → Nuki på døren</h2>
+ <p>Kun eier: oppretter en faktisk 30-minutters testreservasjon i dag, lager en unik Nuki-kode og sender den til e-posten du er innlogget med. <strong>Dette er en gratis teknisk test uten Quickbutik-betaling.</strong></p>
+ <div class="row"><label style="min-width:160px">Aktivitet<select id="ownerTestResource"><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="hyzr">HYZR</option></select></label>
+ <button id="ownerDoorTestStart" type="button" style="width:auto;background:#e2bf77">Opprett testbooking og Nuki-kode</button></div>
+ <p id="ownerDoorTestResult" role="status">Testen starter på neste halvtime med minst 15 minutter til start. Dørkoden blir gyldig fem minutter før start.</p>
+</section>
  <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button><a href="./booking/" target="_blank" rel="noopener" style="padding:10px;border:1px solid #637961;border-radius:9px;color:#d7bf78;font-weight:800;text-decoration:none">Se kundesiden (test)</a></div>
  <div id="checkout" class="panel hidden"><h2>Kassekontroll – 30-minuttersvarianter</h2><p>Sjekker eksisterende Quickbutik-produkter for HYZR, Dart A og Dart B. <strong>Dette oppretter ingen produkter eller ordre og åpner ikke booking.</strong></p><div class="row"><label>Dato <input type="date" id="checkDay"></label><button id="checkVariants" class="alt" style="width:auto">Kontroller Quickbutik-varianter</button></div><div id="checkResult" class="note" role="status">Velg en dato og trykk «Kontroller». Status for kunderabatter og Pushover må testes separat.</div>
 <h3 style="margin-top:20px">Rullerende 45-dagersbooking og betalingsstatus</h3>
@@ -483,6 +490,41 @@ $('clubAccessForm').addEventListener('submit',async e=>{
  $('clubAccessStatus').textContent='Lagrer…';
  try{await api('/admin/club-access',{customerId,active});e.currentTarget.reset();await loadClubAccess();}
  catch(err){$('clubAccessStatus').textContent='Lagring feilet: '+err.message;}
+});
+let ownerTestRunning=false;
+$('ownerDoorTestStart').addEventListener('click',async()=>{
+ if(ownerTestRunning)return;
+ if(!session?.access_token){$('ownerDoorTestResult').textContent='Logg inn som eier først.';return;}
+ const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ const parts=Object.fromEntries(fmt.formatToParts(new Date()).filter(x=>x.type==='hour'||x.type==='minute').map(x=>[x.type,Number(x.value)]));
+ const start=Math.ceil((parts.hour*60+parts.minute+15)/30)*30;
+ const resource=$('ownerTestResource').value;
+ const osloDay=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ if(start>1290){$('ownerDoorTestResult').textContent='Dagens testvindu er stengt. Velg en tidligere test neste gang.';return;}
+ const cacheName='gk2_owner_door_test_'+osloDay+'_'+resource+'_'+start;
+ let key=sessionStorage.getItem(cacheName);
+ if(!key){key=crypto.randomUUID();sessionStorage.setItem(cacheName,key);}
+ if(!confirm('Opprette gratis eiertest av '+resource+' kl. '+String(Math.floor(start/60)).padStart(2,'0')+':'+String(start%60).padStart(2,'0')+' i dag og sende automatisk Nuki-kode?'))return;
+ ownerTestRunning=true;
+ $('ownerDoorTestStart').disabled=true;
+ const endpoint=C.apiUrl.replace('/gk-booking-v2','/gk-booking-notifier')+'/owner/door-test';
+ let last='';
+ try{
+  for(let attempt=0;attempt<10;attempt++){
+   $('ownerDoorTestResult').textContent=attempt===0?'Reserverer og kontakter Nuki …':'Venter på Nuki-synkronisering, kontrollerer kode … ('+(attempt+1)+'/10)';
+   const res=await fetch(endpoint,{method:'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+    cache:'no-store',body:JSON.stringify({idempotencyKey:key,startMin:start,resource,confirmOwnerDoorTest:true})});
+   const result=await res.json();
+   if(!res.ok||result.ok!==true){last=result.code||'Kunne ikke fullføre testen';throw Error(last);}
+   if(result.emailSent===true){
+    $('ownerDoorTestResult').textContent='Booking opprettet! Nuki-kode er sendt til din innloggede e-post. '+result.day+' '+result.from+'–'+result.to+'. Test koden på Keypad fra fem minutter før start.';
+    return;
+   }
+   await new Promise(resolve=>setTimeout(resolve,4000));
+  }
+  $('ownerDoorTestResult').textContent='Testbooking er reservert, men Nuki har ikke bekreftet koden ennå. Trykk knappen på nytt for sikker kontroll; ingen ny kode opprettes.';
+ }catch(e){$('ownerDoorTestResult').textContent='Testen ble ikke fullført: '+(e?.message||last)+'. Ikke prøv en kode før e-post er mottatt.';}
+ finally{ownerTestRunning=false;$('ownerDoorTestStart').disabled=false;}
 });
 bind('memberForm','/admin/member-request',b=>b);
 bind('tournamentForm','/admin/tournament-draft',b=>b);
