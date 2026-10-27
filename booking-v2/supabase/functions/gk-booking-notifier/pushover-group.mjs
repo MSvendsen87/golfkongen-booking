@@ -28,3 +28,26 @@ export async function resolveGolfkongenDeliveryGroup(appToken,{fetchImpl=fetch}=
   return {ok:false,reason:"group_no_active_members"};
  }catch(_e){return {ok:false,reason:"groups_network_error"}}
 }
+
+export async function inspectGolfkongenMembers(appToken,{fetchImpl=fetch}={}){
+ const resolved=await resolveGolfkongenDeliveryGroup(appToken,{fetchImpl});
+ if(!resolved.ok)return {ok:false,reason:resolved.reason};
+ try{
+  const response=await fetchImpl("https://api.pushover.net/1/groups/"+
+   encodeURIComponent(resolved.key)+".json?token="+encodeURIComponent(appToken),{
+    method:"GET",headers:{"Accept":"application/json"},
+    signal:AbortSignal.timeout(12000)
+   });
+  if(!response.ok)return {ok:false,reason:"member_read_failed"};
+  const data=await response.json();
+  if(data?.status!==1||!Array.isArray(data.users)||
+     data.name?.trim().toLowerCase()!==GROUP_NAME.toLowerCase())
+   return {ok:false,reason:"member_list_invalid"};
+  const active=data.users.filter(x=>x.disabled===false||x.disabled===0);
+  const oneOwner=active.length===1&&
+   String(active[0].memo||"").trim().toLowerCase()==="kristoffer";
+  // Only return safe counts and a boolean. No group or user keys.
+  return {ok:true,totalMembers:data.users.length,
+   enabledMembers:active.length,onlyOwnerEnabled:oneOwner};
+ }catch(_error){return {ok:false,reason:"member_lookup_unavailable"}}
+}
