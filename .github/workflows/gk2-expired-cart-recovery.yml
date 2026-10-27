@@ -1,7 +1,7 @@
 name: Booking 2.0 – Recover abandoned Quickbutik carts
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -10,13 +10,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: gk2-variants-safe-rollout
+  group: gk2-expired-checkout-leases
   cancel-in-progress: false
 jobs:
   guarded-lease-recovery:
-    # No scheduled runner costs before checkout launches. Manual and first
-    # deployment tests are allowed while all actual Booking2 products are hidden.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || vars.GK2_CUSTOMER_CHECKOUT_LIVE == 'true' }}
+    # Checkout is now live; always drain expired leases via signed backend.
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
