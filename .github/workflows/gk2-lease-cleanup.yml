@@ -1,7 +1,6 @@
 name: GolfKongen Booking 2.0 - lukk utlopte handlekurvvarianter
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # Manual backup only; scheduled cleanup runs in gk2-expired-cart-recovery.yml.
   workflow_dispatch:
 permissions:
   contents: read
