@@ -81,7 +81,7 @@
 <div id="priceList">Laster ...</div>
 <div class="note">90 minutter og lengre er foreløpige kombinasjonspriser (hele timer + eventuell halvtime). De kan endres enkeltvis her. Hele lokalet kan bookes i hele timer fra 4 til 12 timer. Skjult/åpen status for produkter styres separat.</div>
 </div>
-<div id="members" class="panel hidden"><h2>Medlemmer og fordeler</h2><p>Medlemsregisteret finnes allerede i Google Sheets. De sju kundegruppene og kundens reelle rabatter ligger i Quickbutik.</p><div class="note">Endringer legges i en kontrollkø. Gruppen er ikke aktiv før synk mot både medlemsregister og Quickbutik er bekreftet.</div><form id="memberForm" class="grid"><label>E-post<input type="email" name="email" required></label><label>Kundegruppe<select name="group"><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="medlemmer">Betalt medlemskap</option></select></label><label>Handling<select name="action"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Deaktiver</option></select></label><button type="submit">Send endring til kontroll</button></form><p><span>Medlemsoversikten krever autentisert tilgang.</span></p><div id="memberList"></div></div>
+<div id="members" class="panel hidden"><h2>Medlemmer og fordeler</h2><p>Medlemsregisteret finnes allerede i Google Sheets. De sju kundegruppene og kundens reelle rabatter ligger i Quickbutik.</p><div class="note">Endringer legges i en kontrollkø. Gruppen er ikke aktiv før synk mot både medlemsregister og Quickbutik er bekreftet.</div><form id="memberForm" class="grid"><label>E-post<input type="email" name="email" required></label><label>Kundegruppe<select name="group"><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="medlemmer">Betalt medlemskap</option></select></label><label>Handling<select name="action"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Deaktiver</option></select></label><button type="submit">Send endring til kontroll</button></form><p><span>Medlemsoversikten krever autentisert tilgang.</span></p><div id="memberList"></div><section class="panel" aria-label="Klubbkveldtilgang"><h3>Tilgang til klubbkveld (Booking 2.0)</h3><p>Her styrer du hvilke verifiserte kunde-ID-er som har tilgang til klubbkveld. Dette endrer ikke Quickbutik-kundegruppe eller medlemsarket.</p><form id="clubAccessForm" class="grid"><label>Verifisert kunde-ID<input name="customerId" required minlength="3" maxlength="128" autocomplete="off"></label><label>Tilgang<select name="active"><option value="true">Gi tilgang</option><option value="false">Fjern tilgang</option></select></label><button type="submit">Lagre klubbtilgang</button><button type="button" class="alt" id="clubAccessReload">Oppdater oversikt</button></form><p id="clubAccessStatus" role="status">Ikke hentet ennå.</p><div id="clubAccessEntries"></div></section></div>
  <div id="tournaments" class="panel hidden"><h2>Turneringer</h2><p>Dag/helg eller sesong. Ubegrenset antall forsøk og de tre beste rundene kan brukes ved senere poengregistrering.</p><div class="note">Turneringer lagres først som utkast og påvirker ikke bookingkalenderen eller HYZR. Resultatimport og godkjenning gjenstår.</div><form id="tournamentForm" class="grid"><label>Navn<input type="text" name="name" required minlength="3" maxlength="150"></label><label>Format<select name="format"><option value="single_day">Én dag</option><option value="weekend">Helg</option><option value="season">Sesong</option></select></label><label>Fra<input name="from" type="date" required></label><label>Til<input name="to" type="date" required></label><label>Bane (valgfritt)<input name="course" maxlength="120"></label><button type="submit">Opprett turneringsutkast</button></form><div id="tournamentList"></div></div>
  <div id="message" role="status" class="note" style="margin-top:18px">Ingen endringer gjort.</div>
 </section>
@@ -453,6 +453,37 @@ $('priceForm').onsubmit=async e=>{
   message('Pris ble ikke lagret: '+e.message,true);
  }
 };
+async function loadClubAccess(){
+ const host=$('clubAccessEntries'),status=$('clubAccessStatus');
+ status.textContent='Henter klubbtilganger…';host.replaceChildren();
+ try{
+  const data=await api('/admin/club-access');
+  if(!Array.isArray(data.members))throw Error('Ugyldig serverrespons');
+  status.textContent=data.members.length+' oppføringer (kun Booking 2.0)';
+  if(!data.members.length){const p=document.createElement('p');p.textContent='Ingen klubbtilganger er registrert ennå.';host.appendChild(p);return;}
+  for(const m of data.members){
+   const div=document.createElement('div');div.className='item row';
+   const name=document.createElement('span');name.textContent=String(m.customerId)+' – '+(m.active?'Aktiv':'Deaktivert');
+   const btn=document.createElement('button');btn.type='button';btn.className='alt';
+   btn.textContent=m.active?'Deaktiver':'Aktiver';btn.style.width='auto';
+   btn.addEventListener('click',async()=>{if(!confirm('Endre klubbtilgang for '+String(m.customerId)+'?'))return;
+    btn.disabled=true;
+    try{await api('/admin/club-access',{customerId:String(m.customerId),active:!m.active});await loadClubAccess();}
+    catch(e){status.textContent='Feil: '+e.message;btn.disabled=false;}
+   });
+   div.append(name,btn);host.appendChild(div);
+  }
+ }catch(e){status.textContent='Kunne ikke lese klubbtilganger: '+e.message;}
+}
+$('clubAccessReload').addEventListener('click',loadClubAccess);
+$('clubAccessForm').addEventListener('submit',async e=>{
+ e.preventDefault();const f=new FormData(e.currentTarget);
+ const customerId=String(f.get('customerId')||'').trim(),active=f.get('active')==='true';
+ if(customerId.length<3||customerId.length>128)return;
+ $('clubAccessStatus').textContent='Lagrer…';
+ try{await api('/admin/club-access',{customerId,active});e.currentTarget.reset();await loadClubAccess();}
+ catch(err){$('clubAccessStatus').textContent='Lagring feilet: '+err.message;}
+});
 bind('memberForm','/admin/member-request',b=>b);
 bind('tournamentForm','/admin/tournament-draft',b=>b);
 </script></body></html>
