@@ -45,7 +45,7 @@ async function dispatchConfirmedBookingOutbox(){
  if(apiKey.length<20||!base.startsWith("https://"))throw Error("notification_dispatch_not_configured");
  const timestamp=String(Math.floor(Date.now()/1000));
  const signature=await signDispatchRequest(apiKey,timestamp);
- const response=await fetch(base.replace(/\\/$/,"")+"/functions/v1/gk-booking-notifier/internal/dispatch",{
+ const response=await fetch((base.endsWith("/")?base.slice(0,-1):base)+"/functions/v1/gk-booking-notifier/internal/dispatch",{
   method:"POST",headers:{"content-type":"application/json",
    "x-gk2-dispatch-timestamp":timestamp,"x-gk2-dispatch-signature":signature},
   body:"{}",signal:AbortSignal.timeout(50000)
