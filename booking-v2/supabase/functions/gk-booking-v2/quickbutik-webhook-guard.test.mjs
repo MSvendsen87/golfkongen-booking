@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {verifyQuickbutikWebhook} from './quickbutik-webhook-guard.mjs';
 
-const secret='demo-only-not-a-real-secret-0123456789';
+// Numeric Quickbutik SECURITYHASH test fixture; not a real shop credential.
+const secret='1234567890';
 const url=(suffix='')=>'https://example.invalid/functions/v1/gk-booking-v2/webhook/quickbutik?event_type=order.new&order_id=3777&securityhash='+encodeURIComponent(secret)+suffix;
 test('accepts one signed Quickbutik order.new event without confirming anything',async()=>{
  assert.deepEqual(await verifyQuickbutikWebhook(url(),secret),{ok:true,eventType:'order.new',orderNumber:'3777'});
@@ -10,6 +11,11 @@ test('accepts one signed Quickbutik order.new event without confirming anything'
 test('handles cancellation event for explicit downstream cancellation handling',async()=>{
  const u=url().replace('order.new','order.cancelled');
  assert.equal((await verifyQuickbutikWebhook(u,secret)).eventType,'order.cancelled');
+});
+test('rejects invalid server-side Quickbutik secret formats',async()=>{
+ for(const value of ['short','1234','1234567','123456789012345678901','abcdef1234']){
+  assert.equal((await verifyQuickbutikWebhook(url(),value)).reason,'webhook_secret_not_configured');
+ }
 });
 test('fails closed without a server-side webhook secret',async()=>{
  assert.equal((await verifyQuickbutikWebhook(url(),undefined)).reason,'webhook_secret_not_configured');
