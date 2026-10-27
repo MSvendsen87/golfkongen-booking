@@ -37,7 +37,7 @@ jobs:
           const report=await response.json();
           const reasons=['ok','key_format_invalid','invalid_app_token','invalid_user_key',
            'no_active_device','invalid_recipient_or_no_device','rate_limited',
-           'provider_unavailable','network_error','provider_rejected'];
+           'provider_unavailable','network_error','provider_rejected','group_valid','group_not_found','ambiguous_group','group_no_active_members','groups_api_rejected','groups_api_unavailable','groups_response_invalid','groups_network_error','invalid_app_token_format'];
           console.log('Nuki device:',report?.nukiDevice===true?'OK':'not confirmed');
           console.log('Nuki authorizations:',report?.nukiAuthorizations===true?'OK':'not confirmed');
           console.log('Resend configured:',report?.resendKeyConfigured===true?'OK':'not confirmed');
