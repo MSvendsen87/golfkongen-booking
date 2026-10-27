@@ -124,7 +124,20 @@ $('gk-v2-submit').onclick=async()=>{
  try{
   const r=$('gk-v2-resource').value;
   const rentalSets=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
-  const body={idempotencyKey:crypto.randomUUID(),date:$('gk-v2-day').value,
+  const identity=JSON.stringify({date:$('gk-v2-day').value,resource:r,
+   startMin:selected,duration:Number($('gk-v2-duration').value),
+   email:email.toLowerCase(),rentalSets});
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(identity));
+  const cacheId='gk2_checkout_intent_'+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
+  let saved=null;
+  try{saved=JSON.parse(sessionStorage.getItem(cacheId)||'null')}catch(_){}
+  const sameHold=typeof saved?.idempotencyKey==='string'&&
+    Number.isFinite(Date.parse(saved.expiresAt))&&Date.parse(saved.expiresAt)>Date.now();
+  const idempotencyKey=sameHold?saved.idempotencyKey:crypto.randomUUID();
+  if(!sameHold)sessionStorage.setItem(cacheId,JSON.stringify({
+    idempotencyKey,expiresAt:new Date(Date.now()+9*60000).toISOString()
+  }));
+  const body={idempotencyKey,date:$('gk-v2-day').value,
    resource:r,startMin:selected,duration:Number($('gk-v2-duration').value),
    email,rentalSets,acceptedTerms:true};
   const response=await fetch(CONF.apiUrl+'/hold',{method:'POST',
@@ -132,8 +145,10 @@ $('gk-v2-submit').onclick=async()=>{
    cache:'no-store',redirect:'error'});
   if(!response.ok)throw Error('Tidspunktet ble ikke reservert. Prøv et annet tidspunkt.');
   const hold=await response.json();
-  if(!hold?.ok||!hold.productId||!hold.variantId||!hold.holdId)
+  if(!hold?.ok||!hold.productId||!hold.variantId||!hold.holdId||
+     !Number.isFinite(Date.parse(hold.holdExpiresAt)))
    throw Error('Ugyldig reservasjonsbekreftelse.');
+  sessionStorage.setItem(cacheId,JSON.stringify({idempotencyKey,expiresAt:hold.holdExpiresAt}));
   await quickbutikAddProduct(hold.productId,hold.variantId,1,hold.sku);
   if(rentalSets>0)await quickbutikAddProduct(1318,null,rentalSets,'1318');
   // Quickbutik controls discounts, group prices, shipping and payment.
@@ -144,7 +159,8 @@ $('gk-v2-submit').onclick=async()=>{
   location.assign('/cart/index');
  }catch(ex){
   $('gk-v2-terms').hidden=true;
-  $('gk-v2-status').textContent=ex?.message||'Bookingen kunne ikke startes.';
+  $('gk-v2-status').textContent=(ex?.message||'Bookingen kunne ikke startes.')+
+    ' Hvis du allerede har åpnet kassen, kontroller handlekurven før nytt forsøk.';
   // Do not blindly unlock a paid/pending slot from the browser.
   // Server-side expiration/recovery is authoritative.
   draw();
