@@ -1,7 +1,7 @@
 # Booking 2.0 – owner paid checkout pilot handoff (2026-10-27)
 
 ## Installed and verified in connected Supabase STAGING
-- Booking API `gk-booking-v2` **v45 ACTIVE**; notifier `gk-booking-notifier` **v24 ACTIVE**.
+- Booking API `gk-booking-v2` **v47 ACTIVE**; notifier `gk-booking-notifier` **v24 ACTIVE**.
 - Role-and-admin-allowlist-gated owner-only checkout hold; first bookable day remains 2026-11-01.
 - Owner pilot cannot enable public launch, modify general release gates, or alter Min Bag.
 - Owner checkout may open only the one product/slot variant which matches an atomically reserved and accepted booking. Uses existing Quickbutik V1 adapter; test of actual V1 mutation remains pending.
@@ -35,3 +35,8 @@
 4. Select slot, check test terms, click "Reserver valgt tid og gå til betaling" and complete real payment.
 5. Return to test URL; log in if needed; enter the actual Quickbutik paid order number and verify until Nuki email is confirmed.
 6. If access code arrives, check Pushover and thank-you redirect, then reconcile all gates before ordinary public launch.
+
+## Additional completed readback fixes
+- Quickbutik V1 customer e-mail verification now accepts only a single consistent verified email across customer.email, customer.email_address or customer_email, while rejecting contradictory identities. Installed v47.
+- Confirmed Quickbutik product 1318 is **Leie av pilsett**, 25 NOK; no add-on purchased during setup.
+- The dedicated branded confirmation email now renders HTML and plaintext after confirmed Nuki authorization; staging notifier v24.
