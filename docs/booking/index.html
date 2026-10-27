@@ -30,6 +30,19 @@
 </div>
 <h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Endelig pris og eventuelle medlemsrabatter vises i kassen. Endelig pris vises i kassen.</div>
 <div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Bestilling åpner snart</span></div>
+<section id="gk-v2-owner-pilot" class="gk-v2-note" hidden style="margin-top:25px;border-left-color:#b3d4ab">
+<h3>Test: ekte betaling og adgangskode</h3>
+<p>Kun GolfKongen-administrator. Dette oppretter en faktisk reservasjon og legger den i den vanlige Quickbutik-kassen. Bruk samme e-post i Quickbutik som du logger inn med nedenfor.</p>
+<label>Booking 2.0 admin – e-post <input type="email" id="gk-v2-pilot-email" autocomplete="username" placeholder="Din administrator-e-post"></label>
+<label>Passord <input id="gk-v2-pilot-password" type="password" autocomplete="current-password" placeholder="Adminpassord"></label>
+<div class="gk-v2-actions"><button id="gk-v2-pilot-login" type="button">Logg inn for test</button>
+<button id="gk-v2-pilot-start" type="button" disabled>Reserver valgt tid og gå til betaling</button></div>
+<label class="gk-v2-checkbox"><input id="gk-v2-pilot-terms" type="checkbox"> Jeg godtar <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener">bookingvilkårene</a> for denne betalte testen.</label>
+<p>Etter betaling: Skriv inn Quickbutik-ordrenummeret som vises i kassen. Her kontrollerer vi betalingen og starter Nuki-koden og e-postutsendelsen.</p>
+<label>Ordrenummer fra Quickbutik<input id="gk-v2-pilot-order" inputmode="numeric" pattern="[0-9]*" placeholder="Ordrenummer"></label>
+<button id="gk-v2-pilot-confirm" type="button" disabled>Kontroller betalt ordre og send adgangskode</button>
+<p id="gk-v2-pilot-status" role="status">Logg inn for å starte.</p>
+</section>
 <div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling av dart og simulator senest 30 minutter før start. Hele lokalet senest 24 timer før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler (ikke toalett).</p><label>E-postadresse for bookingbekreftelse<input id="gk-v2-email" type="email" autocomplete="email" inputmode="email" required placeholder="deg@eksempel.no" style="width:100%"></label><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener noreferrer" style="color:#f2d18a;text-decoration:underline">bookingvilkårene</a>.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
 <script>
 (function(){'use strict';
@@ -203,6 +216,95 @@ async function verifyServerWindow(){
   }
  }catch(_){/* Booking remains locked; GET /availability and DB hold still enforce dates. */}
 }
+
+/* Owner-only paid checkout test; ordinary visitors never see these controls. */
+(function(){
+ const pilot=new URLSearchParams(location.search).get('gk2pilot')==='1';
+ if(!pilot||!canUseQuickbutikCart())return;
+ $('gk-v2-owner-pilot').hidden=false;
+ let client=null,session=null,busy=false;
+ const status=t=>{$('gk-v2-pilot-status').textContent=t};
+ async function connect(){
+  if(client)return client;
+  const sdk=await import('https://esm.sh/@supabase/supabase-js@2.58.0');
+  client=sdk.createClient('https://eadgdcimcmfyuicizboo.supabase.co',
+    'sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq',
+    {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  return client;
+ }
+ $('gk-v2-pilot-login').onclick=async()=>{
+  status('Kontrollerer admininnlogging …');
+  try{
+   const sdk=await connect();
+   const {data,error}=await sdk.auth.signInWithPassword({
+     email:$('gk-v2-pilot-email').value.trim(),password:$('gk-v2-pilot-password').value
+   });
+   $('gk-v2-pilot-password').value='';
+   if(error||!data?.session?.access_token||!data?.user?.email_confirmed_at)
+    throw Error(error?.message||'Admininnlogging ble ikke verifisert.');
+   session=data.session;
+   $('gk-v2-pilot-email').value=data.user.email;
+   $('gk-v2-pilot-start').disabled=false;
+   $('gk-v2-pilot-confirm').disabled=false;
+   status('Innlogget som '+data.user.email+'. Velg aktivitet, dato og ledig starttid over. Bruk samme e-post i Quickbutik-kassen.');
+  }catch(e){status('Innlogging feilet: '+(e.message||e));}
+ };
+ $('gk-v2-pilot-start').onclick=async()=>{
+  if(busy||!session?.access_token)return;
+  if(selected===null)return status('Velg et ledig tidspunkt i kalenderen først.');
+  if(!$('gk-v2-pilot-terms').checked)return status('Du må godta bookingvilkårene først.');
+  busy=true;$('gk-v2-pilot-start').disabled=true;
+  const resource=$('gk-v2-resource').value;
+  const date=$('gk-v2-day').value,start=selected;
+  const duration=Number($('gk-v2-duration').value);
+  const rentalSets=resource==='hyzr'?0:Number($('gk-v2-sets-qty').value);
+  const cache='gk2_pilot_key_'+date+'_'+resource+'_'+start+'_'+duration;
+  let key=sessionStorage.getItem(cache);
+  if(!key){key=crypto.randomUUID();sessionStorage.setItem(cache,key);}
+  try{
+   status('Reserverer valgt tid og klargjør Quickbutik-kassen …');
+   const r=await fetch(CONF.apiUrl+'/admin/paid-test/hold',{
+    method:'POST',headers:{'authorization':'Bearer '+session.access_token,
+      'content-type':'application/json'},
+    body:JSON.stringify({idempotencyKey:key,date,resource,startMin:start,
+      duration,rentalSets,acceptedTerms:true}),cache:'no-store'
+   });
+   const d=await r.json();
+   if(!r.ok||!d.ok)throw Error(d.code||'Kunne ikke klargjøre betalt testbooking.');
+   sessionStorage.setItem('gk2_pilot_last_hold',JSON.stringify({
+     holdId:d.holdId,email:$('gk-v2-pilot-email').value,expires:d.holdExpiresAt
+   }));
+   await quickbutikAddProduct(d.productId,d.variantId,1,d.sku);
+   if(rentalSets>0)await quickbutikAddProduct(1318,null,rentalSets,'1318');
+   status('Tidspunktet er reservert. Åpner den vanlige Quickbutik-kassen …');
+   location.assign('/cart/index');
+  }catch(e){
+   status('Testen ble ikke fullført: '+(e.message||e)+
+    '. Ikke opprett en ny booking før vi har kontrollert om varen ligger i handlekurven.');
+  }finally{busy=false;$('gk-v2-pilot-start').disabled=false;}
+ };
+ $('gk-v2-pilot-confirm').onclick=async()=>{
+  if(busy||!session?.access_token)return;
+  const order=$('gk-v2-pilot-order').value.trim();
+  if(!/^[1-9][0-9]{0,8}$/.test(order))return status('Skriv inn ordrenummeret fra en faktisk betalt Quickbutik-ordre.');
+  busy=true;$('gk-v2-pilot-confirm').disabled=true;
+  try{
+   status('Kontrollerer faktisk betalt ordre direkte i Quickbutik …');
+   const response=await fetch(CONF.apiUrl+'/admin/paid-test/confirm',{
+    method:'POST',headers:{'authorization':'Bearer '+session.access_token,
+      'content-type':'application/json'},
+    body:JSON.stringify({orderNumber:order}),cache:'no-store'
+   });
+   const data=await response.json();
+   if(!response.ok||data.bookingStatus!=='confirmed')
+    throw Error(data.code||'Ordren kunne ikke bekreftes automatisk – kontakt GolfKongen før nytt kjøp.');
+   status('Betalingen og bookingen er bekreftet. Nuki/e-post: '+data.notificationStatus+
+    '. Vi åpner takk-for-booking-siden.');
+   location.assign(data.thankYouUrl);
+  }catch(e){status('Ordrekontroll feilet: '+(e.message||e)+'. Ikke betal på nytt.');}
+  finally{busy=false;$('gk-v2-pilot-confirm').disabled=false;}
+ };
+})();
 fillDurations();
 refreshDartSets();
 updateRollingWindow({forceDraw:true});
