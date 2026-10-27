@@ -9,8 +9,12 @@
 - Owner reports a manually created backup entry code and accepts manual access assistance pending physical Nuki testing. The code itself must never be committed or added to public frontend. No backup code has been inserted into automatic customer emails in this session.
 
 ## Next dependency
-Real storefront cart evidence remains missing. HTTP 200 alone is explicitly insufficient in quickbutikAddProduct. The current client has no semantic cart verification; keep checkout disabled until exact booking SKU, quantity, rental sets and actual checkout are verified. No paid booking test or customer notification was performed in this session.
+Real storefront cart evidence remains missing. HTTP 200 alone is explicitly insufficient in quickbutikAddProduct. The client now requires success=1, the exact server-provided SKU, correct product/variant identity, exact quantity and variant flag in the actual cart JSON; HTTP 200 alone fails. Three regression tests exercise the shipped validator. Keep checkout disabled until a real booking variant and paid flow are verified. No paid booking test or customer notification was performed in this session.
 
 A controlled owner checkout test must be made possible without opening all 8 release gates merely to test them. Existing customer /hold requires both the environment switch and all database release gates. Do not claim the customer pilot is ready simply because the catalogue is now complete. Preserve legacy bookings and check old/new overlap before cutover.
 
 Physical Nuki test remains outstanding; the owner's backup access option does not prove automatic PIN delivery/revocation. Do not reproduce the backup PIN in project documentation.
+
+## Cart evidence and implementation follow-up
+- Isolated anonymous storefront session: POST /cart/add for rental product 1318 returned HTTP 200, success=1, exact SKU 1318, qty=1, raw_id=1318, is_variant=0, 25 NOK. No checkout/payment/reservation was created. This is real rental-cart evidence only, not a booking variant or logged-in customer-group test.
+- Updated docs/booking/index.html cart guard and added booking-v2/cart-response.test.mjs; CI includes the regression tests. 3 new tests passed locally; previous 104 tests passed earlier. No checkout release switch changed.
