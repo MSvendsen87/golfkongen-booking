@@ -352,28 +352,8 @@ Deno.serve(async req=>{
    "GK2_QUICKBUTIK_API_KEY"].every(k=>env(k).length>0)
    &&env("NUKI_LOCK_ID")===String(LOCK_ID);
  const enabled=env("GK2_NOTIFIER_ENABLED")==="true";
- if(req.method==="GET"&&pathname.endsWith("/health")){
-  try {
-    const as=await safeDeviceAndAuthList();
-    const device=await nuki("GET","/smartlock/"+LOCK_ID);
-    const matched=as.filter(x=>x?.name==="GK2-TEST-ef646c71041b4aad");
-    console.log("gk2_owner_nuki_readonly_probe",JSON.stringify({
-      listSize:as.length,matchingName:matched.length,
-      namePrefixCount:as.filter(x=>String(x?.name||"").startsWith("GK2-TEST")).length,
-      types:as.map(x=>x?.type),nameLengths:as.map(x=>String(x?.name||"").length),
-      paired:device?.config?.keypadPaired===true||device?.config?.keypad2Paired===true,
-      serverState:device?.serverState??null,
-      smartHostingFlag:device?.smartHosting??device?.config?.smartHosting??null,
-      matchingType13:matched.filter(x=>Number(x.type)===13).length,
-      matchingLock:matched.filter(x=>String(x.smartlockId)===String(LOCK_ID)).length,
-      hasCode:matched.some(x=>x.code!==undefined&&x.code!==null),
-      hasTimeWindow:matched.some(x=>x.allowedFromDate&&x.allowedUntilDate),
-      hasId:matched.some(x=>x.id!==undefined&&x.id!==null),
-      sampleShapes:matched.map(x=>Object.keys(x).sort()).slice(0,2)
-    }));
-  } catch(e){console.log("gk2_owner_nuki_readonly_probe_error",shortError(e))}
+ if(req.method==="GET"&&pathname.endsWith("/health"))
   return json({ok:true,service:"GolfKongen Booking2 notifier",enabled,configured});
- }
  if(req.method==="POST"&&pathname.endsWith("/internal/diagnose")){
   // Safe diagnostics can run before launch. HMAC is separate from dispatch.
   let allowed=await verifyDiagnosticRequest({
