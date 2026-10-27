@@ -1,5 +1,7 @@
 name: Booking 2.0 payment verifier (no deployment)
 on:
+  push:
+    branches: [booking-v2-preview-2026-10-24]
   pull_request:
     paths:
       - 'booking-v2/supabase/functions/gk-booking-v2/payment-validation*.mjs'
@@ -23,4 +25,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs booking-v2/cloudflare/booking-v2-pushover-map.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-order-audit.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-v1-payment-check.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-webhook-guard.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-cart-variant.test.mjs booking-v2/supabase/functions/gk-booking-v2/cleanup-auth.test.mjs booking-v2/scripts/safe-variant-plan.test.mjs booking-v2/supabase/functions/gk-booking-notifier/notify-core.test.mjs
+      - run: node --test booking-v2/supabase/functions/gk-booking-v2/payment-validation.test.mjs booking-v2/cloudflare/booking-v2-pushover-map.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-order-audit.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-v1-payment-check.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-webhook-guard.test.mjs booking-v2/supabase/functions/gk-booking-v2/quickbutik-cart-variant.test.mjs booking-v2/supabase/functions/gk-booking-v2/cleanup-auth.test.mjs booking-v2/scripts/safe-variant-plan.test.mjs booking-v2/supabase/functions/gk-booking-notifier/notify-core.test.mjs booking-v2/supabase/functions/gk-booking-notifier/diagnostic-auth.test.mjs
