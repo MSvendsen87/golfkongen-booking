@@ -24,3 +24,8 @@
 - Preserve and integrate Thursday club priority 19–22 and conditional Tuesday 00:01 release with existing club registrations. This legacy rule is not yet installed in new DB. legacy_rules_verified must stay false.
 - Verify old/new booking cutover, legacy cron transition, checkout shipping and tax, actual concurrent customer checkout, auto email/Pushover/Nuki provisioning and revocation.
 - Backup door PIN is private owner fallback only; not stored in repository or customer frontend. Physical lock test can wait, other blockers cannot be waived by the backup PIN.
+
+## Subsequent verified results
+- All 33 product title/description updates succeeded, retaining Booking 2.0 prefix and hidden products. Removed customer-facing TESTKJØP/SKJULT/IKKE AKTIV wording; descriptions point to /aktiviteter and require actual paid reservation confirmation. Only title/description/weight=0 changed; no prices or group overrides changed. Weight zero alone is NOT proof of free checkout shipping.
+- Cart pilot run 40496437437 / job 122162959616 succeeded. Exact SKU 2026-11-04-1000-1030, product 1474, variant 282560, quantity 1, isVariant=1, rawId=1474, actual anonymous unit price 90 NOK, one cart item. No checkout/payment/order. Final readback confirmed hidden=true, stock=0, price=90 after relock. This verifies the frontend raw_id assumption against real variant output.
+- Read-only club catalogue: future Thursday variants 29 Oct through 10 Dec all currently have 10/10 capacity. That snapshot is not a dynamic club-priority implementation; do not mark legacy_rules_verified true.
