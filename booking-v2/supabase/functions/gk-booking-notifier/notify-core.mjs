@@ -34,7 +34,7 @@ export function matchingNukiAuth(auths,booking,code){
  String(x.smartlockId)===String(LOCK_ID)&&
  (x.name===booking.name||x.name===booking.name.slice(0,20))&&String(x.code)===String(Number(code))&&
  x.allowedFromDate&&x.allowedUntilDate&&
- Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-300000))<60000&&
+ Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-900000))<60000&&
  Math.abs(Date.parse(x.allowedUntilDate)-Date.parse(booking.endUtc))<60000);
 }
 export function bookedNotice(b){
@@ -51,7 +51,7 @@ export function accessMail(b,code){
  "Her er adgangskoden til din bekreftede booking:",
  b.title+" – "+b.day+" kl. "+b.from+"–"+b.to,
  "Dørkode: "+code,"",
- "Koden er gyldig fra 5 minutter før bookingstart til bookingslutt.",
+ "Koden kan brukes fra 10 minutter før bookingstart og til bookingslutt.",
  "Tast alle seks sifrene på Nuki Keypad ved inngangsdøren.",
  "Du trenger ikke Nuki-appen.","",
  "Ordre: "+b.orderId,"Hilsen GolfKongen"].join("\n")};
