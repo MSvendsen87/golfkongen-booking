@@ -9,6 +9,7 @@
 ## Utført verifikasjon
 - SQL rollback-test A: klubbhold først, ordinært dart_a-hold 19–20 avvises med `club_already_reserved`.
 - SQL rollback-test B: dart_b-hold først, klubbhold avvises med `dart_already_reserved`.
+- SQL rollback-test C: 9 plasser + 1 plass ga 0 igjen; ellevte plass avvist med `club_full`. HYZR 19–20 forble bookbar parallelt med full klubbkveld.
 - Begge testene midlertidig satt med release-gates true KUN inne i transaksjon, `ROLLBACK` til slutt.
 - Etterprøve: 0 klubbenrolments, 0 access-rader, 1 eksisterende reservasjon. `legacy_rules_verified` og `legacy_cron_switch_verified` fortsatt false, offentlig checkout fremdeles stengt.
 
