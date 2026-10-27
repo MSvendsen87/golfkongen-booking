@@ -1,0 +1,39 @@
+name: Booking 2.0 – One email to owner (Resend)
+on:
+  push:
+    branches: [booking-v2-preview-2026-10-24]
+    paths: ['.github/workflows/gk2-owner-resend-test.yml']
+permissions:
+  contents: read
+jobs:
+  owner-only-email:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Signed one-time test mail, fixed account owner only
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {createHmac} from 'node:crypto';
+          const secret=process.env.GK2_QUICKBUTIK_API_KEY||'';
+          if(secret.length<20)throw Error('Missing signing secret');
+          const ts=String(Math.floor(Date.now()/1000));
+          const intermediate=createHmac('sha256',secret)
+            .update('gk2-owner-resend-test-2026-10-27').digest();
+          const sig=createHmac('sha256',intermediate)
+            .update('POST:/send:'+ts).digest('hex');
+          const resp=await fetch(
+           'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk2-owner-resend-test/send',{
+            method:'POST',headers:{
+             'x-gk2-owner-mail-time':ts,
+             'x-gk2-owner-mail-signature':sig,
+             'Content-Type':'application/json'
+            },body:'{}',signal:AbortSignal.timeout(45000)
+           });
+          const result=await resp.json();
+          console.log('Resend owner-only test status:',resp.status);
+          console.log('Test send state:',result?.state||result?.reason||'no_result');
+          console.log('Provider receipt recorded:',result?.receipt===true);
+          if(resp.status!==200||result?.ok!==true)throw Error('Single test email not accepted. Do not retry without investigating DB send state.');
+          NODE
