@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/gk2-catalogue-readonly-audit.yml'
   workflow_dispatch:
+concurrency:
+  group: booking2-catalogue-readonly-audit
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -19,4 +22,22 @@ jobs:
       - name: Verify SKU completeness, all hidden/stock zero
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
-        run: node booking-v2/scripts/verify-all-45-day-variants.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node booking-v2/scripts/verify-all-45-day-variants.mjs | tee catalogue-audit.txt
+      - name: Retain catalogue audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking2-catalogue-audit-${{ github.run_id }}
+          path: catalogue-audit.txt
+          retention-days: 14
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if test -f catalogue-audit.txt; then
+            echo '### Booking 2.0 read-only catalogue audit' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 1 catalogue-audit.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
