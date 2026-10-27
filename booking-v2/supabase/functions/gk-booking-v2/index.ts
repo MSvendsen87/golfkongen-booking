@@ -433,12 +433,16 @@ Deno.serve(async (req:Request)=>{
           const discount=v1NokToOre(rawOrder.discount_amount);
           return gross===null||discount===null||gross<discount?null:gross-discount;
         })();
-      if(actualPaid===null||actualPaid<=0)return err("paid_test_amount_unverified",409,origin);
+      // Quickbutik V1 can omit its net paid field for discounted orders.
+      // Do not invent a price. Trusted paid status + strictly matched
+      // order/email/product/SKU/quantity/shipping/refunds is authoritative.
+      if(actualPaid!==null&&actualPaid<=0)
+        return err("paid_test_zero_total_requires_review",409,origin);
       if(rawOrder.total_pay_amount!==undefined&&rawOrder.total_amount!==undefined&&
         rawOrder.discount_amount!==undefined){
         const gross=v1NokToOre(rawOrder.total_amount);
         const discount=v1NokToOre(rawOrder.discount_amount);
-        if(gross===null||discount===null||gross-discount!==actualPaid)
+        if(gross!==null&&discount!==null&&actualPaid!==null&&gross-discount!==actualPaid)
           return err("paid_test_amount_conflict",409,origin);
       }
       const matched=await rpc("gk2_owner_match_paid_order_to_hold",{
@@ -477,7 +481,7 @@ Deno.serve(async (req:Request)=>{
         dispatchResult=notify.ok?"started":"requires_follow_up";
       }catch(_e){dispatchResult="requires_follow_up"}
       return reply({ok:true,bookingStatus:"confirmed",bookingId:String(hold.id),
-        notificationStatus:dispatchResult,amountChecked:true,
+        notificationStatus:dispatchResult,amountChecked:actualPaid!==null,
         thankYouUrl:"https://msvendsen87.github.io/golfkongen-booking/booking/takk/"},200,origin);
     }catch(_e){return err("paid_test_requires_manual_review",503,origin)}
   }
