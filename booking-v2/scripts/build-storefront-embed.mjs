@@ -16,9 +16,29 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
  if(!anchor)return;
  anchor.appendChild(host);host.innerHTML=${JSON.stringify(markup)};
  var init=document.createElement('script');init.textContent=${JSON.stringify(script)};host.appendChild(init);
+ // Customer-facing Quickbutik page: remove internal development notes.
+ if((location.pathname.endsWith('/')?location.pathname.slice(0,-1):location.pathname)==='/aktiviteter'){
+   var activities=document.getElementById('gk-aktiviteter');
+   var section=document.getElementById('gk2-booking-section');
+   var kicker=section&&section.querySelector('.gka-booking-kicker');
+   var heading=section&&section.querySelector('.gka-booking-head p');
+   var clubInfo=section&&section.querySelector('.gka-booking-info');
+   var footer=activities&&activities.querySelector('.gka-footnote');
+   if(kicker)kicker.textContent='BESTILL AKTIVITET';
+   if(heading)heading.textContent='Velg aktivitet, dato og varighet. Se ledige tider, godta vilkårene og fullfør bestillingen i GolfKongens kasse. Tilgangskoden sendes på e-post etter bekreftet booking.';
+   if(clubInfo)clubInfo.textContent='Klubbkveld for Lyngdal Dartklubb: torsdag kl. 19–22, inntil 10 plasser, 50 kr per person. Påmelding åpner snart.';
+   if(footer)footer.textContent='Alle bookinger følger GolfKongens vilkår. Adgangskoden kan brukes fra 10 minutter før bookingstart.';
+   var osloToday=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+   activities&&activities.querySelectorAll('.gka-card.disc .gka-media-badge,.gka-card.disc .gka-tag').forEach(function(badge){
+     if(osloToday>='2026-11-01')badge.remove();
+     else badge.textContent='Fra 1. november';
+   });
+   var loading=document.getElementById('gk2-embed-loading');
+   if(loading)loading.remove();
+ }
  var preview=new URLSearchParams(location.search).get('booking2')==='preview';
  var publicActivities=(location.pathname.endsWith('/')?location.pathname.slice(0,-1):location.pathname)==='/aktiviteter';
- if(preview||publicActivities){host.hidden=false;var note=document.createElement('p');note.textContent='Booking 2.0 vises nå på aktivitetssiden. Betaling åpner når de siste kontrollene er godkjent.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';note.id='gk2-checkout-locked-note';host.prepend(note);}
+ if(preview||publicActivities){host.hidden=false;var note=document.createElement('p');note.textContent='Du kan se aktiviteter og ledige tider. Bestilling åpner snart.';note.style.cssText='padding:12px;background:#3b3020;color:#ffebaa;border-radius:10px';note.id='gk2-checkout-locked-note';host.prepend(note);}
  fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2/window',{cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('window unavailable');return r.json()})
  .then(function(w){
