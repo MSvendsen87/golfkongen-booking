@@ -24,7 +24,29 @@
   script.src='https://msvendsen87.github.io/golfkongen-booking/booking/embed.js?v=20261027-install-v2';
   script.dataset.gk2NativeLoader='1';
   script.defer=true;
+  script.addEventListener('load',function(){
+   var host=document.getElementById('gk2-native-booking');
+   var note=document.getElementById('gk2-embed-loading');
+   if(host){
+    if(note)note.remove();
+   }else if(note){
+    note.textContent='Bookingkalenderen ble ikke montert. Oppdater siden og prøv igjen.';
+   }
+  });
+  script.addEventListener('error',function(){
+   var note=document.getElementById('gk2-embed-loading');
+   if(note)note.textContent='Bookingkalenderen kunne ikke lastes. Oppdater siden og prøv igjen.';
+  });
   document.body.appendChild(script);
+  document.querySelectorAll('#gk-aktiviteter a[data-gk2-resource]').forEach(function(a){
+   a.addEventListener('click',function(){
+    var selected=a.getAttribute('data-gk2-resource');
+    var input=document.getElementById('gk-v2-resource');
+    if(input&&['dart_a','dart_b','hyzr','venue'].includes(selected)){
+     input.value=selected;input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+   });
+  });
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});
  else mount();
