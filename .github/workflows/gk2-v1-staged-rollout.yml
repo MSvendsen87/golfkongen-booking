@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: '22'
       - name: Stage up to a 5000-variant cap across 33 hidden products, then hide and verify SKU
+        # Follow-up after verified read-only coverage audit: only append hidden stock-zero missing SKUs.
         env:
           GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
           GK2_VARIANT_SYNC_WRITE: 'true'
