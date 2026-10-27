@@ -88,6 +88,10 @@ Deno.serve(async (req:Request)=>{
     const held=await rpc("gk2_hold_club_seats",{
       p_key:key,p_day:day,p_customer:member.id,p_seats:seats
     });
+    if(!member.email||held.status!=="held"||!held.id)return err("club_hold_not_active",409,origin);
+    await rpc("gk2_bind_club_verified_email",{
+      p_enrolment:held.id,p_customer:member.id,p_email:member.email
+    });
     return reply({ok:true,holdId:held.id,status:held.status,remaining:held.remaining,
       paymentReady:false,checkoutEnabled:false},200,origin);
   }
