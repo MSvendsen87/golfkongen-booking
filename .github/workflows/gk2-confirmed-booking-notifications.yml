@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verified-confirmed-bookings:
-    if: ${{ vars.GK2_CUSTOMER_CHECKOUT_LIVE == 'true' }}
+    # Always drain already-confirmed booking events. Webhook/checkout gates
+    # control event creation; signed dispatch and idempotent DB claims secure delivery.
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
