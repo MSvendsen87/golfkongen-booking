@@ -32,7 +32,7 @@ export function matchingNukiAuth(auths,booking,code){
  if(!Array.isArray(auths))throw Error("nuki_authorizations_unavailable");
  return auths.find(x=>Number(x.type)===13&&
  String(x.smartlockId)===String(LOCK_ID)&&
- x.name===booking.name&&String(x.code)===String(Number(code))&&
+ (x.name===booking.name||x.name===booking.name.slice(0,20))&&String(x.code)===String(Number(code))&&
  x.allowedFromDate&&x.allowedUntilDate&&
  Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-300000))<60000&&
  Math.abs(Date.parse(x.allowedUntilDate)-Date.parse(booking.endUtc))<60000);
