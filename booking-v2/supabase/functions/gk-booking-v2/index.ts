@@ -307,7 +307,8 @@ Deno.serve(async (req:Request)=>{
       await rpc("gk2_mark_cart_variant_open",{
         p_reservation:heldId,p_variant_id:variant.variantId
       });
-      return reply({ok:true,holdId:heldId,holdExpiresAt:held.hold_expires_at,
+      const checkoutExpiresAt=await rpc("gk2_checkout_hold_expires",{p_reservation:heldId});
+      return reply({ok:true,holdId:heldId,holdExpiresAt:checkoutExpiresAt,
         productId:Number(productId),variantId:variant.variantId,
         sku,rentalSets,checkoutEnabled:true},200,origin);
     }catch(_e){
