@@ -52,6 +52,7 @@ async function dispatchConfirmedBookingOutbox(){
  });
  if(!response.ok)throw Error("notification_dispatch_http_"+response.status);
 }
+function liveCheckoutConfigured(){return Deno.env.get("GK2_WEBHOOK_ENABLED")==="true"&&Boolean(Deno.env.get("GK2_QUICKBUTIK_API_KEY"))}
 Deno.serve(async (req:Request)=>{
  const origin=req.headers.get("origin")||"";
  if(origin&&!origins.has(origin))return err("forbidden_origin",403,origin);
@@ -66,12 +67,12 @@ Deno.serve(async (req:Request)=>{
  const u=new URL(req.url);
  try{
   if(req.method==="GET"&&path==="/admin")return new Response(null,{status:302,headers:{"Location":"https://msvendsen87.github.io/golfkongen-booking/","Cache-Control":"no-store"}});
-  if(req.method==="GET"&&path==="/health")return reply({ok:true,environment:"staging",bookingEnabled:false,checkout:false},200,origin);
+  if(req.method==="GET"&&path==="/health"){const window=await rpc("gk2_booking_window",{});const enabled=liveCheckoutConfigured()&&window.bookingEnabled===true;return reply({ok:true,environment:enabled?"production":"staging",bookingEnabled:window.bookingEnabled===true,checkout:enabled},200,origin);}
   if(req.method==="GET"&&path==="/window"){
     // Derived on every request from Europe/Oslo PostgreSQL clock, no cron required for new dates.
     const window=await rpc("gk2_booking_window",{});
     return reply({ok:true,...window,
-      checkoutEnabled:Deno.env.get("GK2_CHECKOUT_ENABLED")==="true"&&window.bookingEnabled===true,
+      checkoutEnabled:liveCheckoutConfigured()&&window.bookingEnabled===true,
       explanation:"The 45-day calendar rolls daily; Quickbutik checkout follows the server release gates."},200,origin);
   }
   if(req.method==="GET"&&path==="/availability"){
@@ -282,7 +283,7 @@ Deno.serve(async (req:Request)=>{
     // This stays OFF until full release testing. Browser price/group is never
     // used; Quickbutik computes and charges the correct customer group price.
     if(!origin||!origins.has(origin))return err("forbidden_checkout_origin",403,origin);
-    if(Deno.env.get("GK2_CHECKOUT_ENABLED")!=="true")
+    if(!liveCheckoutConfigured())
       return err("checkout_not_enabled",503,origin);
     if(await rpc("gk2_release_gates_satisfied",{})!==true)
       return err("checkout_release_gates_closed",503,origin);
