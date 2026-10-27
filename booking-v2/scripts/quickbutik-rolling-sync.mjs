@@ -105,7 +105,7 @@ async function main(){
  const seen=new Set();
  for(const p of manifest.products){validatePlan(p);if(seen.has(p.productId)||seen.has(p.resource+"|"+p.minutes))throw Error("Duplicate product manifest");seen.add(p.productId);seen.add(p.resource+"|"+p.minutes);}
  if(!key){console.log("SKIPPED: GK2_QUICKBUTIK_API_KEY is missing in GitHub Secrets. No Quickbutik writes.");return;}
- const today=osloDay(),earliest=today<manifest.firstBookable?manifest.firstBookable:today,latest=advance(today,manifest.minDaysAhead);
+ const today=osloDay(),earliest=today<manifest.firstBookable?manifest.firstBookable:today,latest=advance(today,manifest.minDaysAhead+2); // 2-day prewarm buffer prevents unstocked final day if GitHub cron is delayed
  // Prioritize the newest date on every run, so midnight always gets a new day first.
  // Spread the API-write quota across ALL 33 resources/durations, not first few products.
  const dates=[];for(let day=earliest;day<=latest;day=advance(day,1))dates.push(day);
