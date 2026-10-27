@@ -481,6 +481,30 @@ Deno.serve(async (req:Request)=>{
         thankYouUrl:"https://msvendsen87.github.io/golfkongen-booking/booking/takk/"},200,origin);
     }catch(_e){return err("paid_test_requires_manual_review",503,origin)}
   }
+  if(req.method==="GET"&&path==="/admin/paid-test/status"){
+    const bookingId=u.searchParams.get("bookingId")||"";
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(bookingId))
+      return err("invalid_booking_id",400,origin);
+    const status=await rpc("gk2_owner_paid_test_delivery_status",{
+      p_actor:user.email,p_reservation:bookingId
+    });
+    if(status.bookingStatus==="confirmed"&&
+      !status.accessEmailSent&&!status.needsReview){
+      try{
+        await fetch(Deno.env.get("SUPABASE_URL")+
+          "/functions/v1/gk-booking-notifier/owner/dispatch-paid-test",{
+          method:"POST",headers:{"authorization":req.headers.get("authorization")||"",
+            "content-type":"application/json"},
+          body:JSON.stringify({reservationId:bookingId}),signal:AbortSignal.timeout(22000)
+        });
+      }catch(_e){}
+    }
+    const latest=await rpc("gk2_owner_paid_test_delivery_status",{
+      p_actor:user.email,p_reservation:bookingId
+    });
+    return reply({ok:true,...latest,thankYouUrl:
+      "https://msvendsen87.github.io/golfkongen-booking/booking/takk/"},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/order-audit"){
     // Read-only diagnostic, always after owner-only JWT + allowlist check.
     const order=u.searchParams.get("order")||"";
