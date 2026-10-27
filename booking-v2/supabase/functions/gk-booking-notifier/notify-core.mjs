@@ -46,15 +46,39 @@ export function bookedNotice(b){
 }
 export function accessMail(b,code){
  if(!validKeypadCode(code))throw Error("invalid_code");
- return {to:[b.email],subject:"Adgangskode til GolfKongen – "+b.day,
+ const clean=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+ const rows=[["Aktivitet",b.title],["Dato",b.day],
+  ["Tid",b.from+"–"+b.to],["Ordre",b.orderId]];
+ const html="<div style='margin:0;padding:30px 14px;background:#f3f5f0;font-family:Arial,sans-serif;color:#16221a'>"+
+  "<div style='max-width:570px;margin:auto;background:white;border-radius:18px;overflow:hidden'>"+
+  "<div style='padding:26px 30px;background:#1e3b29;color:#fff'>"+
+  "<div style='font-weight:bold;font-size:15px;letter-spacing:2px'>GOLFKONGEN</div>"+
+  "<h1 style='font-size:28px;line-height:1.3;margin:16px 0 0;color:#fff'>Booking bekreftet!</h1></div>"+
+  "<div style='padding:28px 30px'>"+
+  "<p>Vi gleder oss til å ønske deg velkommen. Her finner du informasjonen om bookingen din.</p>"+
+  "<table style='width:100%;border-collapse:collapse'>"+
+  rows.map(([name,value])=>"<tr><td style='padding:9px 0;border-bottom:1px solid #e4e9e2;color:#526256'>"+clean(name)+
+  "</td><td style='padding:9px 0;text-align:right;border-bottom:1px solid #e4e9e2;font-weight:600'>"+clean(value)+"</td></tr>").join("")+
+  "</table><div style='background:#eff5eb;border:1px solid #cddbc8;border-radius:12px;text-align:center;margin:25px 0;padding:20px'>"+
+  "<div style='font-size:13px;color:#516a54'>DIN PERSONLIGE DØRKODE</div>"+
+  "<div style='font-size:37px;letter-spacing:8px;font-weight:800;color:#1e3b29;margin:9px 0'>"+clean(code)+"</div>"+
+  "<div style='font-size:13px'>Kan brukes fra <b>10 minutter før</b> bookingstart til bookingslutt.</div>"+
+  "</div><p>Tast alle seks sifrene på Nuki Keypad ved inngangsdøren. Du trenger ikke Nuki-appen.</p>"+
+  "<p>Bruk kun innesko eller sokker ved dart og simulator. Den som booker er ansvarlig for sine gjester.</p>"+
+  "<p style='color:#516a54;font-size:13px'>Spørsmål? Svar på e-posten eller skriv til post@golfkongen.no.</p>"+
+  "</div></div></div>";
+ return {to:[b.email],subject:"Booking bekreftet – GolfKongen – "+b.day,
  text:["Hei!","",
- "Her er adgangskoden til din bekreftede booking:",
+ "Bookingen hos GolfKongen er bekreftet.",
  b.title+" – "+b.day+" kl. "+b.from+"–"+b.to,
  "Dørkode: "+code,"",
  "Koden kan brukes fra 10 minutter før bookingstart og til bookingslutt.",
  "Tast alle seks sifrene på Nuki Keypad ved inngangsdøren.",
- "Du trenger ikke Nuki-appen.","",
- "Ordre: "+b.orderId,"Hilsen GolfKongen"].join("\n")};
+ "Du trenger ikke Nuki-appen.",
+ "Bruk innesko eller sokker ved dart og simulator.","",
+ "Ordre: "+b.orderId,"Hilsen GolfKongen"].join("\n"),
+ html};
 }
 export async function encryptAccessCode(code,keyBase64){
  if(!validKeypadCode(code))throw Error("invalid_code");
