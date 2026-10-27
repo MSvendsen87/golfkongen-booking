@@ -8,14 +8,14 @@ const b={bookingId:'121a5541-989b-46d0-8c44-ea0cf10b3baa',
  orderId:'3702',email:'customer@example.invalid',day:'2026-11-02',
  resource:'dart_a',startMin:600,endMin:660,rentalSets:2,productId:1486};
 const key='this-is-only-test-key-0000111122223333';
-test('Nuki code is correctly limited to booked Oslo time plus 5 minutes',()=>{
+test('Nuki code is correctly limited to booked Oslo time plus 15 minutes',()=>{
  const booking=checkedBooking(b);
  assert.equal(booking.startUtc,'2026-11-02T09:00:00.000Z');
  assert.equal(booking.endUtc,'2026-11-02T10:00:00.000Z');
  const auth=nukiPayload(booking,'345678');
  assert.equal(auth.type,13);
  assert.deepEqual(auth.smartlockIds,[LOCK_ID]);
- assert.equal(auth.allowedFromDate,'2026-11-02T08:55:00.000Z');
+ assert.equal(auth.allowedFromDate,'2026-11-02T08:45:00.000Z');
  assert.equal(auth.allowedUntilDate,booking.endUtc);
  assert.equal(auth.remoteAllowed,false);
 });
@@ -33,6 +33,8 @@ test('sender receives correct local time and PIN in separate confirmation email'
  const msg=accessMail(booking,'345678');
  assert.match(msg.text,/10:00–11:00/);
  assert.match(msg.text,/345678/);
+ assert.match(msg.text,/10 minutter før bookingstart/);
+ assert.doesNotMatch(msg.text,/15 minutter før bookingstart/);
  assert.deepEqual(msg.to,['customer@example.invalid']);
  assert.match(bookedNotice(booking).message,/Pilsett: 2/);
  assert.throws(()=>accessMail(booking,'123456'),/invalid_code/);
