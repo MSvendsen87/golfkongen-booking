@@ -377,7 +377,7 @@ $('checkVariants').onclick=async()=>{
  };
  $('refresh').onclick=async()=>{try{await refresh();message('Kalender oppdatert')}catch(e){message(e.message,true)}};
 $('day').onchange=async()=>{try{await refresh()}catch(e){message(e.message,true)}};
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('selected',x===b));['calendar','blocks','hours','prices','checkout','members','tournaments'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab))});
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('selected',x===b));['calendar','blocks','hours','prices','checkout','members','tournaments'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='members')loadClubAccess()});
 const bind=(id,route,transform)=>(()=>{$(id).onsubmit=async e=>{e.preventDefault();try{const d=transform(form(e.target));const result=await api(route,d);message('Lagret i staging. Status: '+(result.status||'registrert'));await refresh();}catch(er){message('Kunne ikke lagre: '+er.message,true)}}})();
 bind('blockForm','/admin/block',b=>({...b,start:minutes(b.startTime),end:minutes(b.endTime)}));
 bind('hoursForm','/admin/hours',b=>({resource:b.resource,weekday:Number(b.weekday),opens:minutes(b.opensTime),closes:minutes(b.closesTime),active:b.active==='true'}));
