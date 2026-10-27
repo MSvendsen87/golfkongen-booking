@@ -5,7 +5,6 @@ import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyCleanupRequest} from "./cleanup-auth.mjs";
 import {verifyQuickbutikWebhook} from "./quickbutik-webhook-guard.mjs";
-import {loadClubCapacity} from "./club-priority.mjs";
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -36,16 +35,6 @@ async function rpc(method:string,args:Record<string,unknown>){
  if(error)throw new Error("rpc_failed:"+method+":"+error.code);
  return data;
 }
-async function refreshClub(day:string){
- if(new Date(day+'T12:00:00Z').getUTCDay()!==4)return true;
- const started=new Date().toISOString();
- try{
-  const state=await loadClubCapacity(day,{apiKey:Deno.env.get('GK2_QUICKBUTIK_API_KEY')||''});
-  await rpc('gk2_record_club_capacity',{p_day:day,p_remaining:state.remaining,
-   p_variant:state.variantId,p_started:started});
-  return true;
- }catch{return false;}
-}
 Deno.serve(async (req:Request)=>{
  const origin=req.headers.get("origin")||"";
  if(origin&&!origins.has(origin))return err("forbidden_origin",403,origin);
@@ -71,11 +60,8 @@ Deno.serve(async (req:Request)=>{
   if(req.method==="GET"&&path==="/availability"){
    const day=u.searchParams.get("date")||"";
    if(!validDate(day))return err("invalid_date",400,origin);
-   // Unknown/stale external status must never release club priority.
-   const clubKnown=await refreshClub(day);
    const result=await rpc("gk2_day_availability",{p_day:day});
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
-   if(!clubKnown)safeBlocks.push({target:'dart_a',start_min:1140,end_min:1320},{target:'dart_b',start_min:1140,end_min:1320});
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
   if(req.method==="GET"&&path==="/webhook/quickbutik"){
@@ -214,8 +200,6 @@ Deno.serve(async (req:Request)=>{
     let heldId="";
     let leaseStarted=false;
     try{
-      if(resource!=='hyzr'&&start<1320&&start+minutes>1140&&!await refreshClub(day))
-        return err('club_status_unavailable',503,origin);
       const held=await rpc("gk2_hold_slot",{
         p_key:key,p_day:day,p_resource:resource,p_start:start,
         p_duration:minutes,p_terms:"gk-v1"
@@ -283,6 +267,10 @@ Deno.serve(async (req:Request)=>{
     if(!key)return err("quickbutik_key_not_configured",503,origin);
     const audit=await auditQuickbutikOrder(order,{apiKey:key});
     return reply({ok:true,...audit,bookingConfirmed:false,notificationSent:false},200,origin);
+  }
+  if(req.method==="GET"&&path==="/admin/club-access"){
+    const members=await rpc("gk2_admin_list_club_access",{p_actor:user.email});
+    return reply({ok:true,members},200,origin);
   }
   if(req.method==="GET"&&path==="/admin/health")return reply({ok:true,email:user.email,status:"isolated_staging"},200,origin);
   if(req.method==="GET"&&path==="/admin/snapshot"){
@@ -420,6 +408,13 @@ Deno.serve(async (req:Request)=>{
    if(!Number.isInteger(b.minutes)||!Number.isInteger(b.ore)||b.ore<0||b.ore>10000000)return err("invalid_price",400,origin);
    const saved=await rpc("gk2_admin_save_price",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_price_ore:b.ore,p_note:b.note||""});
    return reply({ok:true,...saved,status:"saved_in_staging_not_quickbutik",checkoutEnabled:false},200,origin);
+  }
+  if(path==="/admin/club-access"){
+    const customerId=String(b.customerId||"").trim();
+    if(customerId.length<3||customerId.length>128||typeof b.active!=="boolean")
+      return err("invalid_club_access",400,origin);
+    const changed=await rpc("gk2_admin_set_club_access",{p_actor:a,p_customer:customerId,p_active:b.active});
+    return reply({ok:true,changed},200,origin);
   }
   if(path==="/admin/member-request"){
    return reply({ok:true,id:await rpc("gk2_admin_request_membership",{p_actor:a,p_email:b.email,p_group:b.group,p_action:b.action}),status:"pending_external_sync"},202,origin);
