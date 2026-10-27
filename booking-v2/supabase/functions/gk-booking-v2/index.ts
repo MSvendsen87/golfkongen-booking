@@ -104,12 +104,11 @@ Deno.serve(async (req:Request)=>{
     return reply({ok:true,...status,checkoutEnabled:false},200,origin);
   }
   if(req.method==="GET"&&path==="/webhook/quickbutik"){
-    // Dual release lock: env + 8 database gates. Until BOTH pass, never
-    // acknowledge a paid Quickbutik event or modify a reservation.
+    // Independent webhook gate: signed paid order callbacks must be testable
+    // before public checkout release gates are marked verified.
+    // Customer checkout remains separately locked by GK2_CHECKOUT_ENABLED and DB gates.
     if(Deno.env.get("GK2_WEBHOOK_ENABLED")!=="true")
       return err("webhook_not_enabled",503,origin);
-    const gates=await rpc("gk2_release_gates_satisfied",{});
-    if(gates!==true)return err("webhook_release_gates_closed",503,origin);
     const verified=await verifyQuickbutikWebhook(u.toString(),Deno.env.get("GK2_WEBHOOK_SECURITYHASH")||"");
     if(!verified.ok)return err("webhook_source_rejected",403,origin);
     const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
