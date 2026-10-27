@@ -12,7 +12,7 @@ export function verifiedV1CustomerEmail(order){
  const options=[order?.customer?.email,order?.customer?.email_address,order?.customer_email]
    .filter(x=>typeof x==='string'&&x.trim()).map(email);
  const unique=[...new Set(options)];
- return unique.length===1&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(unique[0])?unique[0]:'';
+ return unique.length===1&&/^[^ @]+@[^ @]+[.][^ @]+$/.test(unique[0])?unique[0]:'';
 }
 const id=s=>/^[1-9][0-9]{0,8}$/.test(String(s||''))?String(s):null;
 
