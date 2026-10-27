@@ -346,6 +346,67 @@ Deno.serve(async (req:Request)=>{
   }
   if(!path.startsWith("/admin/"))return err("not_found",404,origin);
   const user=await admin(req);if(!user)return err("admin_forbidden",403,origin);
+  // A payment pilot is ONLY available after a verified owner login.
+  // No public launch flags are changed and no public hold may call this route.
+  if(req.method==="POST"&&path==="/admin/paid-test/hold"){
+    const data=await body(req);
+    const key=String(data?.idempotencyKey||""),day=String(data?.date||""),
+      resource=String(data?.resource||""),start=Number(data?.startMin),
+      minutes=Number(data?.duration),sets=Number(data?.rentalSets??0);
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)||
+      !validDate(day)||!["hyzr","dart_a","dart_b","venue"].includes(resource)||
+      !Number.isSafeInteger(start)||start%30!==0||
+      !Number.isSafeInteger(minutes)||minutes%30!==0||
+      !Number.isSafeInteger(sets)||sets<0||sets>6||
+      (resource==="hyzr"&&sets!==0)||data?.acceptedTerms!==true)
+      return err("invalid_paid_pilot_request",400,origin);
+    const apiKey=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!apiKey)return err("quickbutik_api_not_configured",503,origin);
+    const productId=Number(await rpc("gk2_owner_paid_checkout_product_for",{
+      p_actor:user.email,p_resource:resource,p_minutes:minutes
+    }));
+    let heldId="",leaseStarted=false;
+    const sku=expectedSlotSku(day,start,start+minutes);
+    try{
+      const held=await rpc("gk2_owner_paid_test_hold",{
+        p_actor:user.email,p_key:key,p_day:day,p_resource:resource,
+        p_start:start,p_duration:minutes
+      });
+      if(held?.status!=="held"||!held?.id)return err("pilot_slot_unavailable",409,origin);
+      heldId=String(held.id);
+      await rpc("gk2_prepare_cart_intent",{
+        p_reservation:heldId,p_email:user.email,
+        p_rental_sets:sets,p_terms_accepted:true
+      });
+      await rpc("gk2_owner_paid_mark_opening",{
+        p_actor:user.email,p_reservation:heldId,p_product:productId,p_sku:sku
+      });
+      leaseStarted=true;
+      const variant=await mutateHeldCartVariant({productId,sku,action:"open",apiKey});
+      await rpc("gk2_mark_cart_variant_open",{
+        p_reservation:heldId,p_variant_id:variant.variantId
+      });
+      const expires=await rpc("gk2_checkout_hold_expires",{p_reservation:heldId});
+      return reply({ok:true,ownerPaidTest:true,holdId:heldId,holdExpiresAt:expires,
+        productId,variantId:variant.variantId,sku,rentalSets:sets,checkoutEnabled:true},200,origin);
+    }catch(error){
+      if(heldId){
+        try{
+          if(leaseStarted){
+            await mutateHeldCartVariant({productId,sku,action:"close",apiKey});
+            await rpc("gk2_finish_cart_variant_relock",{p_reservation:heldId,p_success:true});
+          }
+          await rpc("gk2_abort_precheckout_hold",{p_reservation:heldId});
+        }catch(_relock){
+          if(leaseStarted)try{await rpc("gk2_finish_cart_variant_relock",{
+            p_reservation:heldId,p_success:false
+          })}catch(_e){}
+          return err("pilot_cleanup_manual_review",503,origin);
+        }
+      }
+      return err("pilot_checkout_not_opened",503,origin);
+    }
+  }
   if(req.method==="GET"&&path==="/admin/order-audit"){
     // Read-only diagnostic, always after owner-only JWT + allowlist check.
     const order=u.searchParams.get("order")||"";
