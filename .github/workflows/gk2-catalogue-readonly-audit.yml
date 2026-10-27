@@ -4,6 +4,8 @@ on:
     branches: [booking-v2-preview-2026-10-24]
     paths:
       - '.github/workflows/gk2-catalogue-readonly-audit.yml'
+      - 'booking-v2/scripts/verify-all-45-day-variants.mjs'
+      - 'booking-v2/data/public-prices.json'
   workflow_dispatch:
 concurrency:
   group: booking2-catalogue-readonly-audit

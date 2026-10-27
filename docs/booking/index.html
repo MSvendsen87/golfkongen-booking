@@ -35,15 +35,17 @@
 (function(){'use strict';
 // Public read-only endpoint requires genuine staging API. Keep checkout disabled until Quickbutik adapter is verified.
 var CONF={apiUrl:'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2',checkoutVerified:false};
+var PUBLIC_PRICES=[{"resource":"hyzr","minutes":30,"productId":1474,"price":90},{"resource":"dart_a","minutes":30,"productId":1475,"price":80},{"resource":"dart_b","minutes":30,"productId":1476,"price":80},{"resource":"hyzr","minutes":60,"productId":1477,"price":150},{"resource":"hyzr","minutes":90,"productId":1478,"price":240},{"resource":"hyzr","minutes":120,"productId":1479,"price":300},{"resource":"hyzr","minutes":150,"productId":1480,"price":390},{"resource":"hyzr","minutes":180,"productId":1481,"price":450},{"resource":"hyzr","minutes":210,"productId":1482,"price":540},{"resource":"hyzr","minutes":240,"productId":1483,"price":600},{"resource":"dart_a","minutes":90,"productId":1484,"price":200},{"resource":"dart_a","minutes":120,"productId":1485,"price":240},{"resource":"dart_a","minutes":60,"productId":1486,"price":120},{"resource":"dart_a","minutes":150,"productId":1487,"price":320},{"resource":"dart_a","minutes":210,"productId":1488,"price":440},{"resource":"dart_a","minutes":180,"productId":1489,"price":360},{"resource":"dart_b","minutes":60,"productId":1490,"price":120},{"resource":"dart_a","minutes":240,"productId":1491,"price":480},{"resource":"dart_b","minutes":90,"productId":1492,"price":200},{"resource":"dart_b","minutes":120,"productId":1493,"price":240},{"resource":"dart_b","minutes":150,"productId":1494,"price":320},{"resource":"dart_b","minutes":180,"productId":1495,"price":360},{"resource":"dart_b","minutes":210,"productId":1496,"price":440},{"resource":"dart_b","minutes":240,"productId":1497,"price":480},{"resource":"venue","minutes":240,"productId":1498,"price":800},{"resource":"venue","minutes":300,"productId":1499,"price":1000},{"resource":"venue","minutes":360,"productId":1500,"price":1200},{"resource":"venue","minutes":420,"productId":1501,"price":1400},{"resource":"venue","minutes":480,"productId":1502,"price":1600},{"resource":"venue","minutes":540,"productId":1503,"price":1800},{"resource":"venue","minutes":600,"productId":1504,"price":2000},{"resource":"venue","minutes":660,"productId":1505,"price":2200},{"resource":"venue","minutes":720,"productId":1506,"price":2400}];
 var canUseQuickbutikCart=()=>['golfkongen.no','www.golfkongen.no'].includes(location.hostname);
-var $=id=>document.getElementById(id),selected=null,snapshot=null,currentDayOslo='';
+var $=id=>document.getElementById(id),selected=null,snapshot=null,currentDayOslo='',availabilityRequest=0;
 
 function draw(){
+ var request=++availabilityRequest;
  selected=null;$('gk-v2-continue').disabled=true;
  if(!CONF.apiUrl){$('gk-v2-status').textContent='Booking åpnes etter kontroll av betaling og sikkerhet.';return}
  var d=$('gk-v2-day').value;if(!d)return; if(d<$('gk-v2-day').min||d>$('gk-v2-day').max){$('gk-v2-status').textContent='Dato utenfor 45-dagersvinduet.';$('gk-v2-times').textContent='';return;} if(d<'2026-11-01'){$('gk-v2-status').textContent='Første bookbare dato er 1. november 2026.';$('gk-v2-times').textContent='';return;}
  $('gk-v2-status').textContent='Henter tilgjengelige tider …';$('gk-v2-times').textContent='';
- fetch(CONF.apiUrl+'/availability?date='+encodeURIComponent(d),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Kunne ikke hente kalender');return r.json()}).then(a=>{snapshot=a;render(a)}).catch(()=>{$('gk-v2-status').textContent='Kalenderen er midlertidig utilgjengelig.'})
+ fetch(CONF.apiUrl+'/availability?date='+encodeURIComponent(d),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Kunne ikke hente kalender');return r.json()}).then(a=>{if(request!==availabilityRequest||d!==$('gk-v2-day').value)return;if(!a.ok||a.day!==d)throw Error('Ugyldig kalender');snapshot=a;render(a)}).catch(()=>{if(request===availabilityRequest)$('gk-v2-status').textContent='Kalenderen er midlertidig utilgjengelig.'})
 }
 function render(a){
  var r=$('gk-v2-resource').value,n=Number($('gk-v2-duration').value),hours=a.openingHoursByResource?.[r];
@@ -65,7 +67,8 @@ function updateSummary(){
   var r=$('gk-v2-resource').value;
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   var extras=qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
-  $('gk-v2-summary').textContent='Bookingprisen for din kundegruppe bekreftes i Quickbutik-kassen.'+extras+' Betaling utføres av Quickbutik først når bookingsystemet er aktivert.';
+  var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
+  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Din innloggede kundegruppepris og eventuelle rabatter bekreftes i kassen.'+extras;
 }
 function refreshDartSets(){
   var show=$('gk-v2-resource').value!=='hyzr';

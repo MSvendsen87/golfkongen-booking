@@ -3,6 +3,7 @@
 // Catch a partial 45-day calendar before it becomes a customer promise.
 import {readFileSync} from "node:fs";
 const manifest=JSON.parse(readFileSync(new URL("../data/quickbutik-duration-manifest.json",import.meta.url),"utf8"));
+const prices=JSON.parse(readFileSync(new URL("../data/public-prices.json",import.meta.url),"utf8"));
 const key=process.env.GK2_QUICKBUTIK_API_KEY||"";
 if(!key)throw Error("Missing read-only Quickbutik key");
 const osloToday=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -22,11 +23,15 @@ for(const p of manifest.products){
     !Array.isArray(prod?.variants)||[true,1,"1"].includes(prod?.visible))
    throw Error("Untrusted parent/variant response for "+p.productId);
  const variants=prod.variants;const map=new Map();
+ const policy=prices.find(x=>x.productId===p.productId&&x.resource===p.resource&&x.minutes===p.minutes);
+ if(!policy)throw Error('Missing public price policy for '+p.productId);
+ let priceErrors=Number(Number(prod.price)!==policy.price);
  let unsafe=0,duplicates=0;
  for(const v of variants){
   if(map.has(v.sku))duplicates++;
   map.set(String(v.sku),v);
   if(![true,1,"1"].includes(v.hidden)||Number(v.qty??v.stock)!==0)unsafe++;
+  if(Number(v.price)!==policy.price)priceErrors++;
  }
  let expected=0,found=0,missing=0,firstMissing="";
  for(const day of dates){
@@ -38,17 +43,17 @@ for(const p of manifest.products){
   }
  }
  const item={id:p.productId,resource:p.resource,minutes:p.minutes,
-  variants:variants.length,expected,found,missing,duplicates,unsafe,firstMissing};
+  variants:variants.length,expected,found,missing,duplicates,unsafe,priceErrors,expectedPrice:policy.price,firstMissing};
  audit.push(item);
  console.log("AUDIT "+JSON.stringify(item));
  await sleep(180);
 }
 const total=audit.reduce((acc,x)=>{
- for(const k of ["expected","found","missing","unsafe","duplicates"])acc[k]+=x[k];
+ for(const k of ["expected","found","missing","unsafe","duplicates","priceErrors"])acc[k]+=x[k];
  return acc;
-},{expected:0,found:0,missing:0,unsafe:0,duplicates:0});
+},{expected:0,found:0,missing:0,unsafe:0,duplicates:0,priceErrors:0});
 const full=audit.filter(x=>x.missing===0).length;
 console.log("BOOKING2 READ-ONLY COVERAGE "+JSON.stringify({from,through,days:dates.length,products:audit.length,
  fullProducts:full,coveragePct:Math.round(10000*total.found/total.expected)/100,...total}));
-if(total.unsafe||total.duplicates)throw Error("Unsafe/duplicate variant inventory detected; never publish");
+if(total.unsafe||total.duplicates||total.priceErrors)throw Error("Unsafe/duplicate inventory or incorrect public price detected; never publish");
 if(total.missing)process.exitCode=2; // Diagnostic fails visibly, NO writes.
