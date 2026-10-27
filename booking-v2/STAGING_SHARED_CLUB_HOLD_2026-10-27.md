@@ -19,3 +19,10 @@
 3. Test mer omfattende 10/10, samtidige forespørsler, venue, HYZR, overlapping ved 19/22, kortbetalingens utløpte hold, kalender readback og fysisk kode.
 4. Eksisterende gamle, bekreftede bookinger må håndteres før gammel kasse fjernes; gamle checkout-innganger skal først fjernes ved kontrollert cutover.
 5. Ingen endring av Min Bag-produksjon; ikke slå på release-gates.
+
+## Videreføring: admin-tilgang 27.10
+- Installert `gk2_private.club_access_audit` med RLS og private grants.
+- Installert `gk2_admin_set_club_access` (kun service_role + eier i `admin_allowlist`), med audit ved hver endring.
+- Installert `gk2_admin_list_club_access` (samme eierkontroll), leverer kun kunde-ID og aktiv status.
+- Rollback-test: autorisert oppdatering og én audit-rad passerte; ikke-autorisert actor avvist. Ingen testmedlem ble liggende igjen.
+- **Viktig gjenværende blokkering**: `gk-booking-v2/index.ts` kaller fremdeles legacy `refreshClub` i `/availability` og `/hold` og mangler klubbhold-/admin-HTTP-endepunkter. Det er ikke deployet en oppdatert Edge Function, og klubb-Quickbutik checkout/webhook er ikke implementert. Ikke kall Booking 2.0 live før disse er rettet og testet.
