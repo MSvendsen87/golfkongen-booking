@@ -336,7 +336,7 @@ Deno.serve(async req=>{
   "Access-Control-Allow-Methods":"POST,OPTIONS",
   "Vary":"Origin"}:{};
  if(req.method==="GET"&&pathname.endsWith("/owner/door-test"))
-  return new Response(OWNER_DOOR_TEST_PAGE,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+  return new Response(null,{status:302,headers:{"Location":"https://msvendsen87.github.io/golfkongen-booking/","Cache-Control":"no-store"}});
  if(req.method==="OPTIONS"&&pathname.endsWith("/owner/door-test")){
   return new Response(null,{status:testOrigin?204:403,headers:cors});
  }
