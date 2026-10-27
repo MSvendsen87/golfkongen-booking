@@ -355,9 +355,15 @@ Deno.serve(async req=>{
  if(req.method==="GET"&&pathname.endsWith("/health")){
   try {
     const as=await safeDeviceAndAuthList();
+    const device=await nuki("GET","/smartlock/"+LOCK_ID);
     const matched=as.filter(x=>x?.name==="GK2-TEST-ef646c71041b4aad");
     console.log("gk2_owner_nuki_readonly_probe",JSON.stringify({
       listSize:as.length,matchingName:matched.length,
+      namePrefixCount:as.filter(x=>String(x?.name||"").startsWith("GK2-TEST")).length,
+      types:as.map(x=>x?.type),nameLengths:as.map(x=>String(x?.name||"").length),
+      paired:device?.config?.keypadPaired===true||device?.config?.keypad2Paired===true,
+      serverState:device?.serverState??null,
+      smartHostingFlag:device?.smartHosting??device?.config?.smartHosting??null,
       matchingType13:matched.filter(x=>Number(x.type)===13).length,
       matchingLock:matched.filter(x=>String(x.smartlockId)===String(LOCK_ID)).length,
       hasCode:matched.some(x=>x.code!==undefined&&x.code!==null),
