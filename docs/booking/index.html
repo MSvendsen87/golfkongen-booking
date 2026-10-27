@@ -298,9 +298,26 @@ async function verifyServerWindow(){
    const data=await response.json();
    if(!response.ok||data.bookingStatus!=='confirmed')
     throw Error(data.code||'Ordren kunne ikke bekreftes automatisk – kontakt GolfKongen før nytt kjøp.');
-   status('Betalingen og bookingen er bekreftet. Nuki/e-post: '+data.notificationStatus+
-    '. Vi åpner takk-for-booking-siden.');
-   location.assign(data.thankYouUrl);
+   status('Betalingen er bekreftet. Booking er registrert – kontrollerer Nuki og bekreftelses-e-post …');
+   let delivered=false;
+   for(let attempt=0;attempt<24;attempt++){
+    const check=await fetch(CONF.apiUrl+'/admin/paid-test/status?bookingId='+
+      encodeURIComponent(data.bookingId),{
+       cache:'no-store',headers:{'authorization':'Bearer '+session.access_token}
+      });
+    const state=await check.json();
+    if(check.ok&&state.bookingStatus==='confirmed'&&state.accessEmailSent===true){
+      status('Booking bekreftet og adgangskode sendt på e-post. Åpner takk-for-booking …');
+      delivered=true;
+      location.assign(data.thankYouUrl);
+      return;
+    }
+    if(state.needsReview)throw Error('Nuki eller varsling krever kontroll. Betalingen er mottatt. Ikke betal på nytt.');
+    status('Betaling og booking bekreftet. Venter på at Nuki synkroniserer adgangskoden ('+
+      (attempt+1)+'/24) …');
+    await new Promise(resolve=>setTimeout(resolve,6500));
+   }
+   if(!delivered)status('Betalingen og bookingen er bekreftet, men e-post med Nuki-kode er ikke ferdig. Ikke betal på nytt. Kontakt GolfKongen for kontroll.');
   }catch(e){status('Ordrekontroll feilet: '+(e.message||e)+'. Ikke betal på nytt.');}
   finally{busy=false;$('gk-v2-pilot-confirm').disabled=false;}
  };
