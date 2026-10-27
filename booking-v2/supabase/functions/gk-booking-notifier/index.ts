@@ -3,6 +3,7 @@
 // No independent Nuki webhooks, no browser access to reservation details.
 import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 import {verifyDispatchRequest} from "./dispatch-auth.mjs";
+import {verifyDiagnosticRequest} from "./diagnostic-auth.mjs";
 import {checkedBooking,nukiPayload,matchingNukiAuth,bookedNotice,accessMail,
  encryptAccessCode,decryptAccessCode,createKeypadCode,LOCK_ID} from "./notify-core.mjs";
 const env=(k)=>Deno.env.get(k)||"";
@@ -242,6 +243,45 @@ Deno.serve(async req=>{
  if(req.method==="GET"&&pathname.endsWith("/health"))
   return json({ok:true,service:"GolfKongen Booking2 notifier",
    enabled,configured});
+ if(req.method==="POST"&&pathname.endsWith("/internal/diagnose")){
+  // Safe diagnostics can run before launch. HMAC is separate from dispatch.
+  const allowed=await verifyDiagnosticRequest({
+   apiKey:env("GK2_QUICKBUTIK_API_KEY"),
+   timestamp:req.headers.get("x-gk2-diagnostic-timestamp")||"",
+   signature:req.headers.get("x-gk2-diagnostic-signature")||""
+  });
+  if(!allowed)return json({ok:false,code:"forbidden"},403);
+  if(!configured)return json({ok:false,code:"credentials_incomplete"},503);
+  let nukiDevice=false,nukiAuths=false,pushoverUser=false;
+  try{
+   const device=await nuki("GET","/smartlock/"+LOCK_ID);
+   nukiDevice=String(device?.smartlockId??device?.id)===String(LOCK_ID)&&
+    (device?.config?.keypadPaired===true||device?.config?.keypad2Paired===true);
+  }catch(_e){/* bool only; no tokens or device details */ }
+  try{
+   const result=await nuki("GET","/smartlock/auth?types=13");
+   nukiAuths=Array.isArray(result)||Array.isArray(result?.data);
+  }catch(_e){/* bool only */ }
+  try{
+   const res=await fetch("https://api.pushover.net/1/users/validate.json",{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({
+     token:env("GK2_PUSHOVER_APP_TOKEN"),user:env("GK2_PUSHOVER_USER_KEY")
+    }),signal:AbortSignal.timeout(12000)
+   });
+   if(res.ok){
+    const result=await res.json();
+    pushoverUser=result?.status===1;
+   }
+  }catch(_e){/* bool only */ }
+  // Resend sending-only keys cannot perform read API checks.
+  // Real mail delivery requires an explicitly authorized test email.
+  return json({ok:nukiDevice&&nukiAuths&&pushoverUser,
+   nukiDevice,nukiAuthorizations:nukiAuths,pushoverRecipient:pushoverUser,
+   resendKeyConfigured:env("RESEND_API_KEY").length>0,
+   emailDeliveryTested:false,notifierEnabled:enabled
+  },nukiDevice&&nukiAuths&&pushoverUser?200:503);
+ }
  if(req.method!=="POST"||!pathname.endsWith("/internal/dispatch"))
   return json({ok:false,code:"not_found"},404);
  if(!enabled)return json({ok:false,code:"notifier_disabled"},503);
