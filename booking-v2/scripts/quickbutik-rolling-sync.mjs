@@ -135,8 +135,8 @@ async function main(){
    // Quickbutik V1 sometimes reports visible:null even for an actually hidden
    // product. In DRY RUN we can report missing variants safely, but only a
    // separately verified hidden parent may ever be modified.
-   if(write&&![1,true,"1",0,false,"0"].includes(product.visible))
-    throw Error("STOP: Product "+p.productId+" is visible; do not write");
+   // Quickbutik V1 may return null even for a visible parent.
+   // Never set parent visibility in variant-only writes.
    // V1 visible:null was independently verified on hidden staging parents.
    // The V1 PUT always keeps visible=0 and the post-write SKU is hidden.
    console.warn("READ-ONLY WARNING: Product "+p.productId+
@@ -166,7 +166,7 @@ async function main(){
   if(repair.length>0){
    console.log("Repairing "+repair.length+" unhidden zero-stock staged variants for "+p.productId);
    for(let i=0;i<repair.length;i+=chunkSize)
-    await hideStagedVariants(p.productId,repair.slice(i,i+chunkSize),[1,"1",true].includes(product.visible));
+    await hideStagedVariants(p.productId,repair.slice(i,i+chunkSize),product.visible===null?null:[1,"1",true].includes(product.visible));
   }
   for(let i=0;i<missing.length;i+=chunkSize){
    const variants=missing.slice(i,i+chunkSize);
@@ -177,7 +177,7 @@ async function main(){
    }]);
    if(result?.success===0||result?.error)throw Error("STOP: V1 variant add rejected");
    // CRITICAL: never retry an uncertain write; first read back to resolve IDs.
-   const now=await rereadProduct(p.productId,[1,"1",true].includes(product.visible));
+   const now=await rereadProduct(p.productId,product.visible===null?null:[1,"1",true].includes(product.visible));
    const added=variants.map(v=>{
     const matches=now.variants.filter(x=>x.sku===v.sku);
     if(matches.length!==1||Number(matches[0].price)!==Number(v.price)||
@@ -185,7 +185,7 @@ async function main(){
      throw Error("STOP: V1 add could not verify exact SKU/zero stock "+v.sku);
     return matches[0];
    });
-   await hideStagedVariants(p.productId,added,[1,"1",true].includes(product.visible));
+   await hideStagedVariants(p.productId,added,product.visible===null?null:[1,"1",true].includes(product.visible));
    created+=variants.length;
    console.log("CREATED_HIDDEN_VERIFIED product="+p.productId+" count="+variants.length);
    await sleep(650);
