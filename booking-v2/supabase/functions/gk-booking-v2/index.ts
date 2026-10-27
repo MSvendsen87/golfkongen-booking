@@ -1,7 +1,7 @@
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
 import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.mjs";
 import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
-import {v1NokToOre} from "./quickbutik-v1-payment-check.mjs";
+import {v1NokToOre,verifiedV1CustomerEmail} from "./quickbutik-v1-payment-check.mjs";
 import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyCleanupRequest} from "./cleanup-auth.mjs";
@@ -156,7 +156,7 @@ Deno.serve(async (req:Request)=>{
         if(paid!==quantity*5000)return err("club_total_paid_mismatch",409,origin);
         const result=await rpc("gk2_match_club_paid_order",{
           p_order:verified.orderNumber,p_sku:sku,
-          p_email:String(rawOrder.customer?.email||""),
+          p_email:verifiedV1CustomerEmail(rawOrder),
           p_seats:quantity,p_paid_ore:paid
         });
         if(result?.matched!==true)return err("club_paid_unallocated_manual_review",409,origin);
@@ -194,7 +194,7 @@ Deno.serve(async (req:Request)=>{
           p_order:verified.orderNumber,
           p_product_id:Number(bookingLines[0].product_id),
           p_sku:String(bookingLines[0].sku||""),
-          p_customer_email:String(rawOrder.customer?.email||"")
+          p_customer_email:verifiedV1CustomerEmail(rawOrder)
         });
         if(!matched?.matched)
           return err("no_active_matching_precheckout_hold_manual_review",409,origin);
@@ -423,7 +423,7 @@ Deno.serve(async (req:Request)=>{
       if(String(rawOrder.order_id)!==order||
         !["1","2"].includes(String(rawOrder.status))||
         rawOrder.currency!=="NOK"||
-        String(rawOrder.customer?.email||"").trim().toLowerCase()!==user.email.toLowerCase()||
+        verifiedV1CustomerEmail(rawOrder)!==user.email.toLowerCase()||
         booking.length!==1||Number(booking[0].qty)!==1)
         return err("paid_test_order_unverified",409,origin);
       const actualPaid=rawOrder.total_pay_amount!==undefined&&rawOrder.total_pay_amount!==null?
