@@ -271,8 +271,12 @@ async function ownerDoorTest(req,origin,cors){
   return output({ok:false,code:"owner_test_not_completed",retryAllowed:true},503);
  }
 }
-async function dispatchOne(){
- const event=await rpc("gk2_claim_confirmed_notification");
+async function dispatchOne(pilot=null){
+ const event=pilot?
+  await rpc("gk2_claim_owner_paid_notification",{
+    p_actor:pilot.actor,p_reservation:pilot.reservation
+  }):
+  await rpc("gk2_claim_confirmed_notification");
  if(!event)return {done:true};
  let booking;
  try{
@@ -343,6 +347,47 @@ Deno.serve(async req=>{
  if(req.method==="POST"&&pathname.endsWith("/owner/door-test")){
   if(!testOrigin)return json({ok:false,code:"forbidden_origin"},403);
   return ownerDoorTest(req,origin,cors);
+ }
+ // Paid pilot notifications are restricted to verified owner, to a confirmed
+ // booking tagged as an owner pilot; global notifier can remain disabled.
+ if(pathname.endsWith("/owner/dispatch-paid-test")&&
+   (req.method==="POST"||req.method==="OPTIONS")){
+  const pilotAllowed=["https://golfkongen.no","https://www.golfkongen.no",
+     "https://msvendsen87.github.io"].includes(origin)||origin==="";
+  const headers={
+    "Content-Type":"application/json","Cache-Control":"no-store",
+    ...(origin&&pilotAllowed?{"Access-Control-Allow-Origin":origin,"Vary":"Origin"}:{}),
+    "Access-Control-Allow-Headers":"authorization,content-type",
+    "Access-Control-Allow-Methods":"POST,OPTIONS"
+  };
+  if(req.method==="OPTIONS")return new Response(null,{status:pilotAllowed?204:403,headers});
+  const output=(obj,status=200)=>new Response(JSON.stringify(obj),{status,headers});
+  if(!pilotAllowed||!db)return output({ok:false,code:"pilot_forbidden"},403);
+  const bearer=req.headers.get("authorization")||"";
+  if(!bearer.startsWith("Bearer ")||bearer.length>7000)
+    return output({ok:false,code:"owner_login_required"},401);
+  const {data,error}=await db.auth.getUser(bearer.slice(7));
+  const actor=data?.user?.email?.trim().toLowerCase()||"";
+  if(error||!data?.user?.email_confirmed_at||!["post@golfkongen.no","kristoffer.mrk@gmail.com"].includes(actor)||
+    await rpc("gk2_is_admin",{p_email:actor})!==true)
+    return output({ok:false,code:"owner_not_authorized"},403);
+  const raw=await req.text();
+  if(raw.length>1000)return output({ok:false,code:"invalid_pilot_request"},400);
+  let payload={};try{payload=JSON.parse(raw)}catch{return output({ok:false,code:"invalid_json"},400);}
+  const reservation=String(payload?.reservationId||"");
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservation))
+    return output({ok:false,code:"invalid_booking_id"},400);
+  if(!env("NUKI_API_TOKEN")||!env("RESEND_API_KEY")||!env("GK2_CODE_KEY_BASE64"))
+    return output({ok:false,code:"door_integration_not_configured"},503);
+  const list=[];
+  for(let i=0;i<3;i++){
+    const event=await dispatchOne({actor,reservation});
+    if(event.done)break;
+    list.push(event);
+    if(event.error)break;
+  }
+  return output({ok:list.every(e=>!e.error),processed:list.length,
+    actions:list.map(e=>e.sent||"requires_review")},list.some(e=>e.error)?207:200);
  }
  if(req.method==="OPTIONS"&&pathname.endsWith("/internal/diagnose")){
   return new Response(null,{status:ownerOrigin?204:403,headers:cors});
