@@ -1,0 +1,22 @@
+name: Booking 2.0 – Read-only 45-day catalogue audit
+on:
+  push:
+    branches: [booking-v2-preview-2026-10-24]
+    paths:
+      - '.github/workflows/gk2-catalogue-readonly-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-all-33-products:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify SKU completeness, all hidden/stock zero
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        run: node booking-v2/scripts/verify-all-45-day-variants.mjs
