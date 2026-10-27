@@ -407,6 +407,80 @@ Deno.serve(async (req:Request)=>{
       return err("pilot_checkout_not_opened",503,origin);
     }
   }
+  if(req.method==="POST"&&path==="/admin/paid-test/confirm"){
+    const data=await body(req),order=String(data?.orderNumber||"");
+    if(!/^[1-9][0-9]{0,8}$/.test(order))
+      return err("invalid_order_number",400,origin);
+    const key=Deno.env.get("GK2_QUICKBUTIK_API_KEY")||"";
+    if(!key)return err("quickbutik_key_not_configured",503,origin);
+    try{
+      // Obtain the actual order from Quickbutik V1: never trust client payment claims.
+      const rawOrder=await loadV1OrderRecord(order,{apiKey:key});
+      const products=Array.isArray(rawOrder.products)?rawOrder.products:[];
+      const booking=products.filter((p:Record<string,unknown>)=>
+        Number.isSafeInteger(Number(p?.product_id))&&
+        Number(p.product_id)>=1474&&Number(p.product_id)<=1506);
+      if(String(rawOrder.order_id)!==order||
+        !["1","2"].includes(String(rawOrder.status))||
+        rawOrder.currency!=="NOK"||
+        String(rawOrder.customer?.email||"").trim().toLowerCase()!==user.email.toLowerCase()||
+        booking.length!==1||Number(booking[0].qty)!==1)
+        return err("paid_test_order_unverified",409,origin);
+      const actualPaid=rawOrder.total_pay_amount!==undefined&&rawOrder.total_pay_amount!==null?
+        v1NokToOre(rawOrder.total_pay_amount):
+        (()=>{
+          const gross=v1NokToOre(rawOrder.total_amount);
+          const discount=v1NokToOre(rawOrder.discount_amount);
+          return gross===null||discount===null||gross<discount?null:gross-discount;
+        })();
+      if(actualPaid===null||actualPaid<=0)return err("paid_test_amount_unverified",409,origin);
+      if(rawOrder.total_pay_amount!==undefined&&rawOrder.total_amount!==undefined&&
+        rawOrder.discount_amount!==undefined){
+        const gross=v1NokToOre(rawOrder.total_amount);
+        const discount=v1NokToOre(rawOrder.discount_amount);
+        if(gross===null||discount===null||gross-discount!==actualPaid)
+          return err("paid_test_amount_conflict",409,origin);
+      }
+      const matched=await rpc("gk2_owner_match_paid_order_to_hold",{
+        p_actor:user.email,p_order:order,
+        p_product_id:Number(booking[0].product_id),
+        p_sku:String(booking[0].sku||"")
+      });
+      if(matched?.matched!==true)return err("paid_pilot_hold_not_matched_manual_review",409,origin);
+      const hold=await rpc("gk2_get_bound_checkout",{p_order:order});
+      if(!hold||String(hold.id)!==String(matched.id))
+        return err("paid_test_binding_mismatch_manual_review",409,origin);
+      const payment=checkV1BookingPayment(rawOrder,{
+        reservation:hold,
+        expectedProductId:hold.checkout_product_id,
+        expectedPaidOre:hold.quoted_ore,
+        expectedRentalSets:hold.rental_sets_count,
+        paymentPolicy:"trusted_status"
+      });
+      if(!payment.eligible)return err("paid_test_payment_validation_failed_manual_review",409,origin);
+      const confirmed=await rpc("gk2_confirm_paid_order_status",{
+        p_reservation:hold.id,p_order:order,p_event_id:"qb.order.new:"+order
+      });
+      if(confirmed?.status!=="confirmed")
+        return err("paid_test_manual_allocation_required",409,origin);
+      let dispatchResult="pending";
+      try{
+        const url=Deno.env.get("SUPABASE_URL")+
+          "/functions/v1/gk-booking-notifier/owner/dispatch-paid-test";
+        const notify=await fetch(url,{
+          method:"POST",
+          headers:{"authorization":req.headers.get("authorization")||"",
+            "content-type":"application/json"},
+          body:JSON.stringify({reservationId:String(hold.id)}),
+          signal:AbortSignal.timeout(22000)
+        });
+        dispatchResult=notify.ok?"started":"requires_follow_up";
+      }catch(_e){dispatchResult="requires_follow_up"}
+      return reply({ok:true,bookingStatus:"confirmed",bookingId:String(hold.id),
+        notificationStatus:dispatchResult,amountChecked:true,
+        thankYouUrl:"https://msvendsen87.github.io/golfkongen-booking/booking/takk/"},200,origin);
+    }catch(_e){return err("paid_test_requires_manual_review",503,origin)}
+  }
   if(req.method==="GET"&&path==="/admin/order-audit"){
     // Read-only diagnostic, always after owner-only JWT + allowlist check.
     const order=u.searchParams.get("order")||"";
