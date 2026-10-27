@@ -1,6 +1,7 @@
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
 import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.mjs";
 import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
+import {v1NokToOre} from "./quickbutik-v1-payment-check.mjs";
 import {expectedSlotSku} from "./payment-validation.mjs";
 import {mutateHeldCartVariant} from "./quickbutik-cart-variant.mjs";
 import {verifyCleanupRequest} from "./cleanup-auth.mjs";
@@ -115,6 +116,47 @@ Deno.serve(async (req:Request)=>{
     if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
     try{
       const rawOrder=await loadV1OrderRecord(verified.orderNumber,{apiKey});
+      // Club payments are recognized exclusively through authoritative Quickbutik V1 readback.
+      const clubLines=(Array.isArray(rawOrder.products)?rawOrder.products:[])
+        .filter((x:Record<string,unknown>)=>Number(x?.product_id)===1507);
+      if(clubLines.length){
+        if(clubLines.length!==1||rawOrder.products.length!==1||rawOrder.currency!=="NOK"||
+           String(rawOrder.order_id)!==verified.orderNumber)
+          return err("invalid_club_order_lines",409,origin);
+        const clubLine=clubLines[0];
+        const quantity=Number(clubLine.qty),sku=String(clubLine.sku||"");
+        if(!Number.isSafeInteger(quantity)||quantity<1||quantity>10||
+           !/^GK2-CLUB-\\d{4}-\\d{2}-\\d{2}$/.test(sku))
+          return err("invalid_club_variant",409,origin);
+        if(verified.eventType==="order.cancelled"){
+          if(String(rawOrder.status)!=="-1")return err("club_cancellation_not_verified",409,origin);
+          const cancelled=await rpc("gk2_cancel_club_by_order",{p_order:verified.orderNumber});
+          return reply({ok:true,clubCancellation:cancelled},200,origin);
+        }
+        if(verified.eventType!=="order.new"||!["1","2"].includes(String(rawOrder.status)))
+          return err("club_payment_not_verified",409,origin);
+        if(v1NokToOre(rawOrder.shipping_amount)!==0||
+           (rawOrder.refunds!==null&&rawOrder.refunds!==undefined&&
+           !(Array.isArray(rawOrder.refunds)&&rawOrder.refunds.length===0)&&
+           !(typeof rawOrder.refunds==="object"&&!Array.isArray(rawOrder.refunds)&&
+             Object.keys(rawOrder.refunds).length===0)))
+          return err("club_shipping_or_refund_requires_review",409,origin);
+        const paid=rawOrder.total_pay_amount!==null&&rawOrder.total_pay_amount!==undefined?
+          v1NokToOre(rawOrder.total_pay_amount):
+          (()=>{
+            const gross=v1NokToOre(rawOrder.total_amount),discount=v1NokToOre(rawOrder.discount_amount);
+            return gross===null||discount===null||discount>gross?null:gross-discount;
+          })();
+        if(paid!==quantity*5000)return err("club_total_paid_mismatch",409,origin);
+        const result=await rpc("gk2_match_club_paid_order",{
+          p_order:verified.orderNumber,p_sku:sku,
+          p_email:String(rawOrder.customer?.email||""),
+          p_seats:quantity,p_paid_ore:paid
+        });
+        if(result?.matched!==true)return err("club_paid_unallocated_manual_review",409,origin);
+        return reply({ok:true,clubStatus:"confirmed",alreadyConfirmed:result.alreadyConfirmed===true,
+          doorCodeQueued:false,manualAccessRequired:true},200,origin);
+      }
       if(verified.eventType==="order.cancelled"){
         // Never revoke door access solely from a caller's order number.
         // Quickbutik must independently confirm the order is cancelled.
