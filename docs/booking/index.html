@@ -259,8 +259,14 @@ async function verifyServerWindow(){
   const duration=Number($('gk-v2-duration').value);
   const rentalSets=resource==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   const cache='gk2_pilot_key_'+date+'_'+resource+'_'+start+'_'+duration;
-  let key=sessionStorage.getItem(cache);
-  if(!key){key=crypto.randomUUID();sessionStorage.setItem(cache,key);}
+  let savedKey=null;
+  try{savedKey=JSON.parse(sessionStorage.getItem(cache)||'null')}catch(_){}
+  const fresh=savedKey&&typeof savedKey.key==='string'&&
+    Date.parse(savedKey.expiresAt)>Date.now()+60000;
+  const key=fresh?savedKey.key:crypto.randomUUID();
+  if(!fresh)sessionStorage.setItem(cache,JSON.stringify({
+    key,expiresAt:new Date(Date.now()+10*60000).toISOString()
+  }));
   try{
    status('Reserverer valgt tid og klargjør Quickbutik-kassen …');
    const r=await fetch(CONF.apiUrl+'/admin/paid-test/hold',{
@@ -271,6 +277,7 @@ async function verifyServerWindow(){
    });
    const d=await r.json();
    if(!r.ok||!d.ok)throw Error(d.code||'Kunne ikke klargjøre betalt testbooking.');
+   sessionStorage.setItem(cache,JSON.stringify({key,expiresAt:d.holdExpiresAt}));
    sessionStorage.setItem('gk2_pilot_last_hold',JSON.stringify({
      holdId:d.holdId,email:$('gk-v2-pilot-email').value,expires:d.holdExpiresAt
    }));
