@@ -64,6 +64,13 @@ Deno.serve(async (req:Request)=>{
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
+  if(req.method==="GET"&&path==="/club/availability"){
+    const day=u.searchParams.get("date")||"";
+    if(!validDate(day)||new Date(day+"T12:00:00Z").getUTCDay()!==4)
+      return err("not_club_thursday",400,origin);
+    const status=await rpc("gk2_club_day_status",{p_day:day});
+    return reply({ok:true,...status,checkoutEnabled:false},200,origin);
+  }
   if(req.method==="GET"&&path==="/webhook/quickbutik"){
     // Dual release lock: env + 8 database gates. Until BOTH pass, never
     // acknowledge a paid Quickbutik event or modify a reservation.
