@@ -1,8 +1,7 @@
 name: Booking 2.0 – Install path-scoped activities loader
+# Loader installed through active theme template. API key has no scripts permission.
 on:
-  push:
-    branches: [booking-v2-preview-2026-10-24]
-    paths: ['.github/workflows/gk2-install-activities-loader.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -10,6 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   install-one-loader:
+    if: ${{ false }} # Archived diagnostic, no automatic writes
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
