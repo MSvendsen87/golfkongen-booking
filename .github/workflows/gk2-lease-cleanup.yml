@@ -1,0 +1,45 @@
+name: GolfKongen Booking 2.0 - lukk utlopte handlekurvvarianter
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gk2-expired-checkout-leases
+  cancel-in-progress: false
+jobs:
+  relock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Sikker opprydding av utlopte reserverte tidsvarianter
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        run: |
+          node <<'NODE'
+          const {createHmac}=require('node:crypto');
+          (async()=>{
+            const apiKey=process.env.GK2_QUICKBUTIK_API_KEY||'';
+            if(apiKey.length<20)throw Error('GK2_QUICKBUTIK_API_KEY secret is not configured');
+            const root=createHmac('sha256',apiKey).update('gk2-booking-cart-cleanup-key-v1').digest();
+            const ts=String(Math.floor(Date.now()/1000));
+            const sig=createHmac('sha256',root)
+              .update('POST:/internal/relock-expired:'+ts).digest('hex');
+            const response=await fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2/internal/relock-expired',{
+              method:'POST',
+              headers:{
+                'x-gk2-cleanup-timestamp':ts,
+                'x-gk2-cleanup-signature':sig,
+                'content-type':'application/json'
+              },
+              body:'{}',
+              signal:AbortSignal.timeout(25000)
+            });
+            const json=await response.json();
+            if(!response.ok||json.ok!==true||json.failed>0)
+              throw Error('Booking 2.0 lease cleanup did not complete; HTTP '+response.status);
+            console.log('Expired checkout lease cleanup',JSON.stringify({
+              processed:json.processed,closed:json.closed,failed:json.failed}));
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
