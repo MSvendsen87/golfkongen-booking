@@ -396,7 +396,10 @@ Deno.serve(async req=>{
    "GK2_PUSHOVER_APP_TOKEN","GK2_PUSHOVER_USER_KEY",
    "GK2_QUICKBUTIK_API_KEY"].every(k=>env(k).length>0)
    &&env("NUKI_LOCK_ID")===String(LOCK_ID);
- const enabled=env("GK2_NOTIFIER_ENABLED")==="true";
+ // The signed paid-order webhook and notifier form one payment-delivery pipeline.
+ // Activating GK2_WEBHOOK_ENABLED also allows idempotent queued delivery.
+ // Separate GK2_NOTIFIER_ENABLED remains supported for recovery-only dispatch.
+ const enabled=env("GK2_NOTIFIER_ENABLED")==="true"||env("GK2_WEBHOOK_ENABLED")==="true";
  if(req.method==="GET"&&pathname.endsWith("/health"))
   return json({ok:true,service:"GolfKongen Booking2 notifier",enabled,configured});
  if(req.method==="POST"&&pathname.endsWith("/internal/diagnose")){
