@@ -7,7 +7,8 @@ import {verifyDiagnosticRequest} from "./diagnostic-auth.mjs";
 import {classifyPushoverValidation,pushoverKeyFormat} from "./pushover-diagnostic.mjs";
 import {resolveGolfkongenDeliveryGroup,GROUP_NAME} from "./pushover-group.mjs";
 import {checkedBooking,nukiPayload,matchingNukiAuth,bookedNotice,accessMail,
- encryptAccessCode,decryptAccessCode,createKeypadCode,LOCK_ID} from "./notify-core.mjs";
+ encryptAccessCode,decryptAccessCode,createKeypadCode,timeHHMM,LOCK_ID} from "./notify-core.mjs";
+import {osloDateTimeToUtc} from "./booking-access.mjs";
 const env=(k)=>Deno.env.get(k)||"";
 const db=env("SUPABASE_URL")&&env("SUPABASE_SERVICE_ROLE_KEY")
  ?createClient(env("SUPABASE_URL"),env("SUPABASE_SERVICE_ROLE_KEY"),{
@@ -188,6 +189,88 @@ async function revokeCancelledBooking(booking){
  if(released!==true)throw Error("slot_claim_release_requires_review");
  return {revoked:true};
 }
+async function ownerDoorTest(req,origin,cors){
+ const output=(obj,status=200)=>new Response(JSON.stringify(obj),{status,
+  headers:{"Content-Type":"application/json","Cache-Control":"no-store",...cors}});
+ try{
+  if(!db)return output({ok:false,code:"backend_unavailable"},503);
+  const header=req.headers.get("authorization")||"";
+  if(!header.startsWith("Bearer ")||header.length>7000)return output({ok:false,code:"login_required"},401);
+  const {data,error}=await db.auth.getUser(header.slice(7));
+  const actor=data?.user?.email?.toLowerCase().trim()||"";
+  if(error||!data?.user?.email_confirmed_at||!["kristoffer.mrk@gmail.com","post@golfkongen.no"].includes(actor))
+   return output({ok:false,code:"owner_login_required"},403);
+  if(await rpc("gk2_is_admin",{p_email:actor})!==true)
+   return output({ok:false,code:"admin_denied"},403);
+  if(!env("NUKI_API_TOKEN")||!env("RESEND_API_KEY")||!env("GK2_CODE_KEY_BASE64"))
+   return output({ok:false,code:"door_integration_not_configured"},503);
+  const raw=await req.text();
+  if(raw.length>2000)return output({ok:false,code:"invalid_body"},400);
+  const input=JSON.parse(raw);
+  const key=String(input?.idempotencyKey||""),start=Number(input?.startMin);
+  const resource=String(input?.resource||"dart_a");
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)||
+    !Number.isInteger(start)||start%30!==0||!["dart_a","dart_b","hyzr"].includes(resource)||
+    input?.confirmOwnerDoorTest!==true)
+   return output({ok:false,code:"invalid_owner_test_request"},400);
+  const held=await rpc("gk2_owner_test_hold",{p_actor:actor,p_key:key,p_resource:resource,p_start:start});
+  if(held?.status!=="held"||!held?.id)return output({ok:false,code:"test_slot_not_held"},409);
+  const bookingId=String(held.id),day=String(held.day);
+  const from=timeHHMM(Number(held.startMin)),to=timeHHMM(Number(held.endMin));
+  const booking={bookingId,day,startMin:Number(held.startMin),endMin:Number(held.endMin),
+    startUtc:osloDateTimeToUtc(day,from),endUtc:osloDateTimeToUtc(day,to),
+    name:"GK2-TEST-"+bookingId.replace(/-/g,"").slice(0,16)};
+  const candidate=createKeypadCode();
+  const encrypted=await encryptAccessCode(candidate,env("GK2_CODE_KEY_BASE64"));
+  const stored=await rpc("gk2_owner_test_code",{
+    p_reservation:bookingId,p_ciphertext:encrypted,p_name:booking.name});
+  const code=await decryptAccessCode(String(stored.ciphertext),env("GK2_CODE_KEY_BASE64"));
+  const auths=await safeDeviceAndAuthList();
+  const existing=matchingNukiAuth(auths,booking,code);
+  if(stored.status==="emailed")return output({ok:true,emailSent:true,day,from,to,resource});
+  if(stored.status==="manual_review")return output({ok:false,code:"nuki_manual_review"},503);
+  if(!existing){
+   if(stored.status==="queued"){
+    await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,p_status:"creating_unknown"});
+    await nuki("PUT","/smartlock/auth",nukiPayload(booking,code));
+    return output({ok:true,phase:"nuki_sync_pending",emailSent:false,day,from,to});
+   }
+   const elapsed=Date.now()-Date.parse(stored.updatedAt||new Date().toISOString());
+   if(elapsed>20*60*1000){
+    await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,p_status:"manual_review"});
+    return output({ok:false,code:"nuki_creation_requires_review"},503);
+   }
+   return output({ok:true,phase:"nuki_sync_pending",emailSent:false,day,from,to});
+  }
+  await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,
+   p_status:"verifying",p_auth_id:String(existing.id||"")});
+  const mailBody=[
+   "GolfKongen – eierens testbooking (ingen betaling).","",
+   resource.replace("_"," ").toUpperCase()+" "+day+" "+from+"–"+to,
+   "Automatisk opprettet Nuki-kode: "+code,
+   "Koden gjelder fra fem minutter før teststart og til tests slutt.","",
+   "Test dette på dørens Nuki Keypad. Booking 2.0 er fortsatt stengt for kundebetaling."
+  ].join("\n");
+  const send=await fetch("https://api.resend.com/emails",{
+   method:"POST",headers:{"authorization":"Bearer "+env("RESEND_API_KEY"),
+    "content-type":"application/json","Idempotency-Key":"gk2-owner-door-"+bookingId},
+   body:JSON.stringify({from:"GolfKongen <booking@golfkongen.no>",to:[actor],
+    subject:"GolfKongen – testbooking og automatisk Nuki-kode",text:mailBody}),
+   signal:AbortSignal.timeout(18000)});
+  if(!send.ok){
+    await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,p_status:"email_unknown"});
+    return output({ok:false,code:"test_email_requires_review"},503);
+  }
+  const receipt=await send.json();
+  if(!receipt?.id)return output({ok:false,code:"test_email_receipt_missing"},503);
+  await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,
+    p_status:"emailed",p_auth_id:String(existing.id||""),p_email_id:String(receipt.id)});
+  return output({ok:true,emailSent:true,day,from,to,resource});
+ }catch(e){
+  console.error("owner-door-test:",shortError(e).replace(/([a-z0-9._%+-]+)@([a-z0-9.-]+)/ig,"[redacted]"));
+  return output({ok:false,code:"owner_test_not_completed",retryAllowed:true},503);
+ }
+}
 async function dispatchOne(){
  const event=await rpc("gk2_claim_confirmed_notification");
  if(!event)return {done:true};
@@ -250,6 +333,13 @@ Deno.serve(async req=>{
   "Access-Control-Allow-Headers":"authorization,content-type",
   "Access-Control-Allow-Methods":"POST,OPTIONS",
   "Vary":"Origin"}:{};
+ if(req.method==="OPTIONS"&&pathname.endsWith("/owner/door-test")){
+  return new Response(null,{status:ownerOrigin?204:403,headers:cors});
+ }
+ if(req.method==="POST"&&pathname.endsWith("/owner/door-test")){
+  if(!ownerOrigin)return json({ok:false,code:"forbidden_origin"},403);
+  return ownerDoorTest(req,origin,cors);
+ }
  if(req.method==="OPTIONS"&&pathname.endsWith("/internal/diagnose")){
   return new Response(null,{status:ownerOrigin?204:403,headers:cors});
  }
