@@ -77,7 +77,7 @@
     };
   }
 
-  var order = /^\/success\/([1-9][0-9]{0,8})\/?$/.exec(location.pathname);
+  var order = /^\/success\/([1-9][0-9]{0,8})(?:\/|$)/.exec(location.pathname);
   if (order) {
     var p = pending();
     var hold = read(sessionStorage, HOLD);
