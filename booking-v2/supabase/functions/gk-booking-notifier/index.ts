@@ -168,7 +168,9 @@ async function nukiBooking(event,booking){
    // Save "unknown" BEFORE PUT. If Nuki times out, re-read Nuki rather than
    // blindly issuing a second keypad-code creation.
    await setAccess(booking,"creating_unknown");
-   await nuki("PUT","/smartlock/auth",nukiPayload(booking,code));
+   const initialPayload=nukiPayload(booking,code);
+    delete initialPayload.smartlockIds;
+    await nuki("PUT","/smartlock/"+LOCK_ID+"/auth",initialPayload);
    await setAccess(booking,"verifying");
    await sendPendingAccessEmail(booking);
    return {complete:false,phase:"awaiting_nuki_sync"};
@@ -287,7 +289,9 @@ async function ownerDoorTest(req,origin,cors){
   if(!existing){
    if(stored.status==="queued"){
     await rpc("gk2_owner_test_code_status",{p_reservation:bookingId,p_status:"creating_unknown"});
-    await nuki("PUT","/smartlock/auth",nukiPayload(booking,code));
+    const initialPayload=nukiPayload(booking,code);
+     delete initialPayload.smartlockIds;
+     await nuki("PUT","/smartlock/"+LOCK_ID+"/auth",initialPayload);
     return output({ok:true,phase:"nuki_sync_pending",emailSent:false,day,from,to});
    }
    const elapsed=Date.now()-Date.parse(stored.updatedAt||new Date().toISOString());
