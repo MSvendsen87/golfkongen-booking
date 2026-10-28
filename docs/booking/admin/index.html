@@ -96,7 +96,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <section data-panel="grupper" class="hidden"><div class="grid"><div class="card"><h2>Legg til eller fjern fra rabattgruppe</h2>
 <p class="small">Registrer en forespørsel. Medlemskapet er <strong>ikke aktivt</strong> før tilhørende kundegruppe er oppdatert og kontrollert i Quickbutik.</p>
 <form id="memberform"><div class="field"><label for="memberemail">Kundens e-post</label><input type="email" id="memberemail" required autocomplete="off"></div>
-<div class="fields"><div class="field"><label for="membergroup">Gruppe</label><select id="membergroup"><option value="medlemmer">Medlem</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div>
+<div class="fields"><div class="field"><label for="membergroup">Gruppe</label><select id="membergroup"><option value="betalt_medlem">Betalt discmedlem + dartklubb</option><option value="frisbee_dart">Frisbee + dart</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div>
 <div class="field"><label for="memberaction">Handling</label><select id="memberaction"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Midlertidig stopp</option></select></div></div>
 <button class="btn secondary" type="submit" id="memberbutton">Registrer forespørsel</button><p id="membermsg" role="status" class="status"></p></form></div>
 <div class="card"><h2>Forespørsler som venter</h2><div class="tablewrap" id="pendingmembers"><div class="empty">Laster …</div></div>
@@ -220,7 +220,14 @@ function render(){
  const blocked=Object.entries(gates).filter(([k,v])=>v===false).map(([k])=>k);
  $("healthsummary").innerHTML='<span class="pill">'+(blocked.length?"Krever kontroll":"Lanseringskontroller registrert")+'</span><p>Ingen Nuki-koder vises i adminpanelet. En booking merket bekreftet betyr ikke alene at adgangskoden er levert.</p>'+(blocked.length?'<p class="error">Åpne kontrollpunkter: '+esc(blocked.join(", "))+'</p>':'');
  const members=Array.isArray(snapshot.membershipRequests)?snapshot.membershipRequests:[];
- $("pendingmembers").innerHTML=table(["Kunde","Gruppe","Handling","Status"],members.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(groupLabel[x.group]||x.group)+'</td><td>'+esc(x.action)+'</td><td><span class="pill held">'+esc(x.state)+'</span></td></tr>'));
+ $("pendingmembers").innerHTML=table(["Kunde","Gruppe","Handling","Status","Oppfølging"],members.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(groupLabel[x.group]||x.group)+'</td><td>'+esc(x.action)+'</td><td><span class="pill held">'+esc(x.state)+'</span></td><td><button type="button" class="btn outline" data-verify-member="'+esc(x.id)+'">Bekreft i Quickbutik</button></td></tr>'));
+ for(const b of $("pendingmembers").querySelectorAll("[data-verify-member]"))b.onclick=async()=>{
+  const request=members.find(x=>x.id===b.dataset.verifyMember);if(!request)return;
+  if(!confirm("Har du selv kontrollert at "+request.email+" er "+(request.action==="add"?"lagt til i":request.action==="remove"?"fjernet fra":"sperret i")+" riktig Quickbutik-kundegruppe? Dette utfører INGEN Quickbutik-endring."))return;
+  b.disabled=true;
+  try{await api("/admin/member-verify","POST",{id:request.id,confirmQuickbutik:true});await loadDay()}
+  catch(e){alert("Kunne ikke registrere manuell bekreftelse: "+e.message);b.disabled=false}
+ };
  renderHours();
 }
 async function loadDay(){
