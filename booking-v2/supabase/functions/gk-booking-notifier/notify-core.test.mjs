@@ -8,14 +8,14 @@ const b={bookingId:'121a5541-989b-46d0-8c44-ea0cf10b3baa',
  orderId:'3702',email:'customer@example.invalid',day:'2026-11-02',
  resource:'dart_a',startMin:600,endMin:660,rentalSets:2,productId:1486};
 const key='this-is-only-test-key-0000111122223333';
-test('Nuki code is correctly limited to booked Oslo time plus 15 minutes',()=>{
+test('Nuki code is correctly limited to booked Oslo time plus 10 minutes',()=>{
  const booking=checkedBooking(b);
  assert.equal(booking.startUtc,'2026-11-02T09:00:00.000Z');
  assert.equal(booking.endUtc,'2026-11-02T10:00:00.000Z');
  const auth=nukiPayload(booking,'345678');
  assert.equal(auth.type,13);
  assert.deepEqual(auth.smartlockIds,[LOCK_ID]);
- assert.equal(auth.allowedFromDate,'2026-11-02T08:45:00.000Z');
+ assert.equal(auth.allowedFromDate,'2026-11-02T08:50:00.000Z');
  assert.equal(auth.allowedUntilDate,booking.endUtc);
  assert.equal(auth.remoteAllowed,false);
 });
@@ -27,6 +27,12 @@ test('Nuki app authorization only accepted after matching code, lock and exact d
  assert.equal(matchingNukiAuth([{...valid,code:999999}],booking,'345678'),undefined);
  assert.equal(matchingNukiAuth([{...valid,smartlockId:100}],booking,'345678'),undefined);
  assert.equal(matchingNukiAuth([{...valid,allowedUntilDate:'2026-11-03T10:00:00Z'}],booking,'345678'),undefined);
+});
+test('existing 15-minute Nuki authorization remains recognizable during safe transition',()=>{
+ const booking=checkedBooking(b),payload=nukiPayload(booking,'345678');
+ const legacy={type:13,smartlockId:LOCK_ID,code:345678,name:booking.name,
+  allowedFromDate:'2026-11-02T08:45:00.000Z',allowedUntilDate:payload.allowedUntilDate,id:100};
+ assert.equal(matchingNukiAuth([legacy],booking,'345678').id,100);
 });
 test('sender receives correct local time and PIN in separate confirmation email',()=>{
  const booking=checkedBooking(b);
