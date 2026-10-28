@@ -170,6 +170,7 @@ $('gk-v2-submit').onclick=async()=>{
   sessionStorage.setItem('gk_booking2_recent_hold',JSON.stringify({
     holdId:hold.holdId,sku:hold.sku,expires:hold.holdExpiresAt
   }));
+  try{localStorage.setItem('gk2_pending_success_v1',JSON.stringify({createdAt:Date.now(),sku:hold.sku}));}catch(_e){}
   location.assign('/cart/index');
  }catch(ex){
   $('gk-v2-terms').hidden=true;
