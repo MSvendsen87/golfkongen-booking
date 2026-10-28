@@ -19,7 +19,7 @@ export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel})
   '<div class="field"><label for="pFilter">Søk produktnummer</label><input id="pFilter" placeholder="F.eks. 1477"></div>'+
   '<div id="priceQueue" class="tablewrap"></div><div class="row spaced"><span id="queuePages" class="small"></span>'+
   '<button id="queueAll" class="btn secondary hidden" type="button">Vis alle treff</button></div>'+
-  '<div class="divider"></div><h2>Kontroller ordinærpris</h2><p class="small">Velg aktivitet og varighet i prismatrisen over. Denne kontrollen leser bare ordinær produktpris, ikke spesialpris for innlogget kunde.</p>'+
+  '<div class="divider"></div><h2>Kontroller ordinærpris</h2><p class="small">Velg aktivitet og varighet i prismatrisen over. Denne kontrollen leser kun grunnprisen på produktet, ikke alle tidsvarianter eller spesialpris i en innlogget kasse.</p>'+
   '<div class="row"><button id="qbCompare" class="btn outline" type="button">Sjekk ordinærpris</button><span class="small" id="qbCompareResult" role="status"></span></div>'+
   '<p class="small" style="margin-top:14px">Kundegruppepriser endres i Quickbutik → Kunder → Kundegrupper → Spesifikke priser. Merk aldri en rabatt som kontrollert bare fordi den er registrert her.</p>'+
   '</div><div class="card"><h2>Prisutkast – påvirker ikke kundene</h2>'+
@@ -101,7 +101,7 @@ export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel})
    status.textContent=d.quickbutikRegularPriceOre==null?
     "Kunne ikke lese ordinærprisen fra Quickbutik for produkt "+d.quickbutikProductId+".":
     d.regularPriceMatches?
-    "Produkt "+d.quickbutikProductId+": "+fmt(d.quickbutikRegularPriceOre)+" stemmer med Booking 2.0 (ikke kassetestet).":
+    "Produkt "+d.quickbutikProductId+": "+fmt(d.quickbutikRegularPriceOre)+" stemmer med Booking 2.0 (varianter og kasse ikke kontrollert).":
     "AVVIK produkt "+d.quickbutikProductId+": Quickbutik "+fmt(d.quickbutikRegularPriceOre)+
      ", Booking 2.0 "+fmt(d.booking2PriceOre)+". Ingen endring utført.";
   }catch(e){status.textContent="Kontroll feilet: "+e.message}finally{b.disabled=false;}
