@@ -47,7 +47,19 @@ async function safeDeviceAndAuthList(){
  if(device?.config?.keypadPaired!==true&&device?.config?.keypad2Paired!==true)
   throw Error("nuki_keypad_not_confirmed");
  if(device?.serverState===4)throw Error("nuki_lock_offline");
- return getNukiAuths(result);
+ const global=getNukiAuths(result);
+ // Per-device Nuki readback may contain a newly accepted authorization before
+ // the global filtered index is refreshed. No extra access rights are granted.
+ try{
+  const scoped=getNukiAuths(await nuki("GET","/smartlock/"+LOCK_ID+"/auth"));
+  const merged=new Map();
+  for(const item of [...global,...scoped]){
+   const id=String(item?.id??item?.authId??"");
+   const lock=String(item?.smartlockId??LOCK_ID);
+   merged.set(lock+":"+id,{...item,smartlockId:item?.smartlockId??LOCK_ID});
+  }
+  return [...merged.values()];
+ }catch(_error){return global}
 }
 const shortError=e=>String(e?.message||e||"unknown").slice(0,200);
 async function complete(event,state,external=null,detail=null){
