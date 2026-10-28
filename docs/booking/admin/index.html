@@ -24,7 +24,7 @@ input,select{width:100%;padding:11px 12px;border:1px solid #ccd6cd;border-radius
 input:focus,select:focus,button:focus-visible{outline:3px solid #91bc9a;outline-offset:2px}
 .field{margin-bottom:16px}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;min-height:42px;padding:10px 15px;font-weight:760;background:var(--forest);color:white;text-decoration:none}
 .btn.secondary{color:var(--forest);background:#e6f0e6}.btn.outline{color:var(--forest);background:white;border:1px solid #b9cdbd}.btn.warning{color:#973b35;background:#fff4f1}
-.btn:disabled{opacity:.55}.row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}.spaced{justify-content:space-between}.stack{display:grid;gap:16px}
+.btn:disabled{opacity:.55}.daylink{background:transparent;border:0;padding:2px;color:#1b633d;text-decoration:underline;font:inherit;font-weight:800;cursor:pointer}.row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}.spaced{justify-content:space-between}.stack{display:grid;gap:16px}
 .notice{background:#fff5dc;border-left:4px solid #bd9042;padding:12px 15px;border-radius:7px;color:#634d2b;font-size:13px;margin:14px 0}
 .oknote{background:#eaf6eb;color:#1d6237;border-left:4px solid #359657}.error{color:#b03030;font-size:14px;margin:12px 0}.pill{font-size:12px;padding:5px 9px;border-radius:30px;font-weight:740;display:inline-block;background:#edf2ed;color:#49624f}
 .pill.confirmed{background:#e0f2e3;color:#226239}.pill.cancelled,.pill.error{background:#fae5e5;color:#9d4141}.pill.held,.pill.payment_pending{background:#fff0cc;color:#845d18}
@@ -73,6 +73,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <div class="toolbar"><div class="row"><label for="day" style="margin:0">Valgt dag</label><input id="day" type="date"><button class="btn outline" id="refresh">Oppdater</button></div><span class="small" id="updated">Ikke oppdatert</span></div>
 <section data-panel="oversikt">
 <div class="stats"><div class="stat"><span>Bekreftede bookinger</span><strong id="statconfirmed">–</strong></div><div class="stat"><span>Reservert / betaling pågår</span><strong id="statheld">–</strong></div><div class="stat"><span>Aktive sperringer</span><strong id="statblocks">–</strong></div><div class="stat"><span>Avbestillinger</span><strong id="statcancelled">–</strong></div></div>
+<div class="card" aria-labelledby="agenda-title"><div class="row spaced"><div><h2 id="agenda-title">Kommende bookinger · 21 dager</h2><p class="small">Bekreftede reservasjoner og aktive betalingsreservasjoner. Kode-status vises uten å vise selve koden.</p></div><span id="agendacount" class="pill">Henter …</span></div><div id="agenda" class="tablewrap"><div class="empty">Henter kommende reservasjoner …</div></div></div>
 <div class="grid"><div class="card"><div class="row spaced"><h2>Bookinger for valgt dag</h2><span class="small" id="daycaption"></span></div><div id="bookings" class="tablewrap"><div class="empty">Laster …</div></div></div>
 <div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div></div></div>
 </section>
@@ -141,7 +142,7 @@ function showApp(email){approved=true;$("login").classList.add("hidden");$("app"
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
  const health=await api("/admin/health");if(health.email!==user.email?.toLowerCase())throw Error("Brukerkonto stemmer ikke.");
- showApp(health.email);await loadDay();}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
+ showApp(health.email);await Promise.all([loadDay(),loadAgenda()]);}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
 }
 $("loginform").addEventListener("submit",async e=>{
  e.preventDefault();$("loginerror").textContent="";$("loginbutton").disabled=true;
@@ -167,6 +168,44 @@ function fillBlock(blocks){
   b.disabled=true;try{await api("/admin/unblock","POST",{id:b.dataset.unblock});await loadDay();}catch(e){$("globalerror").textContent=e.message;}finally{b.disabled=false;}
  };
 }
+function renderAgenda(items){
+ const list=Array.isArray(items)?items:[];
+ const confirmed=list.filter(b=>b.status==="confirmed").length;
+ const waiting=list.filter(b=>b.status!=="confirmed").length;
+ $("agendacount").textContent=confirmed+" bekreftet"+(waiting?" · "+waiting+" venter":"");
+ const accessLabel={
+   emailed:"Kode sendt",not_created:"Adgang ikke registrert",
+   queued:"Klargjøres",creating_unknown:"Nuki kontrolleres",
+   verifying:"Nuki kontrolleres",email_unknown:"E-post kontrolleres",
+   manual_review:"Krever manuell kontroll",revoking:"Tilbakekalles",
+   revoked:"Tilbakekalt",cancel_requested:"Tilbakekalles"
+ };
+ const rows=list.map(b=>{
+   const access=b.status!=="confirmed"?"Etter betaling":(accessLabel[b.accessStatus]||"Krever kontroll");
+   const needCheck=b.status==="confirmed"&&b.accessStatus!=="emailed";
+   return '<tr><td><button type="button" class="daylink" data-agendaday="'+esc(b.date)+'">'+esc(b.date)+'</button></td>'+
+    '<td>'+esc(hh(b.start))+'–'+esc(hh(b.end))+'</td>'+
+    '<td>'+esc(resLabel[b.resource]||b.resource)+'</td>'+
+    '<td>'+esc(b.order||"–")+'</td>'+
+    '<td><span class="pill '+esc(b.status)+'">'+esc(statLabel[b.status]||b.status)+'</span></td>'+
+    '<td><span class="pill '+(needCheck?"error":b.accessStatus==="emailed"?"confirmed":"held")+'">'+esc(access)+'</span></td></tr>';
+ });
+ $("agenda").innerHTML=table(["Dato","Tid","Aktivitet","Ordre","Booking","Dørkode"],rows);
+ for(const b of $("agenda").querySelectorAll("[data-agendaday]")){
+   b.onclick=()=>{$("day").value=b.dataset.agendaday;loadDay()};
+ }
+}
+async function loadAgenda(){
+ if(!approved)return;
+ $("agendacount").textContent="Oppdaterer …";
+ try{
+   const result=await api("/admin/agenda?from="+encodeURIComponent(localDate())+"&days=21");
+   renderAgenda(result.agenda);
+ }catch(e){
+   $("agendacount").textContent="Kunne ikke oppdatere";
+   $("agenda").textContent=e.message||"Ukjent feil";
+ }
+}
 function render(){
  if(!snapshot)return;const bookings=Array.isArray(snapshot.bookings)?snapshot.bookings:[],blocks=Array.isArray(snapshot.blocks)?snapshot.blocks:[];
  $("statconfirmed").textContent=bookings.filter(x=>x.status==="confirmed").length;
@@ -178,7 +217,7 @@ function render(){
  fillBlock(blocks);
  const gates=snapshot.releaseGates||{};
  const blocked=Object.entries(gates).filter(([k,v])=>v===false).map(([k])=>k);
- $("healthsummary").innerHTML='<span class="pill">'+(blocked.length?"Krever kontroll":"Booking 2.0 integrasjon kontrollert")+'</span><p>Ingen Nuki-koder vises i adminpanelet. En booking merket bekreftet betyr ikke alene at adgangskoden er levert.</p>'+(blocked.length?'<p class="error">Åpne kontrollpunkter: '+esc(blocked.join(", "))+'</p>':'');
+ $("healthsummary").innerHTML='<span class="pill">'+(blocked.length?"Krever kontroll":"Lanseringskontroller registrert")+'</span><p>Ingen Nuki-koder vises i adminpanelet. En booking merket bekreftet betyr ikke alene at adgangskoden er levert.</p>'+(blocked.length?'<p class="error">Åpne kontrollpunkter: '+esc(blocked.join(", "))+'</p>':'');
  const members=Array.isArray(snapshot.membershipRequests)?snapshot.membershipRequests:[];
  $("pendingmembers").innerHTML=table(["Kunde","Gruppe","Handling","Status"],members.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(groupLabel[x.group]||x.group)+'</td><td>'+esc(x.action)+'</td><td><span class="pill held">'+esc(x.state)+'</span></td></tr>'));
  renderHours();
@@ -190,7 +229,7 @@ async function loadDay(){
  snapshot=result;render();$("updated").textContent="Oppdatert "+new Date().toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});}
  catch(e){$("updated").textContent="Ikke oppdatert";$("globalerror").textContent=e.message;}
 }
-$("refresh").onclick=loadDay;$("day").onchange=()=>{setBlockDates();loadDay();};
+$("refresh").onclick=()=>{loadDay();loadAgenda()};$("day").onchange=()=>{setBlockDates();loadDay();};
 function setBlockDates(){$("blockfrom").value=$("day").value;$("blockto").value=$("day").value}
 $("blockform").onsubmit=async e=>{
  e.preventDefault();if(!approved)return;
