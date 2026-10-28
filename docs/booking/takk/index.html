@@ -22,6 +22,7 @@ small{color:#adbead}
 <body><main>
 <div class="eyebrow">GolfKongen · Aktiviteter</div>
 <h1>Takk for bestillingen!</h1>
+<p id="gk2-order-number" hidden aria-live="polite" style="color:#e4c17a;font-weight:800"></p>
 <p>Quickbutik behandler betalingen og vi kontrollerer bookingen mot det reserverte tidspunktet.</p>
 <div class="summary"><strong>Hva skjer videre?</strong>
 <p>Etter betalingen bekrefter vi bookingen og klargjør din personlige dørkode i Nuki. Koden sendes på e-post først når dørlåsen har bekreftet den. Det tar vanligvis få minutter, men kan ta lengre tid dersom Nuki bruker tid på synkronisering. Ved forsinkelse får du en egen e-post med status. Ikke bestill på nytt.</p>
@@ -33,4 +34,13 @@ small{color:#adbead}
 <a class="secondary" href="mailto:post@golfkongen.no?subject=Sp%C3%B8rsm%C3%A5l%20om%20booking">Kontakt GolfKongen</a>
 </div>
 <p><small>Betalingskvitteringen håndteres av Quickbutik. Denne siden alene er ikke en bekreftelse på at betaling eller adgangskode er registrert.</small></p>
-</main></body></html>
+</main>
+<script>
+(function(){
+ var order=new URLSearchParams(location.search).get("order")||"";
+ if(!/^[1-9][0-9]{0,8}$/.test(order))return;
+ var line=document.getElementById("gk2-order-number");
+ if(line){line.textContent="Quickbutik-ordre: "+order;line.hidden=false;}
+})();
+</script>
+</body></html>
