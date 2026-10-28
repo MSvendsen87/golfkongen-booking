@@ -110,6 +110,20 @@ async function sendPendingAccessEmail(booking){
  body:JSON.stringify(payload),signal:AbortSignal.timeout(18000)});
  if(!response.ok)throw Error("resend_pending_http_"+response.status);
 }
+// Alert the shop once; continue safe read-only retries for delayed Nuki sync.
+async function sendStalledNukiAlert(booking){
+ const payload={from:"GolfKongen <booking@golfkongen.no>",to:["post@golfkongen.no"],
+ subject:"KREVER KONTROLL: Dørkode ikke bekreftet – Booking "+booking.orderId,
+ text:["Booking "+booking.orderId+" er betalt og bekreftet, men Nuki har ikke bekreftet adgangskoden etter over 20 minutter.",
+ booking.title+" "+booking.day+" kl. "+booking.from+"–"+booking.to,
+ "Kontroller Nuki Web autorisasjon/synk. Ikke opprett duplikatkoder.",
+ "Automatisk kodeutsending forsøkes igjen etter sikker Nuki-bekreftelse."].join("\n")};
+ const response=await fetch("https://api.resend.com/emails",{
+ method:"POST",headers:{"authorization":"Bearer "+env("RESEND_API_KEY"),
+ "content-type":"application/json","Idempotency-Key":"gk2-nuki-stalled-"+booking.bookingId},
+ body:JSON.stringify(payload),signal:AbortSignal.timeout(18000)});
+ if(!response.ok)throw Error("resend_stalled_http_"+response.status);
+}
 async function setAccess(booking,status,authId=null,emailId=null,error=null){
  return rpc("gk2_set_nuki_access_status",{
   p_reservation:booking.bookingId,p_status:status,
@@ -148,9 +162,11 @@ async function nukiBooking(event,booking){
    return {complete:false,phase:"awaiting_nuki_sync"};
   }
   const elapsed=Date.now()-Date.parse(access.updatedAt||new Date().toISOString());
-  if(elapsed>20*60*1000) {
-   await setAccess(booking,"manual_review",null,null,"nuki_not_confirmed_after_20m");
-   throw Error("nuki_not_confirmed_manual_review");
+  if(elapsed>20*60*1000){
+   await sendStalledNukiAlert(booking);
+   // Keep the same encrypted code and the queued event; never issue a second PUT.
+   // Nuki cloud sync can be delayed, but eventual readback should still deliver the code.
+   return {complete:false,phase:"nuki_sync_delayed_staff_alerted"};
   }
   await sendPendingAccessEmail(booking);
   return {complete:false,phase:"awaiting_nuki_sync"};
