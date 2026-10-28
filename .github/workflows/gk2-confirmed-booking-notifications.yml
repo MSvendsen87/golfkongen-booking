@@ -42,23 +42,6 @@ jobs:
           if(!response.ok)throw Error('Booking notifier HTTP '+response.status);
           const result=await response.json();
           console.log('Booking notifications processed:',result.processed);
-          // One-time redacted authorization readback for an existing paid reservation.
-          const diagnosticKey=createHmac('sha256',key)
-            .update('gk2-booking-provider-diagnostics-key-v1').digest();
-          const diagnosticSignature=createHmac('sha256',diagnosticKey)
-            .update('POST:/internal/diagnose:'+ts).digest('hex');
-          const diagnosticResponse=await fetch(
-            'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-notifier/internal/nuki-check',{
-              method:'POST',headers:{
-                'x-gk2-diagnostic-timestamp':ts,
-                'x-gk2-diagnostic-signature':diagnosticSignature,
-                'Content-Type':'application/json'
-              },
-              body:JSON.stringify({reservationId:'af0d5dc9-f803-4cc0-b145-a0e3ced52063'}),
-              signal:AbortSignal.timeout(25000)
-            });
-          const diagnostic=await diagnosticResponse.json();
-          console.log('NUKI BOOKING DIAGNOSTIC (code redacted):',JSON.stringify(diagnostic));
 
           if(result.ok!==true)throw Error('Booking notifications need manual review');
           NODE
