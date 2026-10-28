@@ -145,7 +145,7 @@ async function api(path,method="GET",payload){
  if(!r.ok||j.ok!==true)throw Error("Endringen ble ikke utført ("+esc(j.code||r.status)+"). Kontroller eksisterende bookinger og prøv ikke flere ganger før status er sjekket.");
  return j;
 }
-function showLogin(){approved=false;memberDirectory=[];$("app").classList.add("hidden");$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
+function showLogin(){approved=false;memberDirectory=[];$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
 function showApp(email){approved=true;$("login").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("who").textContent=email;$("backendstatus").textContent="Innlogget · Beskyttet API";}
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
@@ -312,7 +312,7 @@ function renderMemberDirectory(){
    '<td><button type="button" class="btn outline" data-save-name="'+esc(x.email)+'">Lagre</button></td></tr>'));
  for(const b of $("memberdirectory").querySelectorAll("[data-save-name]"))b.onclick=async()=>{
    const email=b.dataset.saveName;
-   const input=Array.from($("memberdirectory").querySelectorAll("[data-name-email]")).find(n=>n.dataset.nameEmail===email);
+   const input=b.closest("tr")?.querySelector("[data-name-email]");
    const name=String(input?.value||"").trim();
    if(name.length<2||name.length>120){msg("directorymsg","Navnet må ha mellom 2 og 120 tegn.");return;}
    b.disabled=true;
