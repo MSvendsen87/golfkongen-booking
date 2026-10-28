@@ -1,46 +1,78 @@
 <!doctype html>
 <html lang="nb">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Takk for bestillingen – GolfKongen</title>
+<meta name="theme-color" content="#10251b">
+<meta name="description" content="Takk for din booking hos GolfKongen. Se hva som skjer etter betaling, hvordan du mottar personlig dørkode, og hvordan du kommer inn.">
+<title>Takk for bestillingen | GolfKongen</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 100% 0,#264631,#101814 58%);font:16px/1.6 system-ui,-apple-system,sans-serif;color:#eef4ec;display:grid;place-items:center;padding:22px}
-main{width:min(100%,650px);background:#182a20;border:1px solid #496a53;border-radius:22px;padding:clamp(25px,6vw,46px);box-shadow:0 24px 65px #0005}
-.eyebrow{font-size:12px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:#e4c17a}
-h1{font-size:clamp(27px,6vw,39px);line-height:1.2;margin:9px 0 19px}
-p{color:#c7d9ca}strong{color:#fff}
-.summary{border-left:3px solid #dfbd76;padding:16px 18px;background:#263a2c;border-radius:10px;margin:25px 0}
-.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
-a{color:#efd699}
-.actions a{display:inline-block;padding:12px 18px;border-radius:10px;background:#dcb76f;color:#132015;text-decoration:none;font-weight:800}
-.actions a.secondary{background:#293b2e;color:#ebf3e5;border:1px solid #526a57}
-small{color:#adbead}
+:root{color-scheme:light;--green:#153c2a;--deep:#10251b;--gold:#ddba72;--cream:#f7f7f1;--ink:#20362a;--muted:#52675a;--line:#dfe7dc}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:var(--deep);color:#fff;padding:19px 20px}header a{display:inline-flex;align-items:center;gap:12px;color:inherit;text-decoration:none;font-weight:850;letter-spacing:.13em;font-size:15px}
+header .dot{width:29px;height:29px;border:2px solid var(--gold);border-radius:50%;display:grid;place-items:center;color:var(--gold);letter-spacing:0;font-size:16px}
+main{max-width:780px;margin:0 auto;padding:32px 18px 60px}.hero{background:var(--green);color:#fff;border-radius:22px;padding:clamp(25px,6vw,42px);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;width:210px;height:210px;border:1px solid #ffffff24;border-radius:50%;right:-60px;top:-110px;pointer-events:none}
+.eyebrow{text-transform:uppercase;letter-spacing:.15em;color:#edcf96;font-size:12px;font-weight:800}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:12px 0 17px;letter-spacing:-.025em}h2{font-size:22px;line-height:1.25;margin:0 0 20px;letter-spacing:-.015em}h3{font-size:17px;margin:0 0 5px}
+.hero p{color:#e4efe8;max-width:575px;margin:0}.order{display:inline-flex;flex-wrap:wrap;gap:8px;margin-top:20px;padding:9px 14px;border:1px solid #ffffff50;border-radius:9px;color:#fff;font-size:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,30px);margin-top:20px;box-shadow:0 7px 28px #143c2310}
+.timeline{list-style:none;padding:0;margin:0;counter-reset:step}.timeline li{display:grid;grid-template-columns:40px 1fr;gap:14px;position:relative;padding:0 0 24px}
+.timeline li:last-child{padding-bottom:0}.timeline li:not(:last-child):before{content:"";position:absolute;left:19px;top:43px;bottom:4px;width:2px;background:#dfe8df}
+.num{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#eaf2e9;color:#185436;font-size:17px;font-weight:800}
+.timeline p{color:var(--muted);margin:0}.codebox{background:#f0f5ec;border:1px solid #d0dfcb;border-radius:14px;padding:20px;margin-top:22px}
+.codebox b{display:block;font-size:14px;color:#31513c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.codebox p{margin:0}.pills{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}.pill{background:#fff;border:1px solid #c8d8c7;color:#31533e;font-weight:750;font-size:13px;border-radius:22px;padding:5px 12px}
+.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.meta div{background:#f7f9f5;border-radius:13px;padding:15px 17px}.meta strong{display:block;color:#183f29;margin-bottom:3px}.meta p{margin:0;color:var(--muted)}
+.notice{border-left:3px solid #d5a650;padding:13px 17px;margin-top:20px;background:#fff8e8;border-radius:0 9px 9px 0;color:#5c4b2d}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px}.button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:11px;padding:12px 18px;background:#184b32;color:#fff;font-weight:800}.button.secondary{background:#fff;color:#184b32;border:1px solid #b2cab5}
+footer{text-align:center;color:#637569;font-size:13px;padding-top:25px}a{color:#195c37}
+@media(max-width:540px){main{padding:18px 12px 35px}.meta{grid-template-columns:1fr}.hero{border-radius:16px}.card{border-radius:15px}.button{width:100%}}
 </style>
 </head>
-<body><main>
-<div class="eyebrow">GolfKongen · Aktiviteter</div>
-<h1>Takk for bestillingen!</h1>
-<p id="gk2-order-number" hidden aria-live="polite" style="color:#e4c17a;font-weight:800"></p>
-<p>Quickbutik behandler betalingen og vi kontrollerer bookingen mot det reserverte tidspunktet.</p>
-<div class="summary"><strong>Hva skjer videre?</strong>
-<p>Etter betalingen bekrefter vi bookingen og klargjør din personlige dørkode i Nuki. Koden sendes på e-post først når dørlåsen har bekreftet den. Det tar vanligvis få minutter, men kan ta lengre tid dersom Nuki bruker tid på synkronisering. Ved forsinkelse får du en egen e-post med status. Ikke bestill på nytt.</p>
-<p><strong>Adgangskoden kan brukes fra 10 minutter før bookingstart.</strong> Kontroller søppelpost dersom bekreftelsen ikke kommer.</p>
+<body>
+<header><a href="https://golfkongen.no/aktiviteter" aria-label="GolfKongen – tilbake til aktiviteter"><span class="dot" aria-hidden="true">G</span> GOLFKONGEN</a></header>
+<main>
+<section class="hero" aria-labelledby="thanks-title">
+<div class="eyebrow">GolfKongen · Aktiviteter i Lyngdal</div>
+<h1 id="thanks-title">Takk for bestillingen!</h1>
+<p>Du er ferdig i kassen. Nå kontrollerer vi betalingen og reserverer tidspunktet ditt endelig. Du får informasjonen du trenger på e-post – også en personlig adgangskode til døren.</p>
+<div class="order" id="order-ref" hidden><strong>Ordrenummer:</strong> <span id="order-number"></span></div>
+</section>
+<section class="card" aria-labelledby="next-title">
+<h2 id="next-title">Hva skjer nå?</h2>
+<ol class="timeline">
+<li><span class="num" aria-hidden="true">1</span><div><h3>Vi kontrollerer bookingen</h3><p>Quickbutik registrerer betalingen. Når betalingen og det valgte tidspunktet er verifisert, bekrefter bookingsystemet reservasjonen.</p></div></li>
+<li><span class="num" aria-hidden="true">2</span><div><h3>Du får bookingbekreftelse</h3><p>Vi sender informasjon om aktivitet, dato og klokkeslett til e-postadressen du brukte ved bestillingen. Kvitteringen for betalingen håndteres av Quickbutik.</p></div></li>
+<li><span class="num" aria-hidden="true">3</span><div><h3>Du får en personlig dørkode</h3><p>Vi oppretter en unik, sekssifret kode for din booking. Koden sendes i en egen e-post når Nuki-låsen har bekreftet at den er registrert. Vanligvis skjer dette i løpet av få minutter, men synkroniseringen kan ta lengre tid.</p></div></li>
+</ol>
+<div class="codebox">
+<b>Slik kommer du inn</b>
+<p>Tast de seks sifrene på Nuki Keypad ved inngangsdøren. Du trenger ingen app. Koden kan brukes fra <strong>10 minutter før bookingstart</strong> og frem til bookingen er ferdig.</p>
+<div class="pills"><span class="pill">6 sifre</span><span class="pill">Ingen app nødvendig</span><span class="pill">Personlig kode</span></div>
 </div>
-<p>Har du betalt, men ikke mottatt bekreftelse? <strong>Ikke bestill samme tid en gang til.</strong> Ta kontakt med oss, så kontrollerer vi ordren før du betaler på nytt.</p>
-<div class="actions">
-<a href="https://golfkongen.no/aktiviteter">Tilbake til aktiviteter</a>
-<a class="secondary" href="mailto:post@golfkongen.no?subject=Sp%C3%B8rsm%C3%A5l%20om%20booking">Kontakt GolfKongen</a>
+<p class="notice"><strong>Ikke fått kode ennå?</strong> Sjekk innboksen og søppelposten. Dersom låsen bruker tid på synkronisering, kan du få en egen statusmelding. Har du betalt, skal du <strong>ikke bestille eller betale på nytt</strong>. Kontakt oss, så hjelper vi deg.</p>
+</section>
+<section class="card" aria-labelledby="visit-title">
+<h2 id="visit-title">Før du kommer</h2>
+<div class="meta">
+<div><strong>Her finner du oss</strong><p>Aanen O. Bergsakers gate 5<br>4580 Lyngdal</p></div>
+<div><strong>Praktisk informasjon</strong><p>Bruk innesko eller sokker ved dart og simulator. Utesko er ikke tillatt.</p></div>
 </div>
-<p><small>Betalingskvitteringen håndteres av Quickbutik. Denne siden alene er ikke en bekreftelse på at betaling eller adgangskode er registrert.</small></p>
+<div class="actions"><a class="button" href="https://golfkongen.no/aktiviteter">Tilbake til aktiviteter</a><a class="button secondary" href="mailto:post@golfkongen.no?subject=Sp%C3%B8rsm%C3%A5l%20om%20booking">Kontakt GolfKongen</a></div>
+</section>
+<footer>Denne siden er informasjon om bestillingsprosessen, ikke en selvstendig betalingsbekreftelse.<br>© GolfKongen</footer>
 </main>
 <script>
 (function(){
- var order=new URLSearchParams(location.search).get("order")||"";
- if(!/^[1-9][0-9]{0,8}$/.test(order))return;
- var line=document.getElementById("gk2-order-number");
- if(line){line.textContent="Quickbutik-ordre: "+order;line.hidden=false;}
+"use strict";
+var number=new URLSearchParams(location.search).get("order")||"";
+if(!/^[1-9][0-9]{0,8}$/.test(number))return;
+var line=document.getElementById("order-ref");
+var target=document.getElementById("order-number");
+if(line&&target){target.textContent=number;line.hidden=false;}
 })();
 </script>
-</body></html>
+</body>
+</html>
