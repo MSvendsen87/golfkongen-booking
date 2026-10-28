@@ -1,4 +1,4 @@
-/* GolfKongen Booking 2.0 – receipt routing v6.1
+/* GolfKongen Booking 2.0 – receipt routing v6.2
  * External file, loaded by a short Quickbutik Body End loader.
  * Redirect is navigation only. Payment, booking and Nuki are server-verified.
  */
@@ -60,6 +60,9 @@
   }
   function cartSet(data) {
     if (!data || !Array.isArray(data.items)) return;
+    // Quickbutik may briefly report an empty cart while checkout completes.
+    // An empty snapshot must never erase a still-valid booking redirect marker.
+    if (data.items.length === 0) return;
     var p = pending();
     var has = data.items.some(function (row) { return isBooking(row, p); });
     saveCart(has ? 'booking2' : 'normal');
@@ -77,7 +80,7 @@
     };
   }
 
-  var order = /^\/success\/([1-9][0-9]{0,8})(?:\/|$)/.exec(location.pathname);
+  var order = /^\/success\/([1-9][0-9]{0,8})(?=\/|-|$)/.exec(location.pathname);
   if (order) {
     var p = pending();
     var hold = read(sessionStorage, HOLD);
