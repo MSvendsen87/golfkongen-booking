@@ -544,6 +544,13 @@ Deno.serve(async (req:Request)=>{
     return reply({ok:true,members},200,origin);
   }
   if(req.method==="GET"&&path==="/admin/health")return reply({ok:true,email:user.email,status:"isolated_staging"},200,origin);
+  if(req.method==="GET"&&path==="/admin/agenda"){
+    const from=u.searchParams.get("from")||"",days=Number(u.searchParams.get("days")||21);
+    if(!validDate(from)||!Number.isInteger(days)||days<1||days>45)
+      return err("invalid_agenda_range",400,origin);
+    const agenda=await rpc("gk2_admin_agenda",{p_actor:user.email,p_from:from,p_days:days});
+    return reply({ok:true,agenda},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/snapshot"){
     const day=u.searchParams.get("date")||"";if(!validDate(day))return err("invalid_date",400,origin);
     return reply({ok:true,...await rpc("gk2_admin_snapshot",{p_actor:user.email,p_day:day})},200,origin);
