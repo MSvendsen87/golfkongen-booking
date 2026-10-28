@@ -11,7 +11,7 @@ import {createClient} from "npm:@supabase/supabase-js@2.58.0";
 const url=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 const origins=new Set(["https://golfkongen.no","https://www.golfkongen.no","https://app.golfkongen.no","https://eadgdcimcmfyuicizboo.supabase.co","https://msvendsen87.github.io"]);
-const allowedEmails=new Set(["post@golfkongen.no","kristoffer.mrk@gmail.com"]);
+const allowedEmails=new Set(["post@golfkongen.no","kristoffer.mrk@gmail.com","kristoffer@golfkongen.no"]);
 const db=url&&serviceKey?createClient(url,serviceKey,{auth:{autoRefreshToken:false,persistSession:false}}):null;
 const getCors=(origin:string)=>origin&&origins.has(origin)?{"Access-Control-Allow-Origin":origin,"Vary":"Origin"}:{};
 function reply(data:unknown,status=200,origin=""){
