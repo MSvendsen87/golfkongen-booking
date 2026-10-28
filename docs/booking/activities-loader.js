@@ -36,7 +36,7 @@
   }
   if(document.querySelector('script[data-gk2-native-loader]'))return;
   const script=document.createElement('script');
-  script.src='https://msvendsen87.github.io/golfkongen-booking/booking/embed.js?v=20261027-install-v2';
+  script.src='https://msvendsen87.github.io/golfkongen-booking/booking/embed.js?v=20261028-layout-bddc2f2';
   script.dataset.gk2NativeLoader='1';
   script.defer=true;
   script.addEventListener('load',function(){
