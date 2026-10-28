@@ -42,5 +42,13 @@ jobs:
           if(!response.ok)throw Error('Booking notifier HTTP '+response.status);
           const result=await response.json();
           console.log('Booking notifications processed:',result.processed);
+          // Read-only diagnostics: print booleans only, no lock IDs or codes.
+          const dk=createHmac('sha256',key).update('gk2-booking-provider-diagnostics-key-v1').digest();
+          const ds=createHmac('sha256',dk).update('POST:/internal/diagnose:'+ts).digest('hex');
+          const dr=await fetch('https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-notifier/internal/diagnose',{
+            method:'POST',headers:{'x-gk2-diagnostic-timestamp':ts,'x-gk2-diagnostic-signature':ds},
+            signal:AbortSignal.timeout(20000)});
+          const diagnostics=await dr.json();
+          console.log('Nuki link state:',JSON.stringify({nukiDevice:diagnostics.nukiDevice,authListAvailable:diagnostics.nukiAuthorizations,pushover:diagnostics.pushoverRecipient}));
           if(result.ok!==true)throw Error('Booking notifications need manual review');
           NODE
