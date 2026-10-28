@@ -1,0 +1,18 @@
+<!-- GolfKongen Booking 2.0: Quickbutik > Analytics/sporing > egne skript på kvittering/takk-siden.
+     Keep any existing analytics/conversion scripts. This only redirects paid booking orders.
+     Quickbutik expands {{#order.items}} and {{product_id}} on its receipt page. -->
+<script>
+(function () {
+  "use strict";
+  var hasBooking2 = false;
+  {{#order.items}}
+  if (Number("{{product_id}}") >= 1474 && Number("{{product_id}}") <= 1506) {
+    hasBooking2 = true;
+  }
+  {{/order.items}}
+  if (!hasBooking2) return;
+  var match = /^\/success\/([1-9][0-9]{0,8})\/?$/.exec(location.pathname);
+  if (!match) return;
+  location.replace("https://msvendsen87.github.io/golfkongen-booking/booking/takk/?order=" + encodeURIComponent(match[1]));
+})();
+</script>
