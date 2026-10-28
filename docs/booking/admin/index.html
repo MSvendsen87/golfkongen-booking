@@ -75,7 +75,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <div class="stats"><div class="stat"><span>Bekreftede bookinger</span><strong id="statconfirmed">–</strong></div><div class="stat"><span>Reservert / betaling pågår</span><strong id="statheld">–</strong></div><div class="stat"><span>Aktive sperringer</span><strong id="statblocks">–</strong></div><div class="stat"><span>Avbestillinger</span><strong id="statcancelled">–</strong></div></div>
 <div class="card" aria-labelledby="agenda-title"><div class="row spaced"><div><h2 id="agenda-title">Kommende bookinger · 21 dager</h2><p class="small">Bekreftede reservasjoner og aktive betalingsreservasjoner. Kode-status vises uten å vise selve koden.</p></div><span id="agendacount" class="pill">Henter …</span></div><div id="agenda" class="tablewrap"><div class="empty">Henter kommende reservasjoner …</div></div></div>
 <div class="grid"><div class="card"><div class="row spaced"><h2>Bookinger for valgt dag</h2><span class="small" id="daycaption"></span></div><div id="bookings" class="tablewrap"><div class="empty">Laster …</div></div></div>
-<div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div></div></div>
+<div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div><div class="divider"></div><h2>Produkt- og variantkontroll</h2><div id="catalogue-audit" class="small" role="status">Henter sist gjennomførte kontroll …</div></div></div>
 </section>
 <section data-panel="sperringer" class="hidden">
 <div class="grid">
@@ -143,7 +143,7 @@ function showApp(email){approved=true;$("login").classList.add("hidden");$("app"
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
  const health=await api("/admin/health");if(health.email!==user.email?.toLowerCase())throw Error("Brukerkonto stemmer ikke.");
- showApp(health.email);await Promise.all([loadDay(),loadAgenda()]);}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
+ showApp(health.email);await Promise.all([loadDay(),loadAgenda(),loadCatalogueAudit()]);}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
 }
 $("loginform").addEventListener("submit",async e=>{
  e.preventDefault();$("loginerror").textContent="";$("loginbutton").disabled=true;
@@ -205,6 +205,26 @@ async function loadAgenda(){
  }catch(e){
    $("agendacount").textContent="Kunne ikke oppdatere";
    $("agenda").textContent=e.message||"Ukjent feil";
+ }
+}
+async function loadCatalogueAudit(){
+ if(!approved)return;
+ const panel=$("catalogue-audit");
+ try {
+  const response=await fetch("./variant-audit.json",{cache:"no-store"});
+  if(!response.ok)throw Error("snapshot_unavailable");
+  const data=await response.json(),n=data.counts||{},m=data.remediation||{};
+  if(data.schemaVersion!==1||n.products!==33||!Number.isSafeInteger(n.variants))
+   throw Error("snapshot_invalid");
+  const date=String(data.checkedDate||"Ukjent dato");
+  const priceErrors=Number(n.wrongVariantPrices||0),durationErrors=Number(n.invalidSlotDurations||0);
+  panel.textContent=date+": "+n.products+" produkter / "+n.variants.toLocaleString("nb-NO")+
+   " varianter kontrollert. Prisavvik: "+priceErrors+
+   ". Feil varighet: "+durationErrors+
+   ". Åpne kasselåser etter kontroll: "+String(m.openLeasesAfterCleanup??"ukjent")+
+   ". Alle varianter er normalt skjult til kunden reserverer et tidsrom. Dette er en datert stikkprøve av drift, IKKE bekreftet kundegruppepris eller gjennomført testkjøp.";
+ }catch(_){
+  panel.textContent="Ingen oppdatert teknisk kontroll tilgjengelig. Booking- og betalingsstatus vises separat.";
  }
 }
 function render(){
