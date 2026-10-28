@@ -69,7 +69,7 @@ export function extractBookingLines(order) {
     }];
   });
 }
-export function bookingWindow(booking,minutesBefore=15){
+export function bookingWindow(booking,minutesBefore=10){
   if(!Number.isInteger(minutesBefore)||minutesBefore<0||minutesBefore>15)
     throw new Error("Invalid lead time");
   return {
