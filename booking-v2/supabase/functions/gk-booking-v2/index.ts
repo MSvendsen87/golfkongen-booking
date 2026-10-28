@@ -657,6 +657,10 @@ Deno.serve(async (req:Request)=>{
       quickbutikUpdated:false,customerGroupPriceVerified:false,
       reason:"quickbutik_group_price_not_exposed_by_supported_api"},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/price-drafts"){
+    const drafts=await rpc("gk2_admin_price_drafts_list",{p_actor:user.email});
+    return reply({ok:true,drafts,quickbutikUpdated:false},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/price-matrix"){
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
@@ -682,10 +686,17 @@ Deno.serve(async (req:Request)=>{
       p_minutes:b.minutes,p_group:b.group,p_stage:b.stage,p_note:String(b.note||"").slice(0,300)});
     return reply({ok:true,...result,bookingEnabled:false},200,origin);
   }
+  if(path==="/admin/price-draft-delete"){
+   if(!["hyzr","dart_a","dart_b","venue"].includes(b.resource)
+      ||!["public","betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(b.group)
+      ||!Number.isInteger(b.minutes))return err("invalid_draft_target",400,origin);
+   return reply({ok:true,deleted:await rpc("gk2_admin_delete_price_draft",
+      {p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes})},200,origin);
+  }
   if(path==="/admin/price-draft"||path==="/admin/price-save"){
    if(!Number.isInteger(b.minutes)||!Number.isInteger(b.ore)||b.ore<0||b.ore>10000000)return err("invalid_price",400,origin);
-   const saved=await rpc("gk2_admin_save_price",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_price_ore:b.ore,p_note:b.note||""});
-   return reply({ok:true,...saved,status:"saved_in_staging_not_quickbutik",checkoutEnabled:false},200,origin);
+   const saved=await rpc("gk2_admin_save_price_draft",{p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,p_price_ore:b.ore,p_note:b.note||""});
+   return reply({ok:true,...saved,status:"draft_only_no_live_price_change",quickbutikUpdated:false,activeBookingPriceUpdated:false},200,origin);
   }
   if(path==="/admin/club-access"){
     const customerId=String(b.customerId||"").trim();
