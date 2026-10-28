@@ -162,10 +162,19 @@ async function nukiBooking(event,booking){
    return {complete:false,phase:"awaiting_nuki_sync"};
   }
   const elapsed=Date.now()-Date.parse(access.updatedAt||new Date().toISOString());
-  if(elapsed>20*60*1000){
+  if(elapsed>30*60*1000){
+   // Verify absence above; for an old unconfirmed authorization, allow exactly
+   // ONE durable recovery with the SAME encrypted booking PIN, never a new PIN.
+   // The DB claim is atomic and prevents duplicate requests across workers.
+   const recovery=await rpc("gk2_claim_nuki_recovery",{p_reservation:booking.bookingId});
+   if(recovery===true){
+    const payload=nukiPayload(booking,code);
+    delete payload.smartlockIds; // Nuki's single-lock endpoint uses the path ID.
+    await nuki("PUT","/smartlock/"+LOCK_ID+"/auth",payload);
+    await sendStalledNukiAlert(booking);
+    return {complete:false,phase:"nuki_recovery_accepted_pending_readback"};
+   }
    await sendStalledNukiAlert(booking);
-   // Keep the same encrypted code and the queued event; never issue a second PUT.
-   // Nuki cloud sync can be delayed, but eventual readback should still deliver the code.
    return {complete:false,phase:"nuki_sync_delayed_staff_alerted"};
   }
   await sendPendingAccessEmail(booking);
