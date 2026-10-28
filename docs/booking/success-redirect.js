@@ -2,7 +2,7 @@
 // No payment or customer data is handled here. Only a recent, local booking checkout
 // marker on Quickbutik's native successful-payment page triggers the redirect.
 (()=>{'use strict';
- const match=/^\/success\/([1-9][0-9]{0,8})\/?$/.exec(location.pathname);
+ const match=/^\/success\/([1-9][0-9]{0,8})(?:\/|$)/.exec(location.pathname);
  if(!match)return;
  const key='gk2_pending_success_v1';
  try{
