@@ -539,6 +539,10 @@ Deno.serve(async (req:Request)=>{
     const audit=await auditQuickbutikOrder(order,{apiKey:key});
     return reply({ok:true,...audit,bookingConfirmed:false,notificationSent:false},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/members"){
+    const members=await rpc("gk2_admin_member_directory",{p_actor:user.email});
+    return reply({ok:true,members,source:"verified_manual_quickbutik_group_records"},200,origin);
+  }
   if(req.method==="GET"&&path==="/admin/club-access"){
     const members=await rpc("gk2_admin_list_club_access",{p_actor:user.email});
     return reply({ok:true,members},200,origin);
@@ -711,6 +715,17 @@ Deno.serve(async (req:Request)=>{
       ||b.confirmQuickbutik!==true)return err("manual_verification_confirmation_required",400,origin);
    const result=await rpc("gk2_admin_confirm_membership_quickbutik",{p_actor:a,p_id:requestId});
    return reply({ok:true,...result},200,origin);
+  }
+  if(path==="/admin/member-name"){
+    const email=String(b.email||"").trim().toLowerCase();
+    const name=String(b.name||"").trim();
+    if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||
+       name.length<2||name.length>120||/[\x00-\x1f\x7f]/.test(name))
+      return err("invalid_member_identity",400,origin);
+    const member=await rpc("gk2_admin_member_name_save",{
+      p_actor:a,p_email:email,p_full_name:name
+    });
+    return reply({ok:true,...member},200,origin);
   }
   if(path==="/admin/member-request"){
    return reply({ok:true,id:await rpc("gk2_admin_request_membership",{p_actor:a,p_email:b.email,p_group:b.group,p_action:b.action}),status:"pending_external_sync"},202,origin);
