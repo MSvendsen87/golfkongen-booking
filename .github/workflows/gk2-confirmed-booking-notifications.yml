@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verified-confirmed-bookings:
+    # Also processes pending cancellation/revocation events; all actions are idempotent.
     # Always drain already-confirmed booking events. Webhook/checkout gates
     # control event creation; signed dispatch and idempotent DB claims secure delivery.
     runs-on: ubuntu-latest
