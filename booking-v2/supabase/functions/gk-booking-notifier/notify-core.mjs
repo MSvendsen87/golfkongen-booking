@@ -34,7 +34,8 @@ export function matchingNukiAuth(auths,booking,code){
  String(x.smartlockId)===String(LOCK_ID)&&
  (x.name===booking.name||x.name===booking.name.slice(0,20))&&String(x.code)===String(Number(code))&&
  x.allowedFromDate&&x.allowedUntilDate&&
- Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-900000))<60000&&
+ [600000,900000].some(leadMs=>
+ Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-leadMs))<60000)&&
  Math.abs(Date.parse(x.allowedUntilDate)-Date.parse(booking.endUtc))<60000);
 }
 export function bookedNotice(b){
