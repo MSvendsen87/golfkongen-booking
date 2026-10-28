@@ -8,12 +8,27 @@
  const marker=document.createElement('span');
  marker.id='gk2-activities-loader-loaded';marker.hidden=true;
  document.body.appendChild(marker);
+ function polishPage(){
+  // Only the redundant Quickbutik page title; keep the actual SEO h1 in the page content.
+  const headings=[...document.querySelectorAll('h1,h2')];
+  const redundant=headings.filter(h=>h.textContent.trim()==='GolfKongen – Aktiviteter & booking');
+  if(redundant.length>0){const h=redundant[0];h.style.display='none';}
+  // Give the existing SEO section a quieter editorial layout instead of a competing CTA card.
+  const seo=headings.find(h=>h.textContent.trim()==='Dart og discgolf-simulator i Lyngdal');
+  if(seo){const panel=seo.closest('section')||seo.parentElement;if(panel){
+   panel.style.maxWidth='1180px';panel.style.margin='16px auto 0';panel.style.padding='18px 22px';
+   panel.style.border='1px solid rgba(140,165,145,.22)';panel.style.borderRadius='14px';
+   panel.style.background='rgba(255,255,255,.025)';
+   seo.style.margin='0 0 8px';seo.style.fontSize='clamp(18px,2vw,23px)';
+  }}
+ }
  function mount(){
+  polishPage();
   let anchor=document.getElementById('gk2-booking-anchor');
   if(!anchor){
    anchor=document.createElement('div');
    anchor.id='gk2-booking-anchor';
-   anchor.style.cssText='max-width:1180px;margin:32px auto;padding:0 12px;scroll-margin-top:80px;';
+   anchor.style.cssText='max-width:1180px;margin:12px auto;padding:0 12px;scroll-margin-top:80px;';
    const root=document.querySelector('#gk-aktiviteter')||
     document.querySelector('main article')||document.querySelector('main')||
     document.querySelector('#content')||document.body;
