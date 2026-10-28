@@ -420,6 +420,30 @@ Deno.serve(async req=>{
  const enabled=env("GK2_NOTIFIER_ENABLED")==="true"||env("GK2_WEBHOOK_ENABLED")==="true";
  if(req.method==="GET"&&pathname.endsWith("/health"))
   return json({ok:true,service:"GolfKongen Booking2 notifier",enabled,configured});
+ if(req.method==="POST"&&pathname.endsWith("/internal/nuki-check")){
+  const valid=await verifyDiagnosticRequest({apiKey:env("GK2_QUICKBUTIK_API_KEY"),
+   timestamp:req.headers.get("x-gk2-diagnostic-timestamp")||"",
+   signature:req.headers.get("x-gk2-diagnostic-signature")||""});
+  if(!valid)return json({ok:false,code:"forbidden"},403);
+  try{
+   const input=await req.json();
+   const reservationId=String(input?.reservationId||"");
+   if(!/^[0-9a-f-]{36}$/.test(reservationId))return json({ok:false,code:"bad_request"},400);
+   const saved=await rpc("gk2_get_existing_nuki_access",{p_reservation:reservationId});
+   if(!saved?.ciphertext)return json({ok:false,code:"no_access_record"},404);
+   const code=await decryptAccessCode(saved.ciphertext,env("GK2_CODE_KEY_BASE64"));
+   const auths=await safeDeviceAndAuthList();
+   const matchingName=auths.filter(x=>x.name===saved.name||x.name===String(saved.name).slice(0,20));
+   const matchingCode=auths.filter(x=>Number(x.type)===13&&String(x.smartlockId)===String(LOCK_ID)&&String(x.code)===String(Number(code)));
+   const both=matchingCode.filter(x=>x.name===saved.name||x.name===String(saved.name).slice(0,20));
+   return json({ok:true,status:saved.status,totalAuths:auths.length,
+    matchingName:matchingName.length>0,matchingCode:matchingCode.length>0,
+    nameAndCode:both.length>0,datesPresent:both.some(x=>!!x.allowedFromDate&&!!x.allowedUntilDate),
+    matchedAuthEnabled:both.some(x=>x.enabled===true),
+    matchingNameTypes:[...new Set(matchingName.map(x=>Number(x.type)))],
+    matchedDateWindows:both.map(x=>({from:x.allowedFromDate||null,to:x.allowedUntilDate||null}))});
+  }catch(error){return json({ok:false,code:"nuki_check_failed",reason:shortError(error)},503)}
+ }
  if(req.method==="POST"&&pathname.endsWith("/internal/diagnose")){
   // Safe diagnostics can run before launch. HMAC is separate from dispatch.
   let allowed=await verifyDiagnosticRequest({
