@@ -112,6 +112,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 </section></main><footer>GolfKongen · Sportskongen AS · Booking 2.0 · Kun autorisert administrasjon · Alle endringer journalføres av Booking 2.0</footer>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import {setupPriceControls} from "./price-controls.mjs";
 const SB="https://eadgdcimcmfyuicizboo.supabase.co";
 const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
 const API=SB+"/functions/v1/gk-booking-v2";
@@ -157,7 +158,7 @@ for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
  selected=t.dataset.tab;
  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===selected));
  document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
- if(selected==="priser")loadPrices();
+ if(selected==="priser")Promise.all([loadPrices(),priceControls.loadAll()]);
 };
 function fillBlock(blocks){
  $("statblocks").textContent=blocks.length;
@@ -246,7 +247,7 @@ function durationOptions(){const vals=$("priceresource").value==="venue"?Array.f
 function renderPrice(){
  const group=$("pricegroup").value,resource=$("priceresource").value;
  const rows=prices.filter(p=>p.group===group&&p.resource===resource).sort((a,b)=>a.minutes-b.minutes);
- $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status"],rows.map(p=>'<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td><td><span class="pill '+(p.active?"confirmed":"held")+'">'+(p.active?"Markert aktiv":"Utkast")+'</span></td></tr>'));
+ $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status"],rows.map(p=>'<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td><td><span class="pill '+(p.active?"confirmed":"held")+'">'+"Kassen må kontrolleres"+'</span></td></tr>'));
  const chosen=prices.find(p=>p.group===group&&p.resource===resource&&p.minutes===Number($("priceminutes").value));
  if(chosen)$("pricenok").value=(Number(chosen.ore)/100).toFixed(2);
 }
@@ -261,7 +262,7 @@ $("priceform").onsubmit=async e=>{
  if(!Number.isInteger(ore)||ore<0){msg("pricemsg","Ugyldig pris.");return;}
  if(!confirm("Lagre kun prisutkast? Dette endrer IKKE betalingen i Quickbutik."))return;
  $("pricebutton").disabled=true;try{await api("/admin/price-draft","POST",{resource:$("priceresource").value,group:$("pricegroup").value,minutes:Number($("priceminutes").value),ore,note:$("pricenote").value});
- msg("pricemsg","Prisutkast lagret. Quickbutik er IKKE oppdatert – kundene betaler fortsatt gjeldende kassepris.",true);await loadPrices();}
+ msg("pricemsg","Utkast lagret separat. Gjeldende Booking 2.0-pris og Quickbutik er uendret.",true);await priceControls.loadDrafts();}
  catch(e){msg("pricemsg",e.message);}finally{$("pricebutton").disabled=false;}
 };
 $("memberform").onsubmit=async e=>{
@@ -285,5 +286,6 @@ $("hoursform").onsubmit=async e=>{
  $("hourbutton").disabled=true;try{await api("/admin/hours","POST",p);msg("hourmsg","Åpningstiden er lagret i Booking 2.0.",true);await loadDay();}
  catch(e){msg("hourmsg",e.message)}finally{$("hourbutton").disabled=false;}
 };
+const priceControls=setupPriceControls({api,approved:()=>approved,esc,table,resLabel,groupLabel});
 $("day").value=localDate();setBlockDates();durationOptions();checkAuth();
 </script></body></html>
