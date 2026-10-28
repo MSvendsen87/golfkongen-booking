@@ -7,6 +7,15 @@
   if (window.__GK_BOOKING2_V6_LOADED__) return;
   window.__GK_BOOKING2_V6_LOADED__ = true;
 
+  // Redirect old public booking URLs to the single Booking 2.0 calendar.
+  // Club-night access is separate and must remain untouched until migrated.
+  var oldRoute = String(location.pathname || '').replace(/\/+$/, '');
+  if (['/sider/dart-booking','/sider/disc-booking',
+       '/sider/leie-hele-lokalet'].indexOf(oldRoute) !== -1) {
+    location.replace('https://golfkongen.no/aktiviteter#gk2-booking-anchor');
+    return;
+  }
+
   var PENDING = 'gk2_pending_success_v1';
   var HOLD = 'gk_booking2_recent_hold';
   var CART = 'gk2_redirect_cart_v6';
