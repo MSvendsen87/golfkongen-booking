@@ -436,7 +436,14 @@ Deno.serve(async req=>{
    const matchingName=auths.filter(x=>x.name===saved.name||x.name===String(saved.name).slice(0,20));
    const matchingCode=auths.filter(x=>Number(x.type)===13&&String(x.smartlockId)===String(LOCK_ID)&&String(x.code)===String(Number(code)));
    const both=matchingCode.filter(x=>x.name===saved.name||x.name===String(saved.name).slice(0,20));
-   return json({ok:true,status:saved.status,totalAuths:auths.length,
+   // One explicit sync request for a previously accepted but still absent keypad authorization.
+   // This is NOT a recurring fallback and never creates another PIN.
+   let syncRequested=false;
+   if(input?.requestSync===true&&saved.status==="verifying"&&!matchingCode.length){
+    await nuki("POST","/smartlock/"+LOCK_ID+"/sync");
+    syncRequested=true;
+   }
+   return json({ok:true,syncRequested,status:saved.status,totalAuths:auths.length,
     matchingName:matchingName.length>0,matchingCode:matchingCode.length>0,
     nameAndCode:both.length>0,datesPresent:both.some(x=>!!x.allowedFromDate&&!!x.allowedUntilDate),
     matchedAuthEnabled:both.some(x=>x.enabled===true),
