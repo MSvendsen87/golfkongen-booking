@@ -255,7 +255,7 @@ async function ownerDoorTest(req,origin,cors){
   if(!header.startsWith("Bearer ")||header.length>7000)return output({ok:false,code:"login_required"},401);
   const {data,error}=await db.auth.getUser(header.slice(7));
   const actor=data?.user?.email?.toLowerCase().trim()||"";
-  if(error||!data?.user?.email_confirmed_at||!["kristoffer.mrk@gmail.com","post@golfkongen.no"].includes(actor))
+  if(error||!data?.user?.email_confirmed_at||!["kristoffer.mrk@gmail.com","kristoffer@golfkongen.no","post@golfkongen.no"].includes(actor))
    return output({ok:false,code:"owner_login_required"},403);
   if(await rpc("gk2_is_admin",{p_email:actor})!==true)
    return output({ok:false,code:"admin_denied"},403);
