@@ -705,6 +705,13 @@ Deno.serve(async (req:Request)=>{
     const changed=await rpc("gk2_admin_set_club_access",{p_actor:a,p_customer:customerId,p_active:b.active});
     return reply({ok:true,changed},200,origin);
   }
+  if(path==="/admin/member-verify"){
+   const requestId=String(b.id||"");
+   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)
+      ||b.confirmQuickbutik!==true)return err("manual_verification_confirmation_required",400,origin);
+   const result=await rpc("gk2_admin_confirm_membership_quickbutik",{p_actor:a,p_id:requestId});
+   return reply({ok:true,...result},200,origin);
+  }
   if(path==="/admin/member-request"){
    return reply({ok:true,id:await rpc("gk2_admin_request_membership",{p_actor:a,p_email:b.email,p_group:b.group,p_action:b.action}),status:"pending_external_sync"},202,origin);
   }
