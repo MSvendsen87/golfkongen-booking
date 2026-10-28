@@ -82,7 +82,7 @@ function updateSummary(){
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   var extras=qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
   var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
-  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Din innloggede kundegruppepris og eventuelle rabatter bekreftes i kassen.'+extras;
+  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Kontroller totalbeløpet og eventuell kundegruppepris i Quickbutik-kassen før du betaler. Beløpet i kassen er det som faktisk belastes.'+extras;
 }
 function refreshDartSets(){
   var show=$('gk-v2-resource').value!=='hyzr';
