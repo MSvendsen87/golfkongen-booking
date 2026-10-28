@@ -94,6 +94,22 @@ async function resendCode(booking,code){
  if(typeof data?.id!=="string")throw Error("resend_missing_receipt");
  return data.id;
 }
+// Paid-booking acknowledgement independent of eventual keypad synchronization.
+async function sendPendingAccessEmail(booking){
+ const payload={from:"GolfKongen <booking@golfkongen.no>",to:[booking.email],
+ subject:"GolfKongen – booking bekreftet, dørkode klargjøres",
+ text:["Hei!","","Betalingen er registrert og bookingen bekreftet.",
+ booking.title+" – "+booking.day+" kl. "+booking.from+"–"+booking.to,
+ "Ordre: "+booking.orderId,"",
+ "Vi klargjør din personlige dørkode i Nuki. Den blir sendt i en egen e-post så snart låsen har bekreftet koden.",
+ "Du skal ikke bestille eller betale på nytt. Ta kontakt med GolfKongen dersom koden ikke kommer i god tid før bookingen.",
+ "","Hilsen GolfKongen"].join("\n")};
+ const response=await fetch("https://api.resend.com/emails",{
+ method:"POST",headers:{"authorization":"Bearer "+env("RESEND_API_KEY"),
+ "content-type":"application/json","Idempotency-Key":"gk2-pending-access-"+booking.bookingId},
+ body:JSON.stringify(payload),signal:AbortSignal.timeout(18000)});
+ if(!response.ok)throw Error("resend_pending_http_"+response.status);
+}
 async function setAccess(booking,status,authId=null,emailId=null,error=null){
  return rpc("gk2_set_nuki_access_status",{
   p_reservation:booking.bookingId,p_status:status,
@@ -128,6 +144,7 @@ async function nukiBooking(event,booking){
    await setAccess(booking,"creating_unknown");
    await nuki("PUT","/smartlock/auth",nukiPayload(booking,code));
    await setAccess(booking,"verifying");
+   await sendPendingAccessEmail(booking);
    return {complete:false,phase:"awaiting_nuki_sync"};
   }
   const elapsed=Date.now()-Date.parse(access.updatedAt||new Date().toISOString());
@@ -135,6 +152,7 @@ async function nukiBooking(event,booking){
    await setAccess(booking,"manual_review",null,null,"nuki_not_confirmed_after_20m");
    throw Error("nuki_not_confirmed_manual_review");
   }
+  await sendPendingAccessEmail(booking);
   return {complete:false,phase:"awaiting_nuki_sync"};
  }
  if(access.status!=="email_unknown"){
