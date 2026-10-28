@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="nb"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#11271c">
+<title>Booking 2.0 – Sportskongen Admin</title>
+<style>
+:root{--forest:#143925;--dark:#101b16;--mint:#dceee0;--gold:#d7b96d;--ink:#25362b;--gray:#667469;--bg:#f4f7f3;--line:#dce5da;--red:#a33c3c}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.6}
+a{color:#1b633d}.hidden{display:none!important}
+header{background:var(--dark);color:#fff;padding:15px max(22px,calc((100vw - 1360px)/2))}
+.bar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.brand{font-weight:850;letter-spacing:.09em;font-size:15px}.brand span{color:var(--gold)}
+.header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13px;color:#c6d7cb}
+header button{border:1px solid #537260;background:transparent;color:white;padding:8px 12px;border-radius:8px}
+main{max-width:1360px;margin:auto;padding:26px 22px 70px}
+h1{font-size:27px;letter-spacing:-.04em;line-height:1.25;margin:0 0 5px}h2{font-size:20px;letter-spacing:-.025em;margin:0 0 12px}
+.sub{color:var(--gray);margin:0 0 22px}p{margin:7px 0}.small{font-size:13px;color:var(--gray)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 6px 16px #11270c08;margin-bottom:17px}
+.auth{max-width:450px;margin:56px auto}.auth h1{font-size:25px}
+label{font-size:13px;font-weight:740;display:block;margin:0 0 6px}
+input,select{width:100%;padding:11px 12px;border:1px solid #ccd6cd;border-radius:9px;background:white;color:var(--ink);min-height:44px}
+input:focus,select:focus,button:focus-visible{outline:3px solid #91bc9a;outline-offset:2px}
+.field{margin-bottom:16px}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;min-height:42px;padding:10px 15px;font-weight:760;background:var(--forest);color:white;text-decoration:none}
+.btn.secondary{color:var(--forest);background:#e6f0e6}.btn.outline{color:var(--forest);background:white;border:1px solid #b9cdbd}.btn.warning{color:#973b35;background:#fff4f1}
+.btn:disabled{opacity:.55}.row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}.spaced{justify-content:space-between}.stack{display:grid;gap:16px}
+.notice{background:#fff5dc;border-left:4px solid #bd9042;padding:12px 15px;border-radius:7px;color:#634d2b;font-size:13px;margin:14px 0}
+.oknote{background:#eaf6eb;color:#1d6237;border-left:4px solid #359657}.error{color:#b03030;font-size:14px;margin:12px 0}.pill{font-size:12px;padding:5px 9px;border-radius:30px;font-weight:740;display:inline-block;background:#edf2ed;color:#49624f}
+.pill.confirmed{background:#e0f2e3;color:#226239}.pill.cancelled,.pill.error{background:#fae5e5;color:#9d4141}.pill.held,.pill.payment_pending{background:#fff0cc;color:#845d18}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab{background:white;color:#35533e;border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-weight:740}
+.tab.active{background:var(--forest);color:white;border-color:var(--forest)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.toolbar input{width:180px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:18px}.stat{border:1px solid var(--line);background:#fff;border-radius:13px;padding:18px}
+.stat strong{display:block;font-size:30px;line-height:1.15;letter-spacing:-.04em;margin-top:9px}.stat span{font-size:13px;color:var(--gray)}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.fields.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;text-align:left;font-size:13px}th{color:var(--gray);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#f7faf6}td,th{padding:11px 9px;border-bottom:1px solid #e7ece6;vertical-align:middle}tr:last-child td{border-bottom:0}
+td code{font-size:12px}.empty{padding:22px;text-align:center;color:var(--gray);background:#f8faf7;border-radius:9px}
+.status{min-height:20px;font-size:13px}.muted{color:var(--gray)}.divider{height:1px;background:var(--line);margin:18px 0}
+footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){main{padding:16px 12px 48px}.stats{gap:8px}.stat{padding:13px}.stat strong{font-size:25px}.fields,.fields.three{grid-template-columns:1fr}.card{padding:16px}h1{font-size:22px}header{padding:12px}.tab{flex:1}}
+</style></head>
+<body>
+<header><div class="bar"><div class="brand">GOLFKONGEN <span>· BOOKING 2.0 ADMIN</span></div><div class="header-right">
+<span id="who"></span><a href="https://golfkongen.no/aktiviteter" style="color:#e8d6a5">Se kundesiden</a>
+<button id="logout" class="hidden">Logg ut</button></div></div></header>
+<main>
+<section id="login" class="card auth">
+<div class="small" style="font-weight:800;color:#3f774c">SPORTSKONGEN INTERN</div>
+<h1>Bookingadministrasjon</h1>
+<p class="sub">Logg inn med en godkjent administratorkonto. Kun verifiserte administratorer får tilgang til bookinger, priser og sperringer.</p>
+<form id="loginform">
+<div class="field"><label for="email">E-post</label><input id="email" type="email" autocomplete="username" required></div>
+<div class="field"><label for="password">Passord</label><input id="password" type="password" autocomplete="current-password" required></div>
+<button class="btn" type="submit" id="loginbutton" style="width:100%">Logg inn</button>
+</form>
+<p id="loginerror" class="error" role="alert"></p><p class="small">Du må allerede ha en bekreftet Supabase Auth-konto. Det opprettes ingen nye brukere her.</p>
+</section>
+<section id="app" class="hidden">
+<div class="row spaced"><div><h1>Booking 2.0 – kontrollsenter</h1>
+<p class="sub">Enkel oversikt over reservasjoner, tilgjengelighet, priser og kundegrupper.</p></div>
+<span class="pill" id="backendstatus">Kontrollerer tilgang …</span></div>
+<div class="notice">Priser i denne administrasjonen er <strong>ikke automatisk oppdatert i Quickbutik</strong>. Utkast og forespørsler merkes tydelig. En allerede betalt booking kan ikke stenges i etterkant.</div>
+<div class="tabs" role="tablist" aria-label="Bookingadministrasjon">
+<button class="tab active" data-tab="oversikt" role="tab">Oversikt</button>
+<button class="tab" data-tab="sperringer" role="tab">Sperringer</button>
+<button class="tab" data-tab="priser" role="tab">Priser</button>
+<button class="tab" data-tab="grupper" role="tab">Rabattgrupper</button>
+<button class="tab" data-tab="apning" role="tab">Åpningstider</button>
+</div>
+<div id="globalerror" role="alert" class="error"></div>
+<div class="toolbar"><div class="row"><label for="day" style="margin:0">Valgt dag</label><input id="day" type="date"><button class="btn outline" id="refresh">Oppdater</button></div><span class="small" id="updated">Ikke oppdatert</span></div>
+<section data-panel="oversikt">
+<div class="stats"><div class="stat"><span>Bekreftede bookinger</span><strong id="statconfirmed">–</strong></div><div class="stat"><span>Reservert / betaling pågår</span><strong id="statheld">–</strong></div><div class="stat"><span>Aktive sperringer</span><strong id="statblocks">–</strong></div><div class="stat"><span>Avbestillinger</span><strong id="statcancelled">–</strong></div></div>
+<div class="grid"><div class="card"><div class="row spaced"><h2>Bookinger for valgt dag</h2><span class="small" id="daycaption"></span></div><div id="bookings" class="tablewrap"><div class="empty">Laster …</div></div></div>
+<div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div></div></div>
+</section>
+<section data-panel="sperringer" class="hidden">
+<div class="grid">
+<div class="card"><h2>Steng en aktivitet eller et tidsrom</h2><p class="small">En sperring aktiveres i Booking 2.0 straks serveren godkjenner den. Systemet nekter kollisjoner med bekreftede eller aktive bookinger.</p>
+<form id="blockform"><div class="field"><label for="blocktarget">Gjelder</label><select id="blocktarget"><option value="all">Hele aktivitetssenteret</option><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue_only">Kun booking av hele lokalet</option></select></div>
+<div class="fields"><div class="field"><label for="blockfrom">Fra dato</label><input type="date" id="blockfrom" required></div><div class="field"><label for="blockto">Til dato</label><input type="date" id="blockto" required></div></div>
+<div class="fields"><div class="field"><label for="blockstart">Fra klokken</label><input type="time" id="blockstart" value="10:00" step="1800" required></div><div class="field"><label for="blockend">Til klokken</label><input type="time" id="blockend" value="22:00" step="1800" required></div></div>
+<div class="field"><label for="blocklabel">Årsak</label><input id="blocklabel" maxlength="140" value="Stengt av administrator" required></div>
+<button class="btn" type="submit" id="blockbutton">Lagre sperring</button><p id="blockmsg" class="status" role="status"></p></form></div>
+<div class="card"><h2>Sperringer på valgt dag</h2><div id="activeblocks"><div class="empty">Laster …</div></div><p class="small">Fjern sperringer med knappen under den aktuelle regelen. Gjennomførte bookinger forblir uendret.</p></div>
+</div></section>
+<section data-panel="priser" class="hidden"><div class="grid"><div class="card"><h2>Prismatrise</h2><p class="small">Viser registrerte priser i Booking 2.0. Quickbutik kan ha en annen aktiv pris i kassen.</p>
+<div class="fields"><div class="field"><label for="priceresource">Aktivitet</label><select id="priceresource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></div><div class="field"><label for="pricegroup">Prisgruppe</label><select id="pricegroup"><option value="public">Ordinær pris</option><option value="betalt_medlem">Betalt medlem</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee og dart</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div></div><div id="pricetable" class="tablewrap"></div></div>
+<div class="card"><h2>Registrer prisutkast</h2><div class="notice"><strong>Ikke en publiseringsknapp.</strong> Utkastet endrer ikke kundens betaling. Quickbutik-gruppeprisene må fremdeles oppdateres og kontrolleres.</div>
+<form id="priceform"><div class="fields"><div class="field"><label for="priceminutes">Varighet (minutter)</label><select id="priceminutes"></select></div><div class="field"><label for="pricenok">Foreslått pris (kr)</label><input type="number" id="pricenok" min="0" max="100000" step="0.01" required></div></div>
+<div class="field"><label for="pricenote">Notat</label><input id="pricenote" maxlength="500" placeholder="Hvorfor endres prisen?"></div>
+<button class="btn secondary" type="submit" id="pricebutton">Lagre utkast – ikke aktiv pris</button><p id="pricemsg" role="status" class="status"></p></form></div></div></section>
+<section data-panel="grupper" class="hidden"><div class="grid"><div class="card"><h2>Legg til eller fjern fra rabattgruppe</h2>
+<p class="small">Registrer en forespørsel. Medlemskapet er <strong>ikke aktivt</strong> før tilhørende kundegruppe er oppdatert og kontrollert i Quickbutik.</p>
+<form id="memberform"><div class="field"><label for="memberemail">Kundens e-post</label><input type="email" id="memberemail" required autocomplete="off"></div>
+<div class="fields"><div class="field"><label for="membergroup">Gruppe</label><select id="membergroup"><option value="medlemmer">Medlem</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div>
+<div class="field"><label for="memberaction">Handling</label><select id="memberaction"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Midlertidig stopp</option></select></div></div>
+<button class="btn secondary" type="submit" id="memberbutton">Registrer forespørsel</button><p id="membermsg" role="status" class="status"></p></form></div>
+<div class="card"><h2>Forespørsler som venter</h2><div class="tablewrap" id="pendingmembers"><div class="empty">Laster …</div></div>
+<p class="small">Det finnes foreløpig ikke en verifisert ett-klikks synkronisering mot Quickbutiks kundegrupper.</p></div></div></section>
+<section data-panel="apning" class="hidden"><div class="grid"><div class="card"><h2>Åpningstider</h2><p class="small">Her endres Booking 2.0-reglene. Endringer som kolliderer med bekreftede bookinger blir avvist.</p>
+<form id="hoursform"><div class="fields"><div class="field"><label for="hourresource">Aktivitet</label><select id="hourresource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></div>
+<div class="field"><label for="hourweekday">Ukedag</label><select id="hourweekday"><option value="1">Mandag</option><option value="2">Tirsdag</option><option value="3">Onsdag</option><option value="4">Torsdag</option><option value="5">Fredag</option><option value="6">Lørdag</option><option value="7">Søndag</option></select></div></div>
+<div class="fields"><div class="field"><label for="houropens">Åpner</label><input type="time" id="houropens" value="10:00" step="1800" required></div>
+<div class="field"><label for="hourcloses">Stenger</label><input type="time" id="hourcloses" value="22:00" step="1800" required></div></div>
+<div class="field"><label><input type="checkbox" id="houractive" checked style="width:auto;min-height:auto"> Booking åpen denne ukedagen</label></div>
+<button class="btn" type="submit" id="hourbutton">Lagre åpningstid</button><p id="hourmsg" role="status" class="status"></p></form></div>
+<div class="card"><h2>Gjeldende ukeplan</h2><div id="hourstable" class="tablewrap"><div class="empty">Laster …</div></div></div></div></section>
+</section></main><footer>GolfKongen · Sportskongen AS · Booking 2.0 · Kun autorisert administrasjon · Alle endringer journalføres av Booking 2.0</footer>
+<script type="module">
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.58.0";
+const SB="https://eadgdcimcmfyuicizboo.supabase.co";
+const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
+const API=SB+"/functions/v1/gk-booking-v2";
+const auth=createClient(SB,KEY,{auth:{autoRefreshToken:true,persistSession:true}});
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const localDate=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const asMin=time=>{const m=/^(\d\d):(\d\d)$/.exec(time||"");return m?Number(m[1])*60+Number(m[2]):NaN};
+const hh=n=>String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
+const resLabel={hyzr:"HYZR simulator",dart_a:"Dartbane A",dart_b:"Dartbane B",venue:"Hele lokalet",all:"Alle",venue_only:"Kun hele lokalet"};
+const statLabel={confirmed:"Bekreftet",held:"Reservert",payment_pending:"Betaling pågår",cancelled:"Avbestilt",expired:"Utløpt"};
+const groupLabel={public:"Ordinær",betalt_medlem:"Medlem",ansatte:"Ansatte",teamgolfkongen:"Team GolfKongen",frisbee_dart:"Frisbee og dart",ambassador:"Ambassadør",frisbeeklubb:"Frisbeeklubb",dartklubb:"Dartklubb"};
+const dayNames=["Mandag","Tirsdag","Onsdag","Torsdag","Fredag","Lørdag","Søndag"];
+let snapshot=null,prices=[],approved=false,selected="oversikt";
+function msg(id,text,good=false){const el=$(id);el.textContent=text;el.className=good?"status oknote":"status error";}
+function table(columns,rows){return rows.length?"<table><thead><tr>"+columns.map(x=>"<th>"+esc(x)+"</th>").join("")+"</tr></thead><tbody>"+rows.join("")+"</tbody></table>":'<div class="empty">Ingen oppføringer</div>';}
+async function api(path,method="GET",payload){
+ const {data:{session}}=await auth.auth.getSession();
+ if(!session?.access_token)throw Error("Økten er utløpt. Logg inn på nytt.");
+ const r=await fetch(API+path,{method,headers:{Authorization:"Bearer "+session.access_token,apikey:KEY,"Content-Type":"application/json"},body:payload?JSON.stringify(payload):undefined,cache:"no-store"});
+ let j;try{j=await r.json()}catch(_){throw Error("Serveren svarte ikke som forventet.");}
+ if(r.status===401||r.status===403){approved=false;showLogin();throw Error("Du har ikke autorisert tilgang.");}
+ if(!r.ok||j.ok!==true)throw Error("Endringen ble ikke utført ("+esc(j.code||r.status)+"). Kontroller eksisterende bookinger og prøv ikke flere ganger før status er sjekket.");
+ return j;
+}
+function showLogin(){approved=false;$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
+function showApp(email){approved=true;$("login").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("who").textContent=email;$("backendstatus").textContent="Innlogget · Beskyttet API";}
+async function checkAuth(){
+ try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
+ const health=await api("/admin/health");if(health.email!==user.email?.toLowerCase())throw Error("Brukerkonto stemmer ikke.");
+ showApp(health.email);await loadDay();}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
+}
+$("loginform").addEventListener("submit",async e=>{
+ e.preventDefault();$("loginerror").textContent="";$("loginbutton").disabled=true;
+ try{const email=$("email").value.trim(),password=$("password").value;
+  const {error}=await auth.auth.signInWithPassword({email,password});$("password").value="";
+  if(error)throw Error("Innlogging mislyktes. Kontroller e-post og passord.");
+  await checkAuth();
+ }catch(ex){$("loginerror").textContent=ex.message||"Ukjent feil";}finally{$("loginbutton").disabled=false;}
+});
+$("logout").onclick=async()=>{await auth.auth.signOut();snapshot=null;prices=[];showLogin();};
+for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
+ selected=t.dataset.tab;
+ document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===selected));
+ document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
+ if(selected==="priser")loadPrices();
+};
+function fillBlock(blocks){
+ $("statblocks").textContent=blocks.length;
+ $("blocksummary").innerHTML=blocks.length?blocks.map(b=>'<p><strong>'+esc(resLabel[b.target]||b.target)+'</strong> · '+esc(hh(b.start))+'–'+esc(hh(b.end))+'<br><span class="small">'+esc(b.label)+'</span></p>').join(""):'<div class="empty">Ingen aktive sperringer denne dagen</div>';
+ $("activeblocks").innerHTML=blocks.length?blocks.map(b=>'<div class="row spaced" style="border-bottom:1px solid var(--line);padding:10px 0"><div><strong>'+esc(resLabel[b.target]||b.target)+'</strong><br><span class="small">'+esc(b.dateFrom)+' – '+esc(b.dateTo)+' kl. '+esc(hh(b.start))+'–'+esc(hh(b.end))+' · '+esc(b.label)+'</span></div><button class="btn warning" data-unblock="'+esc(b.id)+'">Fjern sperring</button></div>').join(""):'<div class="empty">Ingen aktive sperringer</div>';
+ for(const b of $("activeblocks").querySelectorAll("[data-unblock]"))b.onclick=async()=>{
+  if(!confirm("Vil du oppheve denne sperringen? Tidene kan da bli tilgjengelige for kunder."))return;
+  b.disabled=true;try{await api("/admin/unblock","POST",{id:b.dataset.unblock});await loadDay();}catch(e){$("globalerror").textContent=e.message;}finally{b.disabled=false;}
+ };
+}
+function render(){
+ if(!snapshot)return;const bookings=Array.isArray(snapshot.bookings)?snapshot.bookings:[],blocks=Array.isArray(snapshot.blocks)?snapshot.blocks:[];
+ $("statconfirmed").textContent=bookings.filter(x=>x.status==="confirmed").length;
+ $("statheld").textContent=bookings.filter(x=>["held","payment_pending"].includes(x.status)).length;
+ $("statcancelled").textContent=bookings.filter(x=>x.status==="cancelled").length;
+ $("daycaption").textContent=$("day").value;
+ const sorted=bookings.slice().sort((a,b)=>a.start-b.start);
+ $("bookings").innerHTML=table(["Tid","Aktivitet","Ordre","Status"],sorted.map(b=>'<tr><td>'+esc(hh(b.start))+'–'+esc(hh(b.end))+'</td><td>'+esc(resLabel[b.resource]||b.resource)+'</td><td>'+esc(b.order||"–")+'</td><td><span class="pill '+esc(b.status)+'">'+esc(statLabel[b.status]||b.status)+'</span></td></tr>'));
+ fillBlock(blocks);
+ const gates=snapshot.releaseGates||{};
+ const blocked=Object.entries(gates).filter(([k,v])=>v===false).map(([k])=>k);
+ $("healthsummary").innerHTML='<span class="pill">'+(blocked.length?"Krever kontroll":"Booking 2.0 integrasjon kontrollert")+'</span><p>Ingen Nuki-koder vises i adminpanelet. En booking merket bekreftet betyr ikke alene at adgangskoden er levert.</p>'+(blocked.length?'<p class="error">Åpne kontrollpunkter: '+esc(blocked.join(", "))+'</p>':'');
+ const members=Array.isArray(snapshot.membershipRequests)?snapshot.membershipRequests:[];
+ $("pendingmembers").innerHTML=table(["Kunde","Gruppe","Handling","Status"],members.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(groupLabel[x.group]||x.group)+'</td><td>'+esc(x.action)+'</td><td><span class="pill held">'+esc(x.state)+'</span></td></tr>'));
+ renderHours();
+}
+async function loadDay(){
+ if(!approved)return;
+ $("globalerror").textContent="";$("updated").textContent="Henter fra Booking 2.0 …";
+ try{const result=await api("/admin/snapshot?date="+encodeURIComponent($("day").value));
+ snapshot=result;render();$("updated").textContent="Oppdatert "+new Date().toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});}
+ catch(e){$("updated").textContent="Ikke oppdatert";$("globalerror").textContent=e.message;}
+}
+$("refresh").onclick=loadDay;$("day").onchange=()=>{setBlockDates();loadDay();};
+function setBlockDates(){$("blockfrom").value=$("day").value;$("blockto").value=$("day").value}
+$("blockform").onsubmit=async e=>{
+ e.preventDefault();if(!approved)return;
+ const body={target:$("blocktarget").value,dateFrom:$("blockfrom").value,dateTo:$("blockto").value,
+ start:asMin($("blockstart").value),end:asMin($("blockend").value),label:$("blocklabel").value.trim()};
+ if(body.dateTo<body.dateFrom||body.end<=body.start||body.start%30||body.end%30){msg("blockmsg","Velg gyldige datoer og klokkeslett i halvtimer.");return;}
+ if(!confirm("Vil du stenge "+(resLabel[body.target]||body.target)+" fra "+body.dateFrom+" til "+body.dateTo+" kl. "+hh(body.start)+"–"+hh(body.end)+"?"))return;
+ $("blockbutton").disabled=true;try{await api("/admin/block","POST",body);msg("blockmsg","Sperring lagret i Booking 2.0.",true);await loadDay();}
+ catch(ex){msg("blockmsg",ex.message)}finally{$("blockbutton").disabled=false;}
+};
+function durationOptions(){const vals=$("priceresource").value==="venue"?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
+ const old=Number($("priceminutes").value);$("priceminutes").innerHTML=vals.map(v=>'<option value="'+v+'">'+(v/60===1?"1 time":v%60===0?v/60+" timer":v+" minutter")+'</option>').join("");
+ if(vals.includes(old))$("priceminutes").value=old;}
+function renderPrice(){
+ const group=$("pricegroup").value,resource=$("priceresource").value;
+ const rows=prices.filter(p=>p.group===group&&p.resource===resource).sort((a,b)=>a.minutes-b.minutes);
+ $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status"],rows.map(p=>'<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td><td><span class="pill '+(p.active?"confirmed":"held")+'">'+(p.active?"Markert aktiv":"Utkast")+'</span></td></tr>'));
+ const chosen=prices.find(p=>p.group===group&&p.resource===resource&&p.minutes===Number($("priceminutes").value));
+ if(chosen)$("pricenok").value=(Number(chosen.ore)/100).toFixed(2);
+}
+async function loadPrices(){
+ if(!approved)return;try{const r=await api("/admin/price-matrix");prices=Array.isArray(r.prices)?r.prices:[];renderPrice();}
+ catch(e){$("pricetable").textContent=e.message;}
+}
+$("priceresource").onchange=()=>{durationOptions();renderPrice()};
+$("pricegroup").onchange=renderPrice;$("priceminutes").onchange=renderPrice;
+$("priceform").onsubmit=async e=>{
+ e.preventDefault();const ore=Math.round(Number($("pricenok").value)*100);
+ if(!Number.isInteger(ore)||ore<0){msg("pricemsg","Ugyldig pris.");return;}
+ if(!confirm("Lagre kun prisutkast? Dette endrer IKKE betalingen i Quickbutik."))return;
+ $("pricebutton").disabled=true;try{await api("/admin/price-draft","POST",{resource:$("priceresource").value,group:$("pricegroup").value,minutes:Number($("priceminutes").value),ore,note:$("pricenote").value});
+ msg("pricemsg","Prisutkast lagret. Quickbutik er IKKE oppdatert – kundene betaler fortsatt gjeldende kassepris.",true);await loadPrices();}
+ catch(e){msg("pricemsg",e.message);}finally{$("pricebutton").disabled=false;}
+};
+$("memberform").onsubmit=async e=>{
+ e.preventDefault();const body={email:$("memberemail").value.trim(),group:$("membergroup").value,action:$("memberaction").value};
+ if(!confirm("Registrer gruppeforespørsel for "+body.email+"? Den får IKKE virkning i Quickbutik før ekstern synk."))return;
+ $("memberbutton").disabled=true;try{await api("/admin/member-request","POST",body);msg("membermsg","Forespørsel er lagret og venter på oppdatering i Quickbutik.",true);await loadDay();}
+ catch(e){msg("membermsg",e.message)}finally{$("memberbutton").disabled=false;}
+};
+function renderHours(){
+ if(!snapshot)return;const list=Array.isArray(snapshot.openingHours)?snapshot.openingHours:[];
+ const r=$("hourresource").value,d=Number($("hourweekday").value);
+ const specific=list.find(x=>x.resource===r&&x.weekday===d);
+ if(specific){$("houropens").value=hh(specific.opens);$("hourcloses").value=hh(specific.closes);$("houractive").checked=specific.active;}
+ $("hourstable").innerHTML=table(["Dag","Fra","Til","Status"],list.filter(x=>x.resource===r).sort((a,b)=>a.weekday-b.weekday).map(x=>'<tr><td>'+esc(dayNames[x.weekday-1])+'</td><td>'+esc(hh(x.opens))+'</td><td>'+esc(hh(x.closes))+'</td><td>'+esc(x.active?"Åpent":"Stengt")+'</td></tr>'));
+}
+$("hourresource").onchange=renderHours;$("hourweekday").onchange=renderHours;
+$("hoursform").onsubmit=async e=>{
+ e.preventDefault();const p={resource:$("hourresource").value,weekday:Number($("hourweekday").value),opens:asMin($("houropens").value),closes:asMin($("hourcloses").value),active:$("houractive").checked};
+ if(p.closes<=p.opens||p.opens%30||p.closes%30){msg("hourmsg","Ugyldige klokkeslett.");return;}
+ if(!confirm("Oppdatere åpningstiden for "+resLabel[p.resource]+", "+dayNames[p.weekday-1]+"?"))return;
+ $("hourbutton").disabled=true;try{await api("/admin/hours","POST",p);msg("hourmsg","Åpningstiden er lagret i Booking 2.0.",true);await loadDay();}
+ catch(e){msg("hourmsg",e.message)}finally{$("hourbutton").disabled=false;}
+};
+$("day").value=localDate();setBlockDates();durationOptions();checkAuth();
+</script></body></html>
