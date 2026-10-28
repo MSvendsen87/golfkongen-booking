@@ -5,9 +5,9 @@
 </style>
 <h2>Velg aktivitet og tidspunkt</h2><p>Én HYZR discgolf-simulator, to dartbaner og mulighet for å leie hele lokalet.</p>
 <div class="gk-v2-row">
- <article class="gk-v2-card active"><div class="gk-v2-img"><img alt="HYZR simulator – illustrasjonsbilde" loading="lazy" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtYBf1wAgBLYUhxCid8ZCqB7_DylPwkq9UZNPXdyqefA&amp;s" onerror="this.onerror=null;this.src='https://cdn.quickbutik.com/images/52923d/products/69a80a5d59521.jpeg'"><span class="gk-v2-badge">Fra 1. november</span></div><h3>HYZR discgolf-simulator</h3><small>Pris gjelder per simulator, ikke per spiller.</small></article>
- <article class="gk-v2-card"><div class="gk-v2-img"><img alt="DartCounter dart – illustrasjonsbilde" loading="lazy" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5ZRwXpqUENDOFVCAGhMrT4tjoYJga6j0LRRarr2WjRA&amp;s=10" onerror="this.onerror=null;this.src='https://cdn.quickbutik.com/images/52923d/products/69a7f6c0e47c4.jpeg'"></div><h3>DartCounter</h3><small>Automatisk registrering med tellering ved tavla.</small></article>
- <article class="gk-v2-card"><div class="gk-v2-img" style="display:grid;place-items:center;color:#dbbd7a;font-size:60px">♛</div><h3>Hele lokalet</h3><small>HYZR, begge dartbaner og møtebord.</small></article>
+ <article class="gk-v2-card active"><div class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/69a80a5d59521.jpeg"><span class="gk-v2-badge">Fra 1. november</span></div><h3>HYZR discgolf-simulator</h3><small>Pris gjelder per simulator, ikke per spiller.</small></article>
+ <article class="gk-v2-card"><div class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/69a7f6c0e47c4.jpeg"></div><h3>DartCounter</h3><small>Automatisk registrering med tellering ved tavla.</small></article>
+ <article class="gk-v2-card"><div class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6a118911924ff.png"></div><h3>Hele lokalet</h3><small>HYZR, begge dartbaner og møtebord.</small></article>
 </div>
 <div class="gk-v2-note">Kun innesko eller sokker ved HYZR og dart. Utesko er ikke tillatt. Før en reservasjon må du akseptere bookingvilkårene.</div>
 <form id="gk-v2-form" class="gk-v2-form">
@@ -16,6 +16,7 @@
  <label>Varighet<select id="gk-v2-duration"><option value="30">30 min</option><option value="60" selected>1 time</option><option value="90">1,5 time</option><option value="120">2 timer</option><option value="150">2,5 timer</option><option value="180">3 timer</option><option value="210">3,5 timer</option><option value="240">4 timer</option></select></label>
 </form>
 <div id="gk-v2-dartsets" class="gk-v2-note" hidden style="margin:12px 0">
+  <img alt="Pilsett til leie for dart" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/69a809729c0b5.webp" width="80" height="80" style="float:left;width:80px;height:80px;object-fit:cover;border-radius:10px;margin:0 14px 8px 0">
   <label for="gk-v2-sets-qty" style="font-weight:700;display:block;margin-bottom:6px">Leie av dartpiler – 25 kr per sett (valgfritt)</label>
   <select id="gk-v2-sets-qty" style="width:100%;max-width:240px;padding:10px;border:1px solid #547960;border-radius:10px;background:#18271e;color:#f6f8f4">
     <option value="0">Ingen pilsett – 0 kr</option>
@@ -26,7 +27,7 @@
     <option value="5">5 pilsett – 125 kr</option>
     <option value="6">6 pilsett – 150 kr</option>
   </select>
-  <p style="margin:7px 0 0;font-size:13px">Legges til kun hvis du velger pilsett. Gjelder dart og leie av hele lokalet.</p>
+  <p style="margin:7px 0 0;font-size:13px">Legges til kun hvis du velger pilsett. Gjelder dart og leie av hele lokalet.</p><div style="clear:both"></div>
 </div>
 <h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Endelig pris og eventuelle medlemsrabatter vises i kassen. Endelig pris vises i kassen.</div>
 <div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div>
@@ -43,7 +44,7 @@
 <button id="gk-v2-pilot-confirm" type="button" disabled>Kontroller betalt ordre og send adgangskode</button>
 <p id="gk-v2-pilot-status" role="status">Logg inn for å starte.</p>
 </section>
-<div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling av dart og simulator senest 30 minutter før start. Hele lokalet senest 24 timer før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler (ikke toalett).</p><label>E-postadresse for bookingbekreftelse<input id="gk-v2-email" type="email" autocomplete="email" inputmode="email" required placeholder="deg@eksempel.no" style="width:100%"></label><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener noreferrer" style="color:#f2d18a;text-decoration:underline">bookingvilkårene</a>.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
+<div id="gk-v2-terms" class="gk-v2-modal" hidden><div class="gk-v2-dialog"><h2>Vilkår for booking og bruk</h2><p>Booking via GolfKongen er personlig. Avbestilling av dart og simulator senest 30 minutter før start. Hele lokalet senest 24 timer før start. Den som booker, er ansvarlig for sine gjester. Følg sikkerhetsregler, 16-årsgrense for selvstendig bruk, og forbud mot alkohol. Bruk kun innesko eller sokker ved simulator og dart. Lokalet er kameraovervåket etter gjeldende regler.</p><label>E-postadresse for bookingbekreftelse<input id="gk-v2-email" type="email" autocomplete="email" inputmode="email" required placeholder="deg@eksempel.no" style="width:100%"></label><label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener noreferrer" style="color:#f2d18a;text-decoration:underline">bookingvilkårene</a>.</label><div class="gk-v2-actions"><button id="gk-v2-cancel" type="button">Lukk</button><button id="gk-v2-submit" type="button" disabled>Godta og fortsett</button></div></div></div>
 <script>
 (function(){'use strict';
 // Public read-only endpoint requires genuine staging API. Keep checkout disabled until Quickbutik adapter is verified.
