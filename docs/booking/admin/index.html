@@ -96,11 +96,18 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <section data-panel="grupper" class="hidden"><div class="grid"><div class="card"><h2>Legg til eller fjern fra rabattgruppe</h2>
 <p class="small">Registrer en forespørsel. Medlemskapet er <strong>ikke aktivt</strong> før tilhørende kundegruppe er oppdatert og kontrollert i Quickbutik.</p>
 <form id="memberform"><div class="field"><label for="memberemail">Kundens e-post</label><input type="email" id="memberemail" required autocomplete="off"></div>
+<div class="field"><label for="membername">Navn (valgfritt)</label><input type="text" id="membername" autocomplete="off" maxlength="120" placeholder="Fornavn Etternavn"><p class="small">Navnet lagres i Booking 2.0, ikke i Quickbutiks kunderegister.</p></div>
 <div class="fields"><div class="field"><label for="membergroup">Gruppe</label><select id="membergroup"><option value="betalt_medlem">Betalt discmedlem + dartklubb</option><option value="frisbee_dart">Frisbee + dart</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div>
 <div class="field"><label for="memberaction">Handling</label><select id="memberaction"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Midlertidig stopp</option></select></div></div>
 <button class="btn secondary" type="submit" id="memberbutton">Registrer forespørsel</button><p id="membermsg" role="status" class="status"></p></form></div>
 <div class="card"><h2>Forespørsler som venter</h2><div class="tablewrap" id="pendingmembers"><div class="empty">Laster …</div></div>
-<p class="small">Det finnes foreløpig ikke en verifisert ett-klikks synkronisering mot Quickbutiks kundegrupper.</p></div></div></section>
+<p class="small">Det finnes foreløpig ikke en verifisert ett-klikks synkronisering mot Quickbutiks kundegrupper.</p></div></div>
+<div class="card" style="margin-top:18px"><div class="row spaced"><h2>Medlemsoversikt – registrerte kundegrupper</h2><span id="membercount" class="pill">Henter …</span></div>
+<p class="small">Bygger på gruppeendringer som er manuelt bekreftet i Quickbutik. Rediger navn her uten å endre kundegruppen i butikken. En kunde kan ha flere grupper.</p>
+<div class="fields"><div class="field"><label for="membersearch">Søk etter navn eller e-post</label><input type="search" id="membersearch" placeholder="Søk i medlemslisten"></div>
+<div class="field"><label for="memberfilter">Vis gruppe</label><select id="memberfilter"><option value="">Alle grupper</option><option value="betalt_medlem">Betalt medlem</option><option value="frisbee_dart">Frisbee og dart</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div></div>
+<div id="memberdirectory" class="tablewrap"><div class="empty">Henter medlemsliste …</div></div>
+<p id="directorymsg" class="status" role="status"></p></div></section>
 <section data-panel="apning" class="hidden"><div class="grid"><div class="card"><h2>Åpningstider</h2><p class="small">Her endres Booking 2.0-reglene. Endringer som kolliderer med bekreftede bookinger blir avvist.</p>
 <form id="hoursform"><div class="fields"><div class="field"><label for="hourresource">Aktivitet</label><select id="hourresource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></div>
 <div class="field"><label for="hourweekday">Ukedag</label><select id="hourweekday"><option value="1">Mandag</option><option value="2">Tirsdag</option><option value="3">Onsdag</option><option value="4">Torsdag</option><option value="5">Fredag</option><option value="6">Lørdag</option><option value="7">Søndag</option></select></div></div>
@@ -126,7 +133,7 @@ const resLabel={hyzr:"HYZR simulator",dart_a:"Dartbane A",dart_b:"Dartbane B",ve
 const statLabel={confirmed:"Bekreftet",held:"Reservert",payment_pending:"Betaling pågår",cancelled:"Avbestilt",expired:"Utløpt"};
 const groupLabel={public:"Ordinær",betalt_medlem:"Medlem",ansatte:"Ansatte",teamgolfkongen:"Team GolfKongen",frisbee_dart:"Frisbee og dart",ambassador:"Ambassadør",frisbeeklubb:"Frisbeeklubb",dartklubb:"Dartklubb"};
 const dayNames=["Mandag","Tirsdag","Onsdag","Torsdag","Fredag","Lørdag","Søndag"];
-let snapshot=null,prices=[],approved=false,selected="oversikt";
+let snapshot=null,prices=[],memberDirectory=[],approved=false,selected="oversikt";
 function msg(id,text,good=false){const el=$(id);el.textContent=text;el.className=good?"status oknote":"status error";}
 function table(columns,rows){return rows.length?"<table><thead><tr>"+columns.map(x=>"<th>"+esc(x)+"</th>").join("")+"</tr></thead><tbody>"+rows.join("")+"</tbody></table>":'<div class="empty">Ingen oppføringer</div>';}
 async function api(path,method="GET",payload){
@@ -138,7 +145,7 @@ async function api(path,method="GET",payload){
  if(!r.ok||j.ok!==true)throw Error("Endringen ble ikke utført ("+esc(j.code||r.status)+"). Kontroller eksisterende bookinger og prøv ikke flere ganger før status er sjekket.");
  return j;
 }
-function showLogin(){approved=false;$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
+function showLogin(){approved=false;memberDirectory=[];$("app").classList.add("hidden");$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
 function showApp(email){approved=true;$("login").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("who").textContent=email;$("backendstatus").textContent="Innlogget · Beskyttet API";}
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
@@ -159,6 +166,7 @@ for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===selected));
  document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
  if(selected==="priser")Promise.all([loadPrices(),priceControls.loadAll()]);
+ if(selected==="grupper")loadMembers();
 };
 function fillBlock(blocks){
  $("statblocks").textContent=blocks.length;
@@ -245,7 +253,7 @@ function render(){
   const request=members.find(x=>x.id===b.dataset.verifyMember);if(!request)return;
   if(!confirm("Har du selv kontrollert at "+request.email+" er "+(request.action==="add"?"lagt til i":request.action==="remove"?"fjernet fra":"sperret i")+" riktig Quickbutik-kundegruppe? Dette utfører INGEN Quickbutik-endring."))return;
   b.disabled=true;
-  try{await api("/admin/member-verify","POST",{id:request.id,confirmQuickbutik:true});await loadDay()}
+  try{await api("/admin/member-verify","POST",{id:request.id,confirmQuickbutik:true});await Promise.all([loadDay(),loadMembers()])}
   catch(e){alert("Kunne ikke registrere manuell bekreftelse: "+e.message);b.disabled=false}
  };
  renderHours();
@@ -257,7 +265,7 @@ async function loadDay(){
  snapshot=result;render();$("updated").textContent="Oppdatert "+new Date().toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});}
  catch(e){$("updated").textContent="Ikke oppdatert";$("globalerror").textContent=e.message;}
 }
-$("refresh").onclick=()=>{loadDay();loadAgenda()};$("day").onchange=()=>{setBlockDates();loadDay();};
+$("refresh").onclick=()=>{loadDay();loadAgenda();if(selected==="grupper")loadMembers()};$("day").onchange=()=>{setBlockDates();loadDay();};
 function setBlockDates(){$("blockfrom").value=$("day").value;$("blockto").value=$("day").value}
 $("blockform").onsubmit=async e=>{
  e.preventDefault();if(!approved)return;
@@ -292,11 +300,48 @@ $("priceform").onsubmit=async e=>{
  msg("pricemsg","Utkast lagret separat. Gjeldende Booking 2.0-pris og Quickbutik er uendret.",true);await priceControls.loadDrafts();}
  catch(e){msg("pricemsg",e.message);}finally{$("pricebutton").disabled=false;}
 };
+function renderMemberDirectory(){
+ const term=$("membersearch").value.trim().toLowerCase(),group=$("memberfilter").value;
+ const rows=memberDirectory.filter(x=>(!group||x.group===group)&&
+   (!term||(String(x.name||"")+" "+x.email).toLowerCase().includes(term)));
+ const emails=new Set(memberDirectory.map(x=>x.email));
+ $("membercount").textContent=emails.size+" personer · "+memberDirectory.length+" gruppemedlemskap";
+ $("memberdirectory").innerHTML=table(["Navn (redigerbart)","E-post","Gruppe","Lagre"],
+   rows.map(x=>'<tr><td><input type="text" maxlength="120" autocomplete="off" aria-label="Navn til '+esc(x.email)+'" data-name-email="'+esc(x.email)+'" value="'+esc(x.name||"")+'" placeholder="Legg inn navn"></td>'+
+   '<td>'+esc(x.email)+'</td><td>'+esc(groupLabel[x.group]||x.group)+'</td>'+
+   '<td><button type="button" class="btn outline" data-save-name="'+esc(x.email)+'">Lagre</button></td></tr>'));
+ for(const b of $("memberdirectory").querySelectorAll("[data-save-name]"))b.onclick=async()=>{
+   const email=b.dataset.saveName;
+   const input=Array.from($("memberdirectory").querySelectorAll("[data-name-email]")).find(n=>n.dataset.nameEmail===email);
+   const name=String(input?.value||"").trim();
+   if(name.length<2||name.length>120){msg("directorymsg","Navnet må ha mellom 2 og 120 tegn.");return;}
+   b.disabled=true;
+   try{await api("/admin/member-name","POST",{email,name});msg("directorymsg","Navn lagret i medlemsoversikten.",true);await loadMembers();}
+   catch(e){msg("directorymsg",e.message);}finally{b.disabled=false;}
+ };
+}
+async function loadMembers(){
+ if(!approved)return;
+ try{const d=await api("/admin/members");
+ memberDirectory=Array.isArray(d.members)?d.members:[];
+ renderMemberDirectory();}
+ catch(e){$("memberdirectory").textContent="Kunne ikke hente medlemsoversikt: "+e.message;}
+}
+$("membersearch").oninput=renderMemberDirectory;
+$("memberfilter").onchange=renderMemberDirectory;
 $("memberform").onsubmit=async e=>{
  e.preventDefault();const body={email:$("memberemail").value.trim(),group:$("membergroup").value,action:$("memberaction").value};
+ const name=$("membername").value.trim();
+ if(name&&name.length<2){msg("membermsg","Skriv fullt navn eller la feltet være tomt.");return;}
  if(!confirm("Registrer gruppeforespørsel for "+body.email+"? Den får IKKE virkning i Quickbutik før ekstern synk."))return;
- $("memberbutton").disabled=true;try{await api("/admin/member-request","POST",body);msg("membermsg","Forespørsel er lagret og venter på oppdatering i Quickbutik.",true);await loadDay();}
- catch(e){msg("membermsg",e.message)}finally{$("memberbutton").disabled=false;}
+ $("memberbutton").disabled=true;
+ try{
+  await api("/admin/member-request","POST",body);
+  if(name){await api("/admin/member-name","POST",{email:body.email,name});}
+  msg("membermsg","Forespørselen er lagret"+(name?" med navn":"")+". Gruppeendringen venter på bekreftelse i Quickbutik.",true);
+  await Promise.all([loadDay(),loadMembers()]);
+ }catch(e){msg("membermsg","Kontroller oppført forespørsel før du prøver igjen. "+e.message);}
+ finally{$("memberbutton").disabled=false;}
 };
 function renderHours(){
  if(!snapshot)return;const list=Array.isArray(snapshot.openingHours)?snapshot.openingHours:[];
