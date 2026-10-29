@@ -10,6 +10,14 @@ test('staff 98% wins over club membership and club-night line is not duplicated'
  assert(r.lines.includes('98% rabatt på booking av disc simulator'));assert(r.lines.includes('98% rabatt på booking av dart'));
  assert(!r.lines.includes('Disc simulator til 120 kr timen'));assert.equal(r.lines.filter(x=>x==='Tilgang til klubbkvelder').length,1);
 });
+test('edited staff club text replaces other groups regardless of membership order',()=>{
+ const api=instance();api.CONFIG.groups.ansatte.clubNightText='Tilgang til klubbkvelder (TEST)';
+ for(const groups of [['ansatte','dartklubb'],['dartklubb','ansatte'],['frisbeeklubb','dartklubb','ansatte']]){
+  const lines=Array.from(api.resolveBenefits(groups).lines);
+  assert(lines.includes('Tilgang til klubbkvelder (TEST)'));assert(!lines.includes('Tilgang til klubbkvelder'));
+ }
+ assert(api.resolveBenefits(['dartklubb']).lines.includes('Tilgang til klubbkvelder'));
+});
 test('admin text edit is fetched; legacy member retains only original disc benefit',async()=>{
  const api=instance(async()=>({ok:true,json:async()=>({ok:true,schemaVersion:1,groups:{ansatte:{label:'Ansatte',retailText:'Oppdatert butikktekst',discBookingText:'98% simulator',dartBookingText:'98% dart',clubNightText:'Klubbkveld',retailPriority:100,discBookingPriority:100,dartBookingPriority:100}}})}));
  await api.refreshBenefitTexts();assert(api.resolveBenefits(['ansatte']).lines.includes('Oppdatert butikktekst'));
