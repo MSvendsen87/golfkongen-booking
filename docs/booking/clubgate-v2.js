@@ -364,7 +364,7 @@
   event.preventDefault();if(busy||!auth)return;busy=true;
   try{const {error}=await auth.auth.verifyOtp({email:verifiedEmail,token:$("gk-club-code").value.trim(),type:"email"});if(error)throw error;await check();if(!who)throw Error("not_member");await refresh();}
   catch(_){message("Koden kunne ikke bekreftes, eller medlemskapet er ikke aktivt. Kontroller e-post og kode.");}
-  finally{busy=false;}
+  finally{busy=false;render();}
  };
  $("gk-club-logout").onclick=async()=>{if(auth)await auth.auth.signOut();who=null;$("gk-club-verify").hidden=true;await check();};
  async function add(product,variant,sku){
