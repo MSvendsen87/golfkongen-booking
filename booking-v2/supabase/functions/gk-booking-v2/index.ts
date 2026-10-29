@@ -1,3 +1,19 @@
+async function memberSheet(action:string,input:Record<string,unknown>={}){
+ const secret=Deno.env.get("GK2_MEMBER_SHEET_SECRET")||"";
+ if(secret.length<32)return {ok:false,code:"member_sheet_setup_required"};
+ const timestamp=String(Math.floor(Date.now()/1000));
+ const payload=JSON.stringify({...input,action});
+ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ const bytes=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(timestamp+"."+payload));
+ const signature=Array.from(new Uint8Array(bytes)).map(x=>x.toString(16).padStart(2,"0")).join("");
+ const response=await fetch("https://script.google.com/macros/s/AKfycbyyYoTy-hpG9n2ZUqhoNgvkTW5r6vyGdD_OLTxNpOp_dvDPNeLg3IN42fL8uAPV5xTX/exec",{
+  method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({timestamp,payload,signature}),
+  redirect:"follow",signal:AbortSignal.timeout(25000)});
+ if(!response.ok)return {ok:false,code:"member_sheet_unavailable"};
+ const result=await response.json();
+ if(result?.ok!==true)return {ok:false,code:["source_changed","duplicate_email","invalid_member","forbidden","busy"].includes(result?.code)?result.code:"member_sheet_setup_required"};
+ return result;
+}
 import {auditDayCatalog,PRODUCT_IDS} from "./checkout-preflight.mjs";
 import {auditQuickbutikOrder,loadV1OrderRecord} from "./quickbutik-order-audit.mjs";
 import {checkV1BookingPayment} from "./quickbutik-v1-payment-check.mjs";
@@ -671,11 +687,19 @@ Deno.serve(async (req:Request)=>{
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/sheet-members"){
+   const result=await memberSheet("list");
+   return reply(result,result.ok?200:503,origin);
+  }
   if(req.method==="GET"&&path==="/admin/benefits")
    return reply({ok:true,benefits:await rpc("gk2_admin_benefits_list",{p_actor:user.email})},200,origin);
   if(req.method!=="POST")return err("method_not_allowed",405,origin);
   const b=await body(req);
   const a=user.email;
+  if(path==="/admin/sheet-member-save"){
+   const result=await memberSheet("save",{email:b.email,name:b.name,groups:b.groups,active:b.active,version:b.version});
+   return reply(result,result.ok?200:409,origin);
+  }
   if(path==="/admin/benefit-save"){
    if(typeof b.key!=="string"||typeof b.updated!=="string"||!Number.isFinite(Date.parse(b.updated))||!b.config||typeof b.config!=="object")
     return err("invalid_benefit_config",400,origin);
