@@ -87,12 +87,12 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <button class="btn" type="submit" id="blockbutton">Lagre sperring</button><p id="blockmsg" class="status" role="status"></p></form></div>
 <div class="card"><h2>Sperringer på valgt dag</h2><div id="activeblocks"><div class="empty">Laster …</div></div><p class="small">Fjern sperringer med knappen under den aktuelle regelen. Gjennomførte bookinger forblir uendret.</p></div>
 </div></section>
-<section data-panel="priser" class="hidden"><div class="grid"><div class="card"><h2>Prismatrise</h2><p class="small">Viser registrerte priser i Booking 2.0. Quickbutik kan ha en annen aktiv pris i kassen.</p>
+<section data-panel="priser" class="hidden"><div class="grid"><div class="card"><h2>Prismatrise</h2><p class="small">Visningspriser til intern kontroll. Godkjente endringer her endrer ikke priser eller betaling i nettbutikken.</p>
 <div class="fields"><div class="field"><label for="priceresource">Aktivitet</label><select id="priceresource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></div><div class="field"><label for="pricegroup">Prisgruppe</label><select id="pricegroup"><option value="public">Ordinær pris</option><option value="betalt_medlem">Betalt medlem</option><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee og dart</option><option value="ambassador">Ambassadør</option><option value="frisbeeklubb">Frisbeeklubb</option><option value="dartklubb">Dartklubb</option></select></div></div><div id="pricetable" class="tablewrap"></div></div>
-<div class="card"><h2>Registrer prisutkast</h2><div class="notice"><strong>Ikke en publiseringsknapp.</strong> Utkastet endrer ikke kundens betaling. Quickbutik-gruppeprisene må fremdeles oppdateres og kontrolleres.</div>
-<form id="priceform"><div class="fields"><div class="field"><label for="priceminutes">Varighet (minutter)</label><select id="priceminutes"></select></div><div class="field"><label for="pricenok">Foreslått pris (kr)</label><input type="number" id="pricenok" min="0" max="100000" step="0.01" required></div></div>
+<div class="card"><h2>Lagre pris i admin</h2><div class="notice"><strong>Kun visning i admin.</strong> Prisen lagres og godkjennes i prismatrisen. Nettbutikkens priser og kundens betaling endres ikke.</div>
+<form id="priceform"><div class="fields"><div class="field"><label for="priceminutes">Varighet (minutter)</label><select id="priceminutes"></select></div><div class="field"><label for="pricenok">Visningspris (kr)</label><input type="number" id="pricenok" min="0" max="100000" step="0.01" required></div></div>
 <div class="field"><label for="pricenote">Notat</label><input id="pricenote" maxlength="500" placeholder="Hvorfor endres prisen?"></div>
-<button class="btn secondary" type="submit" id="pricebutton">Lagre utkast – ikke aktiv pris</button><p id="pricemsg" role="status" class="status"></p></form></div></div></section>
+<button class="btn secondary" type="submit" id="pricebutton">Lagre og godkjenn i admin</button><p id="pricemsg" role="status" class="status"></p></form></div></div></section>
 <section data-panel="grupper" class="hidden"><div class="grid"><div class="card"><h2>Legg til eller fjern fra rabattgruppe</h2>
 <p class="small">Registrer en forespørsel. Medlemskapet er <strong>ikke aktivt</strong> før tilhørende kundegruppe er oppdatert og kontrollert i Quickbutik.</p>
 <form id="memberform"><div class="field"><label for="memberemail">Kundens e-post</label><input type="email" id="memberemail" required autocomplete="off"></div>
@@ -119,7 +119,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 </section></main><footer>GolfKongen · Sportskongen AS · Booking 2.0 · Kun autorisert administrasjon · Alle endringer journalføres av Booking 2.0</footer>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.58.0";
-import {setupPriceControls} from "./price-controls.mjs";
+import {setupPriceControls} from "./price-controls.mjs?v=20261029-display1";
 const SB="https://eadgdcimcmfyuicizboo.supabase.co";
 const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
 const API=SB+"/functions/v1/gk-booking-v2";
@@ -282,7 +282,7 @@ function durationOptions(){const vals=$("priceresource").value==="venue"?Array.f
 function renderPrice(){
  const group=$("pricegroup").value,resource=$("priceresource").value;
  const rows=prices.filter(p=>p.group===group&&p.resource===resource).sort((a,b)=>a.minutes-b.minutes);
- $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status","Manuell kontroll"],rows.map(p=>{
+ $("pricetable").innerHTML=table(["Tid","Pris i admin","Status","Manuell kontroll"],rows.map(p=>{
   const key=[p.resource,p.group,p.minutes].join("|");
   const stamp=p.manualCheckedAt?new Date(p.manualCheckedAt).toLocaleString("nb-NO"):"";
   return '<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td>'+
@@ -312,9 +312,14 @@ $("pricegroup").onchange=renderPrice;$("priceminutes").onchange=renderPrice;
 $("priceform").onsubmit=async e=>{
  e.preventDefault();const ore=Math.round(Number($("pricenok").value)*100);
  if(!Number.isInteger(ore)||ore<0){msg("pricemsg","Ugyldig pris.");return;}
- if(!confirm("Lagre kun prisutkast? Dette endrer IKKE betalingen i Quickbutik."))return;
- $("pricebutton").disabled=true;try{await api("/admin/price-draft","POST",{resource:$("priceresource").value,group:$("pricegroup").value,minutes:Number($("priceminutes").value),ore,note:$("pricenote").value});
- msg("pricemsg","Utkast lagret separat. Gjeldende Booking 2.0-pris og Quickbutik er uendret.",true);await priceControls.loadDrafts();}
+ if(!confirm("Lagre og godkjenne denne visningsprisen i admin? Nettbutikkens priser og betaling endres ikke."))return;
+ $("pricebutton").disabled=true;try{
+  const target={resource:$("priceresource").value,group:$("pricegroup").value,minutes:Number($("priceminutes").value)};
+  const draft=await api("/admin/price-draft","POST",{...target,ore,note:$("pricenote").value});
+  const result=await api("/admin/price-display-approve","POST",{...target,ore,updated:draft.draftUpdated});
+  if(result.approved!==true)throw Error("Visningsprisen ble ikke godkjent.");
+  msg("pricemsg","Visningspris lagret og godkjent. Nettbutikkens priser og betaling er uendret.",true);
+  await Promise.all([loadPrices(),priceControls.loadDrafts()]);}
  catch(e){msg("pricemsg",e.message);}finally{$("pricebutton").disabled=false;}
 };
 function renderMemberDirectory(){
@@ -375,6 +380,6 @@ $("hoursform").onsubmit=async e=>{
  $("hourbutton").disabled=true;try{await api("/admin/hours","POST",p);msg("hourmsg","Åpningstiden er lagret i Booking 2.0.",true);await loadDay();}
  catch(e){msg("hourmsg",e.message)}finally{$("hourbutton").disabled=false;}
 };
-const priceControls=setupPriceControls({api,approved:()=>approved,esc,table,resLabel,groupLabel});
+const priceControls=setupPriceControls({api,approved:()=>approved,esc,table,resLabel,groupLabel,onPricesChanged:loadPrices});
 $("day").value=localDate();setBlockDates();durationOptions();checkAuth();
 </script></body></html>

@@ -1,7 +1,7 @@
 /* GolfKongen Booking 2.0 Admin: safe Quickbutik reconciliation.
  * Import from same-origin Booking 2.0 admin. No API secrets or customer keys.
  */
-export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel}) {
+export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel,onPricesChanged=()=>{}}) {
  const panel=document.querySelector('[data-panel="priser"]');
  if(!panel)throw Error("price_panel_missing");
  panel.insertAdjacentHTML("beforeend",'<div class="card">'+
@@ -22,8 +22,8 @@ export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel})
   '<div class="divider"></div><h2>Kontroller ordinærpris</h2><p class="small">Velg aktivitet og varighet i prismatrisen over. Denne kontrollen leser kun grunnprisen på produktet, ikke alle tidsvarianter eller spesialpris i en innlogget kasse.</p>'+
   '<div class="row"><button id="qbCompare" class="btn outline" type="button">Sjekk ordinærpris</button><span class="small" id="qbCompareResult" role="status"></span></div>'+
   '<p class="small" style="margin-top:14px">Kundegruppepriser endres i Quickbutik → Kunder → Kundegrupper → Spesifikke priser. Merk aldri en rabatt som kontrollert bare fordi den er registrert her.</p>'+
-  '</div><div class="card"><h2>Prisutkast – påvirker ikke kundene</h2>'+
-  '<p class="small">Planlagte prisendringer lagres helt separat fra aktive bookingpriser. Quickbutik og allerede betalte bookinger forblir uendret.</p>'+
+  '</div><div class="card"><h2>Lagrede prisutkast</h2>'+
+  '<p class="small">Godkjenn et lagret utkast for å oppdatere visningsprisen i prismatrisen. Dette endrer ikke nettbutikkens priser eller kundens betaling.</p>'+
   '<div class="tablewrap" id="draftQueue"></div></div>');
  const el=id=>panel.querySelector("#"+id);
  const fmt=v=>(Number(v)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2})+" kr";
@@ -76,9 +76,20 @@ export function setupPriceControls({api,approved,esc,table,resLabel,groupLabel})
     const key=[d.resource,d.group,d.minutes].join("|");
     return '<tr><td>'+esc(resLabel[d.resource]||d.resource)+'</td><td>'+esc(groupLabel[d.group]||d.group)+
     '</td><td>'+esc(d.minutes)+' min</td><td>'+esc(fmt(d.currentOre))+'</td><td><strong>'+esc(fmt(d.proposedOre))+
-    '</strong></td><td><span class="pill '+(d.stale?"error":"held")+'">'+(d.stale?"Grunnpris endret":"Ikke aktiv")+'</span></td>'+
-    '<td><button type="button" class="btn warning" data-remove="'+esc(key)+'">Slett utkast</button></td></tr>';
+    '</strong></td><td><span class="pill '+(d.stale?"error":"held")+'">'+(d.stale?"Visningspris endret":"Venter på godkjenning")+'</span></td>'+
+    '<td><button type="button" class="btn" data-approve-display="'+esc(key)+'" '+(d.stale?'disabled ':'')+'>Godkjenn i prismatrisen</button> <button type="button" class="btn warning" data-remove="'+esc(key)+'">Slett utkast</button></td></tr>';
    }));
+   for(const b of el("draftQueue").querySelectorAll("[data-approve-display]"))b.onclick=async()=>{
+    const d=drafts.find(x=>[x.resource,x.group,x.minutes].join("|")===b.dataset.approveDisplay);
+    if(!d||d.stale)return;
+    b.disabled=true;
+    try{
+     const result=await api("/admin/price-display-approve","POST",{
+      resource:d.resource,group:d.group,minutes:d.minutes,ore:d.proposedOre,updated:d.updated});
+     if(result.approved!==true)throw Error("Godkjenningen ble ikke lagret.");
+     await Promise.all([loadDrafts(),onPricesChanged()]);
+    }catch(e){alert("Kunne ikke godkjenne visningsprisen: "+e.message);b.disabled=false;}
+   };
    for(const b of el("draftQueue").querySelectorAll("[data-remove]"))b.onclick=async()=>{
     const d=drafts.find(x=>[x.resource,x.group,x.minutes].join("|")===b.dataset.remove);
     if(!d||!confirm("Slette utkastet? Aktive priser påvirkes ikke."))return;
