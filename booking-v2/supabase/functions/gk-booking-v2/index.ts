@@ -1,3 +1,4 @@
+import {verifyClubPaidOrder} from "./club-paid-order.mjs";
 import {setupClubEngine,clubOrderLines} from "./club-engine.mjs";
 async function memberSheet(action:string,input:Record<string,unknown>={}){
  const secret=Deno.env.get("GK2_MEMBER_SHEET_SECRET")||"";
@@ -129,25 +130,9 @@ Deno.serve(async (req:Request)=>{
         }
         if(verified.eventType!=="order.new"||!["1","2"].includes(String(rawOrder.status)))
           return err("club_payment_not_verified",409,origin);
-        if(v1NokToOre(rawOrder.shipping_amount)!==0||
-           (rawOrder.refunds!==null&&rawOrder.refunds!==undefined&&
-           !(Array.isArray(rawOrder.refunds)&&rawOrder.refunds.length===0)&&
-           !(typeof rawOrder.refunds==="object"&&!Array.isArray(rawOrder.refunds)&&
-             Object.keys(rawOrder.refunds).length===0)))
-          return err("club_shipping_or_refund_requires_review",409,origin);
-        const paid=rawOrder.total_pay_amount!==null&&rawOrder.total_pay_amount!==undefined?
-          v1NokToOre(rawOrder.total_pay_amount):
-          (()=>{
-            const gross=v1NokToOre(rawOrder.total_amount),discount=v1NokToOre(rawOrder.discount_amount);
-            return gross===null||discount===null||discount>gross?null:gross-discount;
-          })();
-        if(rawOrder.total_pay_amount!==undefined&&rawOrder.total_pay_amount!==null&&
-           rawOrder.total_amount!==undefined&&rawOrder.discount_amount!==undefined){
-          const gross=v1NokToOre(rawOrder.total_amount),discount=v1NokToOre(rawOrder.discount_amount);
-          if(gross===null||discount===null||discount>gross||gross-discount!==paid)
-            return err("club_payment_amount_fields_conflict",409,origin);
-        }
-        if(paid!==clubInput.expectedOre)return err("club_total_paid_mismatch",409,origin);
+        const checked=verifyClubPaidOrder(rawOrder,verified.orderNumber);
+        if(!checked.ok)return err(checked.code,409,origin);
+        const paid=checked.paidOre;
         const result=await rpc("gk2_match_club_paid_order",{
           p_order:verified.orderNumber,p_sku:sku,
           p_email:verifiedV1CustomerEmail(rawOrder),
@@ -759,3 +744,4 @@ Deno.serve(async (req:Request)=>{
   return err("request_rejected_or_service_unavailable",400,origin);
  }
 });
+

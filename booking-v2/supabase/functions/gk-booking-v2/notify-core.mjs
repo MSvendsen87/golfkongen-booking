@@ -50,8 +50,11 @@ export function accessMail(b,code){
  if(!validKeypadCode(code))throw Error("invalid_code");
  const clean=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
   .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
- const rows=[["Aktivitet",b.title],["Dato",b.day],
-  ["Tid",b.from+"–"+b.to],["Ordre",b.orderId]];
+ const displayDate=new Intl.DateTimeFormat("nb-NO",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Oslo"}).format(new Date(b.day+"T12:00:00Z"));
+ const shared=b.sharedCode===true,codeLabel=shared?"FELLES DØRKODE DENNE KVELDEN":"DIN PERSONLIGE DØRKODE",windowText=shared?"Koden fungerer 18:45–22:15.":"Kan brukes fra 10 minutter før bookingstart til bookingslutt.";
+ const price=Number.isSafeInteger(b.paidOre)&&b.paidOre>=0?new Intl.NumberFormat("nb-NO",{style:"currency",currency:"NOK"}).format(b.paidOre/100):null;
+ const rows=[["Aktivitet",b.title],["Dato",displayDate],
+  ["Tid",b.from+"–"+b.to],...(price?[["Betalt",price]]:[]),["Pilsett",b.rentalSets?String(b.rentalSets)+" stk.":"Ikke valgt"],["Ordre",b.orderId]];
  const html="<div style='margin:0;padding:30px 14px;background:#f3f5f0;font-family:Arial,sans-serif;color:#16221a'>"+
   "<div style='max-width:570px;margin:auto;background:white;border-radius:18px;overflow:hidden'>"+
   "<div style='padding:26px 30px;background:#1e3b29;color:#fff'>"+
@@ -63,19 +66,20 @@ export function accessMail(b,code){
   rows.map(([name,value])=>"<tr><td style='padding:9px 0;border-bottom:1px solid #e4e9e2;color:#526256'>"+clean(name)+
   "</td><td style='padding:9px 0;text-align:right;border-bottom:1px solid #e4e9e2;font-weight:600'>"+clean(value)+"</td></tr>").join("")+
   "</table><div style='background:#eff5eb;border:1px solid #cddbc8;border-radius:12px;text-align:center;margin:25px 0;padding:20px'>"+
-  "<div style='font-size:13px;color:#516a54'>DIN PERSONLIGE DØRKODE</div>"+
+  "<div style='font-size:13px;color:#516a54'>"+codeLabel+"</div>"+
   "<div style='font-size:37px;letter-spacing:8px;font-weight:800;color:#1e3b29;margin:9px 0'>"+clean(code)+"</div>"+
-  "<div style='font-size:13px'>Kan brukes fra <b>10 minutter før</b> bookingstart til bookingslutt.</div>"+
+  "<div style='font-size:13px'>"+windowText+"</div>"+
   "</div><p>Tast alle seks sifrene på Nuki Keypad ved inngangsdøren. Du trenger ikke Nuki-appen.</p>"+
-  "<p>Bruk kun innesko eller sokker ved dart og simulator. Den som booker er ansvarlig for sine gjester.</p>"+
+  (shared?"<p>Koden gjelder bare denne klubbkvelden. Ikke del den med andre.</p>":"")+"<p>Bruk kun innesko eller sokker ved dart og simulator. Den som booker er ansvarlig for sine gjester.</p>"+
   "<p style='color:#516a54;font-size:13px'>Spørsmål? Svar på e-posten eller skriv til post@golfkongen.no.</p>"+
   "</div></div></div>";
  return {to:[b.email],subject:"Booking bekreftet – GolfKongen – "+b.day,
  text:["Hei!","",
  "Bookingen hos GolfKongen er bekreftet.",
- b.title+" – "+b.day+" kl. "+b.from+"–"+b.to,
+ b.title+" – "+displayDate+" kl. "+b.from+"–"+b.to,
+ ...(price?["Betalt: "+price]:[]),"Pilsett: "+(b.rentalSets?b.rentalSets+" stk.":"Ikke valgt"),
  "Dørkode: "+code,"",
- "Koden kan brukes fra 10 minutter før bookingstart og til bookingslutt.",
+ windowText,...(shared?["Koden gjelder bare denne klubbkvelden. Ikke del den med andre."]:[]),
  "Tast alle seks sifrene på Nuki Keypad ved inngangsdøren.",
  "Du trenger ikke Nuki-appen.",
  "Bruk innesko eller sokker ved dart og simulator.","",
@@ -102,3 +106,4 @@ export async function decryptAccessCode(encoded,keyBase64){
  return code;
 }
 export {createKeypadCode};
+

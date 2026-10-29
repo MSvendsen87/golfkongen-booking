@@ -34,12 +34,14 @@ test('ambiguous product or wrong price fails closed',async()=>{
  await assert.rejects(()=>clubVariant(sku,{apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({id:1507,sku:'GK2-CLUB',variants:[{id:1,sku,price:49,qty:0,hidden:true}]})})}));
 });
 
+
 test('one Nuki code is shared, read back before email, and retained until last cancellation',async()=>{
  const {setupClubEngine}=await import('../supabase/functions/gk-booking-v2/club-engine.mjs');
  const originalFetch=globalThis.fetch,originalDeno=globalThis.Deno;
  globalThis.Deno={env:{get:k=>k==='GK2_CODE_KEY_BASE64'?Buffer.alloc(32,7).toString('base64'):'test-only'}};
  let access=null,active=2,auths=[],creates=0,deletes=0;const mails=[],sent=new Set(),day='2026-11-05';
  const rpc=async(name,p={})=>{
+  if(name==='gk2_club_push_claim')return null;
   if(name==='gk2_club_worker')return true;
   if(name==='gk2_club_maintenance')return {leases:[],dates:[day]};
   if(name==='gk2_club_access_get'){
@@ -63,9 +65,10 @@ test('one Nuki code is shared, read back before email, and retained until last c
   const engine=setupClubEngine({rpc});
   await engine.process();assert.equal(creates,1);assert.equal(mails.length,0);
   await engine.process();assert.equal(mails.length,2);assert.equal(creates,1);
-  const codes=mails.map(x=>x.text.match(/denne kvelden: ([1-9]{6})/)[1]);assert.equal(codes[0],codes[1]);
+  const codes=mails.map(x=>x.text.match(/Dørkode: ([1-9]{6})/)[1]);assert.equal(codes[0],codes[1]);
   assert.equal(auths[0].allowedFromDate,'2026-11-05T17:45:00.000Z');assert.equal(auths[0].allowedUntilDate,'2026-11-05T21:15:00.000Z');
   active=1;await engine.process();assert.equal(deletes,0);
   active=0;await engine.process();assert.equal(deletes,1);await engine.process();assert.equal(access.status,'revoked');
  }finally{globalThis.fetch=originalFetch;globalThis.Deno=originalDeno;}
 });
+

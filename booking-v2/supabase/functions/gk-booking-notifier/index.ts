@@ -1,3 +1,4 @@
+import {v1NokToOre} from "./quickbutik-v1-payment-check.mjs";
 // GolfKongen Booking2: ONLY consumes events emitted by the atomic
 // confirmed-paid reservation transaction. No Quickbutik order ingestion.
 // No independent Nuki webhooks, no browser access to reservation details.
@@ -66,12 +67,50 @@ async function complete(event,state,external=null,detail=null){
  return rpc("gk2_complete_confirmed_notification",{
   p_event:event.eventId,p_state:state,p_external_id:external,p_error:detail});
 }
+// Only use the authoritative, paid Quickbutik order to identify the customer.
+// Identity is never derived from client-side hold details. Pushover falls back
+// to the verified booking email if the order API is temporarily unavailable.
+async function verifiedQuickbutikCustomerName(booking,details=false){
+ const apiKey=env("GK2_QUICKBUTIK_API_KEY").trim();
+ if(apiKey.length<20)throw Error("quickbutik_customer_lookup_not_configured");
+ if(!/^[1-9][0-9]{0,8}$/.test(String(booking.orderId||"")))
+  throw Error("quickbutik_customer_lookup_bad_order");
+ const response=await fetch("https://api.quickbutik.com/v1/orders?order_id="+
+  encodeURIComponent(booking.orderId)+"&include_details=true&limit=2",{
+  method:"GET",headers:{"Authorization":"Basic "+btoa(apiKey+":"+apiKey),
+  "Accept":"application/json"},redirect:"error",signal:AbortSignal.timeout(10000)});
+ if(!response.ok)throw Error("quickbutik_customer_lookup_http_"+response.status);
+ const body=await response.json();
+ const rows=Array.isArray(body)?body:
+  Array.isArray(body?.orders)?body.orders:Array.isArray(body?.data)?body.data:
+  body?.order_id!==undefined?[body]:[];
+ const matching=rows.filter(x=>String(x?.order_id)===String(booking.orderId));
+ if(matching.length!==1||!["1","2"].includes(String(matching[0].status)))
+  throw Error("quickbutik_customer_lookup_not_paid");
+ const customer=matching[0].customer||{};
+ const customerEmail=String(customer.email||customer.email_address||
+  matching[0].customer_email||"").trim().toLowerCase();
+ if(customerEmail!==String(booking.email).trim().toLowerCase())
+  throw Error("quickbutik_customer_lookup_email_mismatch");
+ const s=customer.shipping_details||{},b=customer.billing_details||{};
+ const first=String(s.firstname||b.firstname||customer.firstname||"").trim();
+ const last=String(s.lastname||b.lastname||customer.lastname||"").trim();
+ const name=(first+" "+last).replace(/[\r\n\t\x00-\x1f\x7f]+/g," ")
+  .replace(/\s+/g," ").trim().slice(0,100);
+ if(!name)throw Error("quickbutik_customer_lookup_no_name");
+ if(details){const o=matching[0],paidOre=v1NokToOre(o.total_pay_amount);return {name,...(paidOre!==null?{paidOre}:{})};}
+ return name;
+}
 async function pushover(booking,{cancelled=false}={}){
+ let customerName=String(booking.email||"");
+ try{customerName=await verifiedQuickbutikCustomerName(booking)}
+ catch(e){console.warn("booking customer name fallback:",shortError(e))}
  const msg=cancelled?{
   title:"GolfKongen – booking avbestilt",
   message:[booking.title,booking.day,booking.from+"–"+booking.to,
+   "Kunde: "+customerName,
    "Ordre: "+booking.orderId,"Referanse: "+booking.bookingId.slice(0,8)].join("\\n")
- }:bookedNotice(booking);
+ }:bookedNotice({...booking,customerName});
  // The existing legacy GolfKongen notification app delivers to the
  // "Golfkongen" group. Resolve/validate the same group for Booking 2.0.
  // Do not fall back to the owner account, which has no registered devices.
@@ -93,6 +132,7 @@ async function pushover(booking,{cancelled=false}={}){
  return String(data.request);
 }
 async function resendCode(booking,code){
+ try{booking={...booking,...await verifiedQuickbutikCustomerName(booking,true)}}catch(_){/* confirmed booking remains deliverable during temporary order API failure */}
  const payload={from:"GolfKongen <booking@golfkongen.no>",
   ...accessMail(booking,code)};
  const r=await fetch("https://api.resend.com/emails",{
@@ -526,3 +566,4 @@ Deno.serve(async req=>{
  return json({ok:results.every(r=>!r.error),processed:results.length,
   results:results.map(r=>({status:r.sent||r.error}))},results.some(r=>r.error)?207:200);
 });
+

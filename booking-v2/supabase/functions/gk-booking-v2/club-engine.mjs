@@ -1,3 +1,5 @@
+import {accessMail} from "./notify-core.mjs";
+import {resolveGolfkongenDeliveryGroup} from "./pushover-group.mjs";
 import {createKeypadCode,encryptAccessCode,decryptAccessCode} from "./notify-core.mjs";
 import {osloDateTimeToUtc} from "./booking-access.mjs";
 const env=k=>Deno.env.get(k)||"";
@@ -29,7 +31,7 @@ export async function clubVariant(sku,{apiKey,action="open",fetchImpl=fetch}={})
  let v=await read();
  if(action==="close"&&!v)return {absent:true};
  if(!v){await call("PUT",[{product_id:1507,variants:{add:[{sku,price:50,qty:0,preorder:0,
-  variant_option1_name:"Klubbkveld",variant_option1_value:sku.slice(9,19)+" 19:00–22:00 · "+sku.slice(-8)}]}}]);v=await read();}
+  variant_option1_name:"Klubbkveld",variant_option1_value:sku.slice(9,19)+" 19:00–22:00"}]}}]);v=await read();}
  if(!v||Number(v.price)!==50||!Number.isSafeInteger(Number(v.id)))throw Error("club_variant_price_or_id");
  const id=Number(v.id),qty=Number(v.qty??v.stock),hidden=[true,1,"1"].includes(v.hidden);
  if(action==="open"&&!hidden&&qty===1)return {id,sku};
@@ -52,8 +54,8 @@ export function setupClubEngine({db,rpc,memberSheet,reply,err,origins}){
   const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(env("GK2_MEMBER_SHEET_SECRET")),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))).map(x=>x.toString(16).padStart(2,"0")).join("");
  }
- async function send(to,subject,text,id){
-  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:"Bearer "+env("RESEND_API_KEY"),"Content-Type":"application/json","Idempotency-Key":id},body:JSON.stringify({from:"GolfKongen <booking@golfkongen.no>",reply_to:"post@golfkongen.no",to:[to],subject,text}),signal:AbortSignal.timeout(15000)});
+ async function send(to,subject,text,id,html){
+  const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:"Bearer "+env("RESEND_API_KEY"),"Content-Type":"application/json","Idempotency-Key":id},body:JSON.stringify({from:"GolfKongen <booking@golfkongen.no>",reply_to:"post@golfkongen.no",to:[to],subject,text,...(html?{html}:{})}),signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw Error("club_email_"+response.status);
   const result=await response.json();if(!result.id)throw Error("club_email_no_receipt");return result.id;
  }
@@ -108,9 +110,27 @@ export function setupClubEngine({db,rpc,memberSheet,reply,err,origins}){
    "gk2-club-access-alert-"+day+"-"+a.generation);
   await rpc("gk2_club_access_alerted",{p_day:day,p_generation:a.generation,p_receipt:receipt});
  }
+ async function pushBookings(){
+  let sent=0,failed=0;
+  for(let i=0;i<10;i++){
+   const item=await rpc("gk2_club_push_claim",{});if(!item)break;
+   let receipt=null;
+   try{
+    const token=env("GK2_PUSHOVER_APP_TOKEN").trim(),target=await resolveGolfkongenDeliveryGroup(token);
+    if(!target.ok)throw Error("club_push_group_unavailable");
+    const response=await fetch("https://api.pushover.net/1/messages.json",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+     body:new URLSearchParams({token,user:target.key,title:"Klubbkveld – ny betalt påmelding",message:"Ordre #"+item.orderId+"\n"+item.date+" kl. 19:00–22:00\n"+item.email+"\nBetalt: "+(item.priceOre/100)+" kr\nPilsett: "+item.rentalSets,priority:"0"}),signal:AbortSignal.timeout(15000)});
+    const result=await response.json();if(!response.ok||result.status!==1||!result.request)throw Error("club_push_not_accepted");
+    receipt=String(result.request);sent++;
+   }catch(_){failed++;}
+   await rpc("gk2_club_push_finish",{p_hold:item.id,p_receipt:receipt});
+  }
+  return {sent,failed};
+ }
  async function process(){
   const worker=crypto.randomUUID();if(!await rpc("gk2_club_worker",{p_key:worker}))return {busy:true};
   try {
+  const pushes=await pushBookings();
   const work=await rpc("gk2_club_maintenance",{});let closed=0,mailed=0;
   for(const item of work.leases.slice(0,10)){
    await clubVariant(item.sku,{apiKey:env("GK2_QUICKBUTIK_API_KEY"),action:"close"});
@@ -153,14 +173,14 @@ export function setupClubEngine({db,rpc,memberSheet,reply,err,origins}){
    state=await rpc("gk2_club_access_get",{p_day:day,p_ciphertext:null});
    if(!state.active)continue;
    for(const recipient of state.recipients.slice(0,10)){
-    const id=await send(recipient.email,"Klubbkveld "+day+" – bekreftet påmelding og adgangskode",
-     "Påmeldingen din til klubbkveld i Lyngdal Dartklubb er bekreftet.\n\nDato: "+day+"\nKlubbkveld: 19:00–22:00\nOrdre: "+recipient.orderId+"\n\nFelles adgangskode denne kvelden: "+code+"\nKoden fungerer 18:45–22:15.\nKoden gjelder bare denne klubbkvelden. Ikke del den med andre.\n\nVelkommen!\nGolfKongen",
-     "gk2-club-access-"+recipient.id+"-"+a.generation);
+    const mail=accessMail({email:recipient.email,title:"Klubbkveld – Lyngdal Dartklubb",day,from:"19:00",to:"22:00",orderId:recipient.orderId,sharedCode:true,paidOre:recipient.priceOre,rentalSets:recipient.rentalSets||0},code);
+    const id=await send(recipient.email,mail.subject,mail.text,"gk2-club-access-"+recipient.id+"-"+a.generation,mail.html);
     await rpc("gk2_club_access_emailed",{p_hold:recipient.id,p_receipt:id});mailed++;
    }
   }
-  return {closed,mailed};
+  return {closed,mailed,pushes};
   } finally {await rpc("gk2_club_worker",{p_key:worker,p_release:true});}
  }
  return {handle,process};
 }
+
