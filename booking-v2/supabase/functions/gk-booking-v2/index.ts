@@ -681,6 +681,16 @@ Deno.serve(async (req:Request)=>{
    return reply({ok:true,id:await rpc("gk2_admin_block",{p_actor:a,p_target:b.target,p_from:b.dateFrom,p_to:b.dateTo,p_start:b.start,p_end:b.end,p_label:b.label,p_weekdays:Array.isArray(b.weekdays)?b.weekdays:null})},200,origin);
   }
   if(path==="/admin/unblock")return reply({ok:true,changed:await rpc("gk2_admin_unblock",{p_actor:a,p_id:b.id})},200,origin);
+  if(path==="/admin/manual-price-check"){
+   if(!["hyzr","dart_a","dart_b","venue"].includes(b.resource)
+    ||!["public","betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(b.group)
+    ||!Number.isInteger(b.minutes)||!Number.isInteger(b.ore)||b.ore<0
+    ||typeof b.updated!=="string"||!Number.isFinite(Date.parse(b.updated))
+    ||typeof b.checked!=="boolean")return err("invalid_price_check",400,origin);
+   return reply({ok:true,saved:await rpc("gk2_admin_manual_price_check",{
+    p_actor:a,p_resource:b.resource,p_group:b.group,p_minutes:b.minutes,
+    p_ore:b.ore,p_updated:b.updated,p_checked:b.checked})},200,origin);
+  }
   if(path==="/admin/group-price-stage"){
     if(!["hyzr","dart_a","dart_b","venue"].includes(b.resource)
       ||!["betalt_medlem","teamgolfkongen","frisbee_dart","ansatte","ambassador","frisbeeklubb","dartklubb"].includes(b.group)
