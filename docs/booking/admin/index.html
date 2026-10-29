@@ -119,6 +119,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 </section></main><footer>GolfKongen · Sportskongen AS · Booking 2.0 · Kun autorisert administrasjon · Alle endringer journalføres av Booking 2.0</footer>
 <script type="module">
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import {setupBenefitEditor} from "./benefit-controls.mjs?v=20261029a";
 import {setupPriceControls} from "./price-controls.mjs?v=20261029-unified2";
 const SB="https://eadgdcimcmfyuicizboo.supabase.co";
 const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
@@ -166,7 +167,7 @@ for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===selected));
  document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
  if(selected==="priser")Promise.all([loadPrices(),priceControls.loadAll()]);
- if(selected==="grupper")loadMembers();
+ if(selected==="grupper")Promise.all([loadMembers(),benefitEditor.load()]);
 };
 function fillBlock(blocks){
  $("statblocks").textContent=blocks.length;
@@ -265,7 +266,7 @@ async function loadDay(){
  snapshot=result;render();$("updated").textContent="Oppdatert "+new Date().toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});}
  catch(e){$("updated").textContent="Ikke oppdatert";$("globalerror").textContent=e.message;}
 }
-$("refresh").onclick=()=>{loadDay();loadAgenda();if(selected==="grupper")loadMembers()};$("day").onchange=()=>{setBlockDates();loadDay();};
+$("refresh").onclick=()=>{loadDay();loadAgenda();if(selected==="grupper")Promise.all([loadMembers(),benefitEditor.load()])};$("day").onchange=()=>{setBlockDates();loadDay();};
 function setBlockDates(){$("blockfrom").value=$("day").value;$("blockto").value=$("day").value}
 $("blockform").onsubmit=async e=>{
  e.preventDefault();if(!approved)return;
@@ -382,5 +383,6 @@ $("hoursform").onsubmit=async e=>{
  catch(e){msg("hourmsg",e.message)}finally{$("hourbutton").disabled=false;}
 };
 const priceControls=setupPriceControls({api,approved:()=>approved,esc,table,resLabel,groupLabel,onPricesChanged:reloadPriceViews});
+const benefitEditor=setupBenefitEditor({api,approved:()=>approved,esc});
 $("day").value=localDate();setBlockDates();durationOptions();checkAuth();
 </script></body></html>

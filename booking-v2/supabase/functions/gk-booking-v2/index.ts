@@ -365,6 +365,8 @@ Deno.serve(async (req:Request)=>{
    // calculation, existing 7 customer groups and authoritative paid order retrieval.
    return err("not_enabled_until_payment_and_safety_tests",503,origin);
   }
+  if(req.method==="GET"&&path==="/member-benefits")
+   return reply({ok:true,...await rpc("gk2_member_benefit_config",{})},200,origin);
   if(!path.startsWith("/admin/"))return err("not_found",404,origin);
   const user=await admin(req);if(!user)return err("admin_forbidden",403,origin);
   // A payment pilot is ONLY available after a verified owner login.
@@ -669,9 +671,17 @@ Deno.serve(async (req:Request)=>{
     const prices=await rpc("gk2_admin_price_matrix",{p_actor:user.email});
     return reply({ok:true,prices,quickbutikUpdated:false,bookingEnabled:false},200,origin);
   }
+  if(req.method==="GET"&&path==="/admin/benefits")
+   return reply({ok:true,benefits:await rpc("gk2_admin_benefits_list",{p_actor:user.email})},200,origin);
   if(req.method!=="POST")return err("method_not_allowed",405,origin);
   const b=await body(req);
   const a=user.email;
+  if(path==="/admin/benefit-save"){
+   if(typeof b.key!=="string"||typeof b.updated!=="string"||!Number.isFinite(Date.parse(b.updated))||!b.config||typeof b.config!=="object")
+    return err("invalid_benefit_config",400,origin);
+   return reply({ok:true,benefit:await rpc("gk2_admin_benefit_save",{
+    p_actor:a,p_key:b.key,p_config:b.config,p_updated:b.updated}),textOnly:true},200,origin);
+  }
   if(path==="/admin/hours"){
    if(!["hyzr","dart_a","dart_b","venue"].includes(b.resource)||![1,2,3,4,5,6,7].includes(Number(b.weekday))||!Number.isInteger(b.opens)||!Number.isInteger(b.closes)||typeof b.active!=="boolean")return err("invalid_hours",400,origin);
    return reply({ok:true,changed:await rpc("gk2_admin_set_hours",{p_actor:a,p_resource:b.resource,p_weekday:b.weekday,p_opens:b.opens,p_closes:b.closes,p_active:b.active})},200,origin);
