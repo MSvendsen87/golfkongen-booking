@@ -1,3 +1,4 @@
+import {setupClubEngine,clubOrderLines} from "./club-engine.mjs";
 async function memberSheet(action:string,input:Record<string,unknown>={}){
  const secret=Deno.env.get("GK2_MEMBER_SHEET_SECRET")||"";
  if(secret.length<32)return {ok:false,code:"member_sheet_setup_required"};
@@ -69,6 +70,7 @@ async function dispatchConfirmedBookingOutbox(){
  if(!response.ok)throw Error("notification_dispatch_http_"+response.status);
 }
 function liveCheckoutConfigured(){return Deno.env.get("GK2_WEBHOOK_ENABLED")==="true"&&Boolean(Deno.env.get("GK2_QUICKBUTIK_API_KEY"))}
+const clubEngine=setupClubEngine({db,rpc,memberSheet,reply,err,origins});
 Deno.serve(async (req:Request)=>{
  const origin=req.headers.get("origin")||"";
  if(origin&&!origins.has(origin))return err("forbidden_origin",403,origin);
@@ -98,44 +100,7 @@ Deno.serve(async (req:Request)=>{
    const safeBlocks=Array.isArray(result.blocks)?result.blocks.map((x:Record<string,unknown>)=>({target:x.target,start_min:x.start_min,end_min:x.end_min})):[];
    return reply({ok:true,day:result.day,claims:result.claims||[],blocks:safeBlocks,openingHoursByResource:result.openingHoursByResource||{},bookingEnabled:result.bookingEnabled===true},200,origin);
   }
-  if(req.method==="POST"&&path==="/club/hold"){
-    // No browser-supplied customer ID. Membership identity is the verified Supabase Auth user UUID.
-    if(!origin||!origins.has(origin))return err("forbidden_checkout_origin",403,origin);
-    if(Deno.env.get("GK2_CHECKOUT_ENABLED")!=="true"||
-       Deno.env.get("GK2_CLUB_CHECKOUT_ENABLED")!=="true")
-      return err("club_checkout_not_enabled",503,origin);
-    if(await rpc("gk2_release_gates_satisfied",{})!==true)
-      return err("checkout_release_gates_closed",503,origin);
-    const token=req.headers.get("authorization")||"";
-    if(!token.startsWith("Bearer ")||token.length>7000)return err("login_required",401,origin);
-    const {data:authData,error:authError}=await db.auth.getUser(token.slice(7));
-    const member=authData?.user;
-    if(authError||!member?.id||!member.email_confirmed_at)return err("verified_login_required",401,origin);
-    const input=await body(req);
-    const key=String(input?.idempotencyKey||""),day=String(input?.date||"");
-    const seats=Number(input?.seats);
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)
-       ||!validDate(day)||new Date(day+"T12:00:00Z").getUTCDay()!==4
-       ||!Number.isInteger(seats)||seats<1||seats>10||input?.acceptedTerms!==true)
-       return err("invalid_club_request",400,origin);
-    // Hold alone does not create payment confirmation or door authorization.
-    const held=await rpc("gk2_hold_club_seats",{
-      p_key:key,p_day:day,p_customer:member.id,p_seats:seats
-    });
-    if(!member.email||held.status!=="held"||!held.id)return err("club_hold_not_active",409,origin);
-    await rpc("gk2_bind_club_verified_email",{
-      p_enrolment:held.id,p_customer:member.id,p_email:member.email
-    });
-    return reply({ok:true,holdId:held.id,status:held.status,remaining:held.remaining,
-      paymentReady:false,checkoutEnabled:false},200,origin);
-  }
-  if(req.method==="GET"&&path==="/club/availability"){
-    const day=u.searchParams.get("date")||"";
-    if(!validDate(day)||new Date(day+"T12:00:00Z").getUTCDay()!==4)
-      return err("not_club_thursday",400,origin);
-    const status=await rpc("gk2_club_day_status",{p_day:day});
-    return reply({ok:true,...status,checkoutEnabled:false},200,origin);
-  }
+  if(path.startsWith("/club/"))return await clubEngine.handle(req,path,u,origin);
   if(req.method==="GET"&&path==="/webhook/quickbutik"){
     // Independent webhook gate: signed paid order callbacks must be testable
     // before public checkout release gates are marked verified.
@@ -152,14 +117,11 @@ Deno.serve(async (req:Request)=>{
       const clubLines=(Array.isArray(rawOrder.products)?rawOrder.products:[])
         .filter((x:Record<string,unknown>)=>Number(x?.product_id)===1507);
       if(clubLines.length){
-        if(clubLines.length!==1||rawOrder.products.length!==1||rawOrder.currency!=="NOK"||
+        if(clubLines.length!==1||rawOrder.currency!=="NOK"||
            String(rawOrder.order_id)!==verified.orderNumber)
           return err("invalid_club_order_lines",409,origin);
-        const clubLine=clubLines[0];
-        const quantity=Number(clubLine.qty),sku=String(clubLine.sku||"");
-        if(!Number.isSafeInteger(quantity)||quantity<1||quantity>10||
-           !/^GK2-CLUB-[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(sku))
-          return err("invalid_club_variant",409,origin);
+        let clubInput;try{clubInput=clubOrderLines(rawOrder)}catch(_){return err("invalid_club_order_lines",409,origin)}
+        const quantity=clubInput.seats,sku=clubInput.sku;
         if(verified.eventType==="order.cancelled"){
           if(String(rawOrder.status)!=="-1")return err("club_cancellation_not_verified",409,origin);
           const cancelled=await rpc("gk2_cancel_club_by_order",{p_order:verified.orderNumber});
@@ -185,7 +147,7 @@ Deno.serve(async (req:Request)=>{
           if(gross===null||discount===null||discount>gross||gross-discount!==paid)
             return err("club_payment_amount_fields_conflict",409,origin);
         }
-        if(paid!==quantity*5000)return err("club_total_paid_mismatch",409,origin);
+        if(paid!==clubInput.expectedOre)return err("club_total_paid_mismatch",409,origin);
         const result=await rpc("gk2_match_club_paid_order",{
           p_order:verified.orderNumber,p_sku:sku,
           p_email:verifiedV1CustomerEmail(rawOrder),
@@ -193,7 +155,7 @@ Deno.serve(async (req:Request)=>{
         });
         if(result?.matched!==true)return err("club_paid_unallocated_manual_review",409,origin);
         return reply({ok:true,clubStatus:"confirmed",alreadyConfirmed:result.alreadyConfirmed===true,
-          doorCodeQueued:false,manualAccessRequired:true},200,origin);
+          sharedDoorCodeQueued:true,codeActiveFrom:"18:45",codeActiveUntil:"22:15"},200,origin);
       }
       if(verified.eventType==="order.cancelled"){
         // Never revoke door access solely from a caller's order number.
@@ -292,7 +254,9 @@ Deno.serve(async (req:Request)=>{
         })}catch(_other){/* leave lease for owner to inspect */}
       }
     }
-    return reply({ok:true,processed:leases.length,closed,failed},200,origin);
+    let clubMaintenance;
+    try{clubMaintenance=await clubEngine.process()}catch(_){clubMaintenance={failed:true};failed++;}
+    return reply({ok:true,processed:leases.length,closed,failed,clubMaintenance},200,origin);
   }
   if(req.method==="POST"&&path==="/hold"){
     // Unified old-style Quickbutik checkout: DB hold -> product variant cart.
