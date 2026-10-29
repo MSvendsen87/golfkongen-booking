@@ -63,7 +63,7 @@
 <h2 id="gk-v2-terms-title">Bookingvilkår – GolfKongen</h2>
 <p class="gk-v2-terms-lead">Disse vilkårene gjelder HYZR-simulator, dartbaner og leie av hele lokalet. Du kan lese og godta dem her før du går til betaling.</p>
 <div class="gk-v2-terms-content" tabindex="0" aria-label="Vilkår for booking og bruk">
-<section><h3>1. Booking og betaling</h3><p>Bookingen gjelder valgt aktivitet, dato og tidspunkt. Betaling skjer i Quickbutik-kassen, med mindre annet er særskilt avtalt. Du må oppgi riktig e-postadresse og videreformidle reglene til øvrige deltakere. Endelig pris og eventuelle medlemsrabatter vises i kassen.</p></section>
+<section><h3>1. Booking og betaling</h3><p>Bookingen gjelder valgt aktivitet, dato og tidspunkt. Betaling skjer trygt i GolfKongens kasse, med mindre annet er særskilt avtalt. Du må oppgi riktig e-postadresse og videreformidle reglene til øvrige deltakere. Endelig pris og eventuelle medlemsrabatter vises i kassen.</p></section>
 <section><h3>2. Avbestilling og ombooking</h3><ul><li><strong>HYZR og dart:</strong> Senest 30 minutter før start.</li><li><strong>Hele lokalet:</strong> Senest 24 timer før start.</li><li>Ved senere avbestilling eller uteblivelse gis normalt ikke refusjon, med mindre loven krever det eller GolfKongen godkjenner unntak. Kontakt <a href="mailto:post@golfkongen.no">post@golfkongen.no</a> ved behov.</li></ul><p>Booking av en fritidsaktivitet til et bestemt tidspunkt omfattes normalt ikke av den lovbestemte 14 dagers angreretten.</p></section>
 <section><h3>3. Aldersgrense og sikkerhet</h3><ul><li>Du må som hovedregel være minst 16 år for å bruke fasilitetene uten en ansvarlig voksen. Yngre deltakere må ha tilsyn eller særskilt avtale.</li><li><strong>Kun innesko eller sokker</strong> ved HYZR og dart – ikke utesko.</li><li>Kun den som kaster eller spiller skal være i aktivt kaste- eller slagområde. Følg skilting og sikkerhetsinstruksjoner.</li><li>Alkohol, andre rusmidler og farlig eller truende oppførsel er ikke tillatt.</li></ul></section>
 <section><h3>4. Brukstid, utstyr og ansvar</h3><p>Booket start- og sluttid må overholdes; overtid kan faktureres. Ikke gå inn på kjøkken, lager eller andre merkede personal-/sperrede områder uten tillatelse. Bruk utstyret aktsomt og sørg så langt det er rimelig for at gjestene følger reglene. Dokumenterte skader som skyldes forsett eller uaktsomhet kan kreves erstattet etter norsk rett. Normal slitasje belastes ikke.</p></section>
@@ -111,7 +111,7 @@ function updateSummary(){
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   var extras=qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
   var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
-  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Kontroller totalbeløpet og eventuell kundegruppepris i Quickbutik-kassen før du betaler. Beløpet i kassen er det som faktisk belastes.'+extras;
+  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Kontroller totalbeløpet og eventuell medlemspris i kassen før du betaler. Beløpet i kassen er det som faktisk belastes.'+extras;
 }
 function refreshDartSets(){
   var show=$('gk-v2-resource').value!=='hyzr';
@@ -149,7 +149,7 @@ async function quickbutikAddProduct(productId,variantId,qty,sku){
   'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',
   'X-Requested-With':'XMLHttpRequest'
  },body:data,redirect:'error'});
- if(!response.ok)throw Error('Quickbutik kunne ikke legge til bookingproduktet i handlekurven.');
+ if(!response.ok)throw Error('Bookingproduktet kunne ikke legges til i handlekurven.');
  // HTTP 200 alone does not prove a successful add. Require the actual SKU
  // and exact quantity in Quickbutik's authoritative cart response.
  const cart=await response.json();
@@ -236,7 +236,7 @@ async function verifyServerWindow(){
    CONF.checkoutVerified=w.checkoutEnabled===true&&w.bookingEnabled===true&&canUseQuickbutikCart();
    if(wasReady!==CONF.checkoutVerified){
     $('gk-v2-checkout-note').textContent=CONF.checkoutVerified?
-      'Velg tid, godta vilkår og betal i Quickbutik':
+      'Velg tid, godta vilkår og betal i kassen':
       'Bestilling åpner snart';
     draw();
    }
