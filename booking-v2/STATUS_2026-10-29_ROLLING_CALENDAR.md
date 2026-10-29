@@ -3,8 +3,8 @@
 ## Active implementation
 
 - Backend `eadgdcimcmfyuicizboo`; Edge Function `gk2-rolling-calendar` version 1.
-- Supabase cron job `gk2-rolling-calendar-every-15-minutes`, active schedule `*/15 * * * *`.
-- Each invocation leases the least recently checked booking product. All 33 products are checked in approximately 8 hours 15 minutes, with three days of prewarming beyond the public 45-day booking window.
+- Supabase cron job `gk2-rolling-calendar-nightly`, active schedule `0-32 3 * * *`: 33 invocations once each night, 03:00-03:32 UTC (04:00-04:32 winter / 05:00-05:32 summer in Norway).
+- Each invocation leases the least recently checked booking product. All 33 products are checked during a single 33-minute nightly pass, with three days of prewarming beyond the public 45-day booking window.
 - Dates are computed in the database using Europe/Oslo and existing booking settings. First bookable date remains 1 November 2026.
 - Existing Quickbutik key stays in Edge Function environment; requests use the existing Vault-backed, time-limited cron HMAC verification.
 - Queue, five-minute worker lease and completion status are in private RLS-enabled `gk2_private.calendar_sync_state`. Only service_role can invoke the worker RPCs. No new public table access.
@@ -18,7 +18,8 @@
 - All 33 products, resources and durations read back complete through 16 December 2026, no missing expected SKUs.
 - Actual prewarming created 573 new variants for 16 December. All new variants verified hidden, zero stock, correct SKU and regular price.
 - HYZR product 1474 repeated after the initial full pass: complete, created 0, repaired 0, remaining 0 (HTTP 200).
-- Cron itself executed successfully at 08:31 UTC during temporary minute-frequency verification; final schedule restored to every 15 minutes.
+- Cron itself executed successfully at 08:31 UTC during temporary minute-frequency verification. Schedule subsequently reduced to one nightly pass at user request; old 15-minute job removed. The future nightly pass has not yet occurred.
+- Minute-level notification, cancellation and expired-cart cleanup job remains active (`* * * * *`).
 - Unsigned POST rejected with HTTP 403.
 - Four worker tests plus nine existing cleanup/signature/adapter tests pass.
 - Rollback SQL checks verified exclusive product leases, invalid-token rejection and Oslo-based target date.
