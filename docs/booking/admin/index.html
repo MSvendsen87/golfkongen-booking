@@ -282,7 +282,24 @@ function durationOptions(){const vals=$("priceresource").value==="venue"?Array.f
 function renderPrice(){
  const group=$("pricegroup").value,resource=$("priceresource").value;
  const rows=prices.filter(p=>p.group===group&&p.resource===resource).sort((a,b)=>a.minutes-b.minutes);
- $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status"],rows.map(p=>'<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td><td><span class="pill '+(p.active?"confirmed":"held")+'">'+"Kassen må kontrolleres"+'</span></td></tr>'));
+ $("pricetable").innerHTML=table(["Tid","Pris i Booking 2.0","Status","Manuell kontroll"],rows.map(p=>{
+  const key=[p.resource,p.group,p.minutes].join("|");
+  const stamp=p.manualCheckedAt?new Date(p.manualCheckedAt).toLocaleString("nb-NO"):"";
+  return '<tr><td>'+esc(p.minutes)+' min</td><td><strong>'+esc((Number(p.ore)/100).toLocaleString("nb-NO",{minimumFractionDigits:2,maximumFractionDigits:2}))+' kr</strong></td>'+
+   '<td><span class="pill '+(p.manualChecked?"confirmed":"held")+'">'+(p.manualChecked?"Manuelt kontrollert – OK":"Kassen må kontrolleres")+'</span>'+
+   (p.manualChecked?'<div class="small">'+esc(stamp)+' · '+esc(p.manualCheckedBy||"")+'</div>':'')+'</td>'+
+   '<td><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" style="width:18px;height:18px" data-manual-price="'+esc(key)+'" '+(p.manualChecked?'checked ':'')+'aria-label="'+esc("Manuelt kontrollert: "+(resLabel[p.resource]||p.resource)+", "+(groupLabel[p.group]||p.group)+", "+p.minutes+" minutter")+'"> Pris sjekket – OK</label></td></tr>';
+ }));
+ for(const checkbox of $("pricetable").querySelectorAll("[data-manual-price]"))checkbox.onchange=async()=>{
+  const p=rows.find(x=>[x.resource,x.group,x.minutes].join("|")===checkbox.dataset.manualPrice);if(!p)return;
+  const checked=checkbox.checked;checkbox.disabled=true;
+  try{
+   const saved=await api("/admin/manual-price-check","POST",{resource:p.resource,group:p.group,minutes:p.minutes,ore:p.ore,updated:p.updated,checked});
+   if(saved.saved!==true)throw Error("Kontrollen ble ikke lagret.");
+   await loadPrices();
+  }catch(e){checkbox.checked=!!p.manualChecked;msg("pricemsg","Kontrollen ble ikke lagret. Oppdater prislisten og prøv igjen. "+e.message);}
+  finally{checkbox.disabled=false;}
+ };
  const chosen=prices.find(p=>p.group===group&&p.resource===resource&&p.minutes===Number($("priceminutes").value));
  if(chosen)$("pricenok").value=(Number(chosen.ore)/100).toFixed(2);
 }
