@@ -30,6 +30,39 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
    var heading=section&&section.querySelector('.gka-booking-head p');
    var clubInfo=section&&section.querySelector('.gka-club-info,.gka-booking-info');
    var footer=activities&&activities.querySelector('.gka-footnote');
+   // Only the activities page gets a compact storefront shell, after the widget mounts.
+   document.body.classList.add('gk2-activities-ready');
+   if(activities&&section){
+     var intro=activities.querySelector('.gka-intro'),privateBox=activities.querySelector('.gka-private');
+     activities.insertBefore(section,activities.firstChild);
+     if(privateBox){section.after(privateBox);var privateLink=privateBox.querySelector('[data-gk2-resource="venue"]');if(privateLink)privateLink.addEventListener('click',function(){var select=document.getElementById('gk-v2-resource');select.value='venue';select.dispatchEvent(new Event('change',{bubbles:true}));});}
+     if(intro)(privateBox||section).after(intro);
+     activities.querySelectorAll(':scope > br,.gka-booking-section > br,.gka-intro br,.gka-private br').forEach(function(br){br.remove();});
+   }
+   var pageTitle=document.querySelector('h1[data-qb-element="list_show_cattitle"]');
+   if(pageTitle)pageTitle.textContent='Book simulator og dart i Lyngdal';
+   var compactStyle=document.createElement('style');compactStyle.id='gk2-activities-compact-style';
+   compactStyle.textContent=\`body.gk2-activities-ready .main-content .breadcrumb{display:none!important}
+body.gk2-activities-ready h1[data-qb-element="list_show_cattitle"]{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
+body.gk2-activities-ready .main-content [data-qb-area="category"],body.gk2-activities-ready .collection-header,body.gk2-activities-ready .hero-content{padding-top:0!important;padding-bottom:0!important}
+body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section{padding:0!important;border:0!important;background:none!important}
+body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section>.gka-booking-label,body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section>.gka-booking-kicker{display:none!important}
+body.gk2-activities-ready #gk-aktiviteter .gka-private{margin:18px 0 12px}
+body.gk2-activities-ready #gk-aktiviteter .gka-intro{margin:16px 0}
+body.gk2-activities-ready #gk-aktiviteter .gka-intro p{font-size:14px;line-height:1.5}
+@media(max-width:767px){
+ body.gk2-activities-ready header.header .top-bar,body.gk2-activities-ready .gk-mobile-search-holder,body.gk2-activities-ready header.header form[data-qb-element="header_showsearch"]{display:none!important}
+ body.gk2-activities-ready header.header .img-logo{height:54px!important;width:auto!important;max-height:54px!important}
+ body.gk2-activities-ready header.header .navbar{min-height:68px!important}
+ body.gk2-activities-ready header.header .navbar-brand{padding:5px 0!important;margin-top:0!important;margin-bottom:0!important}
+ body.gk2-activities-ready header.header nav[data-qb-area="header"]>.container+ .container{display:none!important}
+ body.gk2-activities-ready .main-content>.pt-0{padding:0!important}
+ body.gk2-activities-ready #gk-aktiviteter{padding:10px 0 20px!important}
+ body.gk2-activities-ready #gk-aktiviteter p{line-height:1.45}
+ body.gk2-activities-ready #gk-booking-v2-livewidget .gk-v2-row{margin-top:12px}
+}\`;
+   document.head.appendChild(compactStyle);
+
    if(kicker)kicker.textContent='BESTILL AKTIVITET';
    if(heading)heading.textContent='Velg aktivitet, dato og varighet. Se ledige tider, godta vilkårene og fullfør bestillingen i GolfKongens kasse. Tilgangskoden sendes på e-post etter bekreftet booking.';
    if(clubInfo&&host.querySelector('#gk-v2-club-evening'))clubInfo.remove();

@@ -17,19 +17,45 @@
 #gk-booking-v2-livewidget .gk-v2-dialog .gk-v2-actions{margin-top:3px}
 @media(max-width:700px){#gk-booking-v2-livewidget .gk-v2-dialog{max-height:95dvh;padding:14px;gap:8px}#gk-booking-v2-livewidget .gk-v2-dialog h2{font-size:20px}#gk-booking-v2-livewidget .gk-v2-terms-content{max-height:33vh;padding:10px}}
 #gk-booking-v2-livewidget .gk-v2-checkbox{display:flex;align-items:center;gap:9px}#gk-booking-v2-livewidget .gk-v2-checkbox input{width:20px;height:20px}#gk-booking-v2-livewidget a{color:#e0d19a}@media(max-width:700px){#gk-booking-v2-livewidget{padding:14px}#gk-booking-v2-livewidget .gk-v2-row,#gk-booking-v2-livewidget .gk-v2-form{grid-template-columns:1fr}#gk-booking-v2-livewidget .gk-v2-img{height:auto;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#0c1811}#gk-booking-v2-livewidget .gk-v2-img img{width:100%;height:100%;object-fit:contain;object-position:center}}
+
+/* Compact activity choices keep the booking controls within easy reach on mobile. */
+#gk-booking-v2-livewidget .gk-v2-card-title{display:block;font-size:17px;font-weight:750;margin:0 0 5px}
+#gk-booking-v2-livewidget .gk-v2-row .gk-v2-card{text-align:left;width:100%;min-width:0;font-size:14px;line-height:1.45}
+#gk-booking-v2-livewidget .gk-v2-row .gk-v2-card:focus-visible{outline:3px solid #e4c87f;outline-offset:3px}
+#gk-booking-v2-livewidget .gk-v2-img{display:block}
+#gk-booking-v2-livewidget .gk-v2-intro{margin:5px 0 16px;font-size:15px}
+#gk-booking-v2-livewidget .gk-v2-capacity{font-size:13px;line-height:1.45;margin:12px 0 0;max-width:650px}
+#gk-booking-v2-livewidget .gk-v2-footwear{font-size:12px;margin:0 0 10px;color:#b8c9bc}
+@media(max-width:700px){
+ #gk-booking-v2-livewidget{padding:14px;border-radius:15px}
+ #gk-booking-v2-livewidget h2{font-size:23px;line-height:1.15;margin:0}
+ #gk-booking-v2-livewidget .gk-v2-intro{margin:7px 0 13px;font-size:14px;line-height:1.4}
+ #gk-booking-v2-livewidget .gk-v2-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card{padding:6px;border-radius:10px;align-self:stretch}
+ #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card small{display:none}
+ #gk-booking-v2-livewidget .gk-v2-card-title{font-size:12px;line-height:1.25;margin:0;min-height:30px}
+ #gk-booking-v2-livewidget .gk-v2-row .gk-v2-img{height:64px;aspect-ratio:auto;margin-bottom:7px;border-radius:6px}
+ #gk-booking-v2-livewidget .gk-v2-row .gk-v2-img img{object-fit:cover}
+ #gk-booking-v2-livewidget .gk-v2-row .gk-v2-badge{font-size:8px;top:3px;left:3px;padding:2px 4px}
+ #gk-booking-v2-livewidget .gk-v2-form{grid-template-columns:1fr 1fr;gap:10px;margin:13px 0 8px}
+ #gk-booking-v2-livewidget .gk-v2-form label:first-child{grid-column:1/-1}
+ #gk-booking-v2-livewidget input,#gk-booking-v2-livewidget select{font-size:16px;min-height:44px;padding:9px;min-width:0}
+ #gk-booking-v2-livewidget .gk-v2-times{gap:7px}
+}
 </style>
-<h2>Velg aktivitet og tidspunkt</h2><p>Én HYZR discgolf-simulator, to dartbaner og mulighet for å leie hele lokalet.</p>
+<h2>Book simulator og dart i Lyngdal</h2><p class="gk-v2-intro">Velg aktivitet og finn en tid som passer.</p>
 <div class="gk-v2-row">
- <article class="gk-v2-card active"><div class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"><span class="gk-v2-badge">Fra 1. november</span></div><h3>HYZR discgolf-simulator</h3><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Prisen gjelder per simulator, ikke per spiller.</small></article>
- <article class="gk-v2-card"><div class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></div><h3>DartCounter</h3><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></article>
- <article class="gk-v2-card"><div class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></div><h3>Hele lokalet</h3><small>HYZR, begge dartbaner og møtebord.</small></article>
+ <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"><span class="gk-v2-badge">Fra 1. november</span></span><span class="gk-v2-card-title">HYZR simulator</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Prisen gjelder per simulator, ikke per spiller.</small></button>
+ <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
+ <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
-<div class="gk-v2-note">Kun innesko eller sokker ved HYZR og dart. Utesko er ikke tillatt. Før en reservasjon må du akseptere bookingvilkårene.</div>
+<p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris per simulator.</p>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
  <label>Varighet<select id="gk-v2-duration"><option value="30">30 min</option><option value="60" selected>1 time</option><option value="90">1,5 time</option><option value="120">2 timer</option><option value="150">2,5 timer</option><option value="180">3 timer</option><option value="210">3,5 timer</option><option value="240">4 timer</option></select></label>
 </form>
+<p class="gk-v2-footwear">Kun innesko eller sokker ved HYZR og dart.</p>
 <div id="gk-v2-dartsets" class="gk-v2-note" hidden style="margin:12px 0">
   <img alt="Pilsett til leie for dart" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/69a809729c0b5.webp" width="80" height="80" style="float:left;width:80px;height:80px;object-fit:cover;border-radius:10px;margin:0 14px 8px 0">
   <label for="gk-v2-sets-qty" style="font-weight:700;display:block;margin-bottom:6px">Leie av dartpiler – 25 kr per sett (valgfritt)</label>
@@ -129,7 +155,14 @@ function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),o
  var durations=v==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
  d.innerHTML=durations.map(m=>'<option value="'+m+'">'+(m>=60?(m/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' timer':m+' min')+'</option>').join('');
  d.value=String(durations.includes(old)?old:(v==='venue'?240:60));}
-$('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();draw()};
+function syncActivityChoices(){
+ var r=$('gk-v2-resource').value;
+ document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+ $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris per simulator.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
+}
+$('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivityChoices();draw()};
+document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
+syncActivityChoices();
 $('gk-v2-sets-qty').onchange=updateSummary;
 $('gk-v2-duration').onchange=draw;$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
