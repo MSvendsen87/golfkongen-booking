@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {summarizeV1Order,auditQuickbutikOrder} from './quickbutik-order-audit.mjs';
+const order={order_id:'3706',status:'2',total_amount:'10.50',products:[{product_id:1477,sku:'2026-11-01-1000-1100',qty:1}]};
+test('safe read-only result cannot authorize payment',()=>{const s=summarizeV1Order([order],'3706');assert.equal(s.orderNumber,'3706');assert.equal(s.paidVerified,false);assert.equal(s.containsBooking2Product,true);assert.equal(s.products.length,1)});
+test('rejects nonmatching order',()=>assert.throws(()=>summarizeV1Order([order],'3707'),/order_not_found/));
+test('rejects duplicate ambiguous records',()=>assert.throws(()=>summarizeV1Order([order,order],'3706'),/ambiguous_order/));
+test('rejects injected identifiers',()=>assert.throws(()=>summarizeV1Order([order],'3706&limit=20'),/invalid_order_number/));
+test('supports prefixed order identifiers',()=>assert.equal(summarizeV1Order({orders:[order]},'ord_3706').orderNumber,'3706'));
+test('empty sku and items are sanitized',()=>{const s=summarizeV1Order([{...order,products:null}],'3706');assert.equal(s.products.length,0)});
+test('missing secret fails closed before network access',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:''}),/quickbutik_key_not_configured/)});
+test('uses v1 official URL Basic credentials and returns sanitized data',async()=>{let calls=0;const s=await auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async(url,options)=>{calls++;assert.equal(url,'https://api.quickbutik.com/v1/orders?order_id=3706&include_details=true&limit=2');assert.match(options.headers.Authorization,/^Basic /);assert.equal(Buffer.from(options.headers.Authorization.slice(6),'base64').toString(),'test_fake_123456789:test_fake_123456789');return {ok:true,json:async()=>[order]}}});assert.equal(calls,1);assert.equal(s.paidVerified,false);assert.equal(s.totalAmount,'10.50')});
+test('API 401/404 fails closed',async()=>{await assert.rejects(auditQuickbutikOrder('3706',{apiKey:'test_fake_123456789',fetchImpl:async()=>({ok:false,status:401})}),/api_unavailable/)});
+
+test('maps Quickbutik V1 statuses without authorizing reservations',()=>{
+ const expected={'-1':'cancelled','0':'unpaid','1':'paid','2':'fulfilled'};
+ for(const [raw,state] of Object.entries(expected)){
+  const audit=summarizeV1Order([{...order,status:raw}],'3706');
+  assert.equal(audit.orderState,state);
+  assert.equal(audit.paymentStatusFromV1Only,['paid','fulfilled'].includes(state));
+  assert.equal(audit.paidVerified,false);
+ }
+ const unknown=summarizeV1Order([{...order,status:'999'}],'3706');
+ assert.equal(unknown.orderState,'unknown');
+ assert.equal(unknown.paidVerified,false);
+});
+
+test('read-only schema probe exposes only field availability, never customer details',()=>{
+ const raw={...order,customer:{email:'private@example.invalid'},payment:{currency:'NOK',secret:'do-not-show'},refunds:[],total_pay_amount:'10.50',shipping_amount:'0.00'};
+ const result=summarizeV1Order([raw],'3706');
+ assert.equal(result.fieldProbe.hasTotalPayAmount,true);
+ assert.equal(result.fieldProbe.hasShippingAmount,true);
+ assert.equal(result.fieldProbe.hasCurrency,true);
+ assert.equal(result.fieldProbe.hasCustomerEmail,true);
+ assert.equal(result.fieldProbe.hasVariantSkus,true);
+ assert.equal(JSON.stringify(result).includes('private@example.invalid'),false);
+ assert.equal(JSON.stringify(result).includes('do-not-show'),false);
+ assert.equal(result.paidVerified,false);
+});
+
+test('owner-only diagnostic reports only numeric safe totals, never raw payment object',()=>{
+ const z={...order,total_amount:'800.00',discount_amount:'784.00',payment:{secret:'do-not-return'}};
+ const a=summarizeV1Order([z],'3706');
+ assert.equal(a.totalAmount,'800.00');
+ assert.equal(a.discountAmount,'784.00');
+ assert.equal(a.explicitPaidAmount,null);
+ assert.equal(JSON.stringify(a).includes('do-not-return'),false);
+});
+test('malformed discount and paid amount are never reflected back',()=>{
+ const z={...order,discount_amount:'<script>',total_pay_amount:'hello@example.invalid'};
+ const a=summarizeV1Order([z],'3706');
+ assert.equal(a.discountAmount,null);
+ assert.equal(a.explicitPaidAmount,null);
+});

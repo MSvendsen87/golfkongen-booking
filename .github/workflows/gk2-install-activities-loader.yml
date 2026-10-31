@@ -1,0 +1,23 @@
+name: Booking 2.0 – Install path-scoped activities loader
+# Loader installed through active theme template. API key has no scripts permission.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gk2-install-activities-loader
+  cancel-in-progress: false
+jobs:
+  install-one-loader:
+    if: ${{ false }} # Archived diagnostic, no automatic writes
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install only the named activities loader and verify readback
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        run: node booking-v2/scripts/install-activities-loader.mjs
