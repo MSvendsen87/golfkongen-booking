@@ -47,11 +47,11 @@
 </style>
 <h2>Book simulator og dart i Lyngdal</h2><p class="gk-v2-intro">Velg aktivitet og finn en tid som passer.</p>
 <div class="gk-v2-row">
- <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"><span class="gk-v2-badge">Fra 1. november</span></span><span class="gk-v2-card-title">HYZR simulator</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Prisen gjelder per simulator, ikke per spiller.</small></button>
+ <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"><span class="gk-v2-badge">Fra 1. november</span></span><span class="gk-v2-card-title">HYZR simulator</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Intropris: 150 kr per time ut 2026. Prisen gjelder per simulator, ikke per spiller.</small></button>
  <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
  <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
-<p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris per simulator.</p>
+<p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Intropris: 150 kr per time ut 2026. Pris per simulator.</p>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
@@ -161,7 +161,7 @@ function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),o
 function syncActivityChoices(){
  var r=$('gk-v2-resource').value;
  document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
- $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris per simulator.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
+ $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Intropris: 150 kr per time ut 2026. Pris per simulator.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
 }
 $('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivityChoices();draw()};
 document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
