@@ -143,9 +143,9 @@ function render(a){
 function updateSummary(){
   var r=$('gk-v2-resource').value;
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
-  var extras=qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
+  var extras=r==='hyzr'?'':qty>0?' Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr før eventuelle gruppe-/kasserabatter.':' Ingen pilsett valgt.';
   var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
-  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':'')+'Kontroller totalbeløpet og eventuell medlemspris i kassen før du betaler. Beløpet i kassen er det som faktisk belastes.'+extras;
+  $('gk-v2-summary').textContent=(Number.isFinite(price)?'Ordinær pris: '+price.toLocaleString('nb-NO')+' kr. '+(qty>0?'Sum med valgte pilsett: '+(price+qty*25).toLocaleString('nb-NO')+' kr. ':''):'')+'Kontroller totalbeløpet og eventuell medlemspris i kassen før du betaler. Beløpet i kassen er det som faktisk belastes.'+extras;
 }
 function refreshDartSets(){
   var show=$('gk-v2-resource').value!=='hyzr';
@@ -153,7 +153,8 @@ function refreshDartSets(){
   if(!show)$('gk-v2-sets-qty').value='0';
   updateSummary();
 }
-function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),old=Number(d.value);
+var activityDurations={hyzr:60,dart_a:60,dart_b:60,venue:240};
+function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),old=activityDurations[v];
  var durations=v==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
  d.innerHTML=durations.map(m=>'<option value="'+m+'">'+(m>=60?(m/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' timer':m+' min')+'</option>').join('');
  d.value=String(durations.includes(old)?old:(v==='venue'?240:60));}
@@ -166,7 +167,7 @@ $('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivity
 document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
 syncActivityChoices();
 $('gk-v2-sets-qty').onchange=updateSummary;
-$('gk-v2-duration').onchange=draw;$('gk-v2-day').onchange=draw;
+$('gk-v2-duration').onchange=()=>{activityDurations[$('gk-v2-resource').value]=Number($('gk-v2-duration').value);draw()};$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
 $('gk-v2-accept').onchange=()=>{$('gk-v2-submit').disabled=!$('gk-v2-accept').checked};
 $('gk-v2-cancel').onclick=()=>{$('gk-v2-terms').hidden=true};
