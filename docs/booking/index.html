@@ -126,6 +126,26 @@ var PUBLIC_PRICES=[{"resource":"hyzr","minutes":30,"productId":1474,"price":90},
 var canUseQuickbutikCart=()=>['golfkongen.no','www.golfkongen.no'].includes(location.hostname);
 var $=id=>document.getElementById(id),selected=null,snapshot=null,currentDayOslo='',availabilityRequest=0;
 
+// Compare Oslo wall-clock dates, including the 20-minute cutoff across midnight.
+function bookingStartOpen(day,startMin,nowMs=Date.now()){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isInteger(startMin))return false;
+ var parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(nowMs+20*60000));
+ var clock=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+ var cutoffDay=clock.year+'-'+clock.month+'-'+clock.day;
+ return day>cutoffDay||(day===cutoffDay&&startMin>Number(clock.hour)*60+Number(clock.minute)+Number(clock.second)/60);
+}
+function selectionStillOpen(){
+ if(selected!==null&&bookingStartOpen($('gk-v2-day').value,selected))return true;
+ selected=null;$('gk-v2-continue').disabled=true;$('gk-v2-submit').disabled=true;
+ $('gk-v2-status').textContent='Påmeldingen stenger 20 minutter før start. Velg et senere tidspunkt.';
+ return false;
+}
+function refreshTimeCutoff(){
+ var day=$('gk-v2-day').value,buttons=$('gk-v2-times').querySelectorAll('button[data-time]');
+ buttons.forEach(b=>{if(!bookingStartOpen(day,Number(b.dataset.time))){b.disabled=true;b.classList.remove('selected')}});
+ if(selected!==null&&!bookingStartOpen(day,selected))selectionStillOpen();
+ if(snapshot?.bookingEnabled&&buttons.length)$('gk-v2-status').textContent=Array.from(buttons).filter(b=>!b.disabled).length+' tilgjengelige starttider · Bestilling stenger 20 minutter før start';
+}
 function draw(){
  var request=++availabilityRequest;
  selected=null;$('gk-v2-continue').disabled=true;
@@ -142,12 +162,13 @@ function render(a){
  for(var t=hours.from;t+n<=hours.to;t+=30){
   var blocked=(a.blocks||[]).some(b=>t<b.end_min&&t+n>b.start_min&&(b.target==='all'||(r==='venue'&&b.target==='venue_only')||phys.includes(b.target)));
   var taken=phys.some(rr=>{for(var k=t;k<t+n;k+=30)if(occupied.has(rr+'|'+k))return true;return false});
-  var open=!blocked&&!taken&&phys.every(rr=>{var p=a.openingHoursByResource?.[rr];return !!p&&t>=p.from&&t+n<=p.to;});
+  var open=bookingStartOpen(a.day,t)&&!blocked&&!taken&&phys.every(rr=>{var p=a.openingHoursByResource?.[rr];return !!p&&t>=p.from&&t+n<=p.to;});
   var hh=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
   html+='<button type="button" data-time="'+t+'" '+(open?'':'disabled')+'>'+hh+'</button>';if(open)possible++;
  }
  $('gk-v2-times').innerHTML=html;$('gk-v2-status').textContent=a.bookingEnabled?possible+' tilgjengelige starttider':'Mulige starttider – bestilling åpner snart';
- $('gk-v2-times').querySelectorAll('button:not(:disabled)').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.time);$('gk-v2-times').querySelectorAll('button').forEach(c=>c.classList.toggle('selected',c===b));$('gk-v2-continue').disabled=!(CONF.checkoutVerified&&a.bookingEnabled&&canUseQuickbutikCart())});
+ $('gk-v2-times').querySelectorAll('button:not(:disabled)').forEach(b=>b.onclick=()=>{if(!bookingStartOpen(a.day,Number(b.dataset.time))){refreshTimeCutoff();return}selected=Number(b.dataset.time);$('gk-v2-times').querySelectorAll('button').forEach(c=>c.classList.toggle('selected',c===b));$('gk-v2-continue').disabled=!(CONF.checkoutVerified&&a.bookingEnabled&&canUseQuickbutikCart())});
+ refreshTimeCutoff();
  updateSummary();
 }
 function updateSummary(){
@@ -179,7 +200,7 @@ document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]'
 syncActivityChoices();
 $('gk-v2-sets-qty').onchange=updateSummary;
 $('gk-v2-duration').onchange=()=>{activityDurations[$('gk-v2-resource').value]=Number($('gk-v2-duration').value);draw()};$('gk-v2-day').onchange=draw;
-$('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
+$('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart()||!selectionStillOpen())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
 $('gk-v2-accept').onchange=()=>{$('gk-v2-submit').disabled=!$('gk-v2-accept').checked};
 $('gk-v2-cancel').onclick=()=>{$('gk-v2-terms').hidden=true};
 function validateQuickbutikCartAdd(cart,productId,variantId,qty,sku){
@@ -210,7 +231,7 @@ async function quickbutikAddProduct(productId,variantId,qty,sku){
 }
 $('gk-v2-submit').onclick=async()=>{
  if(!$('gk-v2-accept').checked||!CONF.checkoutVerified||
-    !canUseQuickbutikCart()||selected===null)return;
+    !canUseQuickbutikCart()||selected===null||!selectionStillOpen())return;
  const email=String($('gk-v2-email').value||'').trim();
  if(!/^\S+@\S+\.\S+$/.test(email)){
   $('gk-v2-status').textContent='Skriv inn en gyldig e-postadresse.';return;
@@ -418,6 +439,8 @@ refreshDartSets();
 updateRollingWindow({forceDraw:true});
 verifyServerWindow();
 // Update a page left open overnight: no cron needed for the calendar itself.
+setInterval(refreshTimeCutoff,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshTimeCutoff()});
 setInterval(()=>{var old=currentDayOslo;updateRollingWindow();if(old!==currentDayOslo)verifyServerWindow()},60000);
 })();
 </script>
