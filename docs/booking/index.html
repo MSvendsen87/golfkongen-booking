@@ -27,6 +27,11 @@
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card:focus-visible{outline:3px solid #e4c87f;outline-offset:3px}
 #gk-booking-v2-livewidget .gk-v2-img{display:block}
 #gk-booking-v2-livewidget .gk-v2-intro{margin:5px 0 16px;font-size:15px}
+#gk-booking-v2-livewidget .gk-v2-membership{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;padding:14px;border:1px solid #74643d;border-radius:12px;background:#262819}
+#gk-booking-v2-livewidget .gk-v2-membership[hidden]{display:none}
+#gk-booking-v2-livewidget .gk-v2-membership h3{margin:0 0 4px;color:#f3df9b}
+#gk-booking-v2-livewidget .gk-v2-membership p{margin:0;font-size:14px}
+#gk-booking-v2-livewidget .gk-v2-membership a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:8px;background:#e8cd81;color:#202316;font-weight:700;text-decoration:none}
 #gk-booking-v2-livewidget .gk-v2-capacity{font-size:13px;line-height:1.45;margin:12px 0 0;max-width:650px}
 #gk-booking-v2-livewidget .gk-v2-footwear{font-size:12px;margin:0 0 10px;color:#b8c9bc}
 @media(max-width:700px){
@@ -62,6 +67,11 @@
  <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
 <p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.</p>
+<aside id="gk-v2-membership" class="gk-v2-membership" aria-labelledby="gk-v2-membership-title">
+<div><h3 id="gk-v2-membership-title">Spill HYZR for 100 kr per time</h3>
+<p>Årsmedlemskap koster 399 kr og fornyes årlig.</p></div>
+<a href="https://golfkongen.no/aktiviteter/medlemskap">Se årsmedlemskapet</a>
+</aside>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
@@ -192,6 +202,7 @@ function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),o
  d.value=String(durations.includes(old)?old:(v==='venue'?240:60));}
 function syncActivityChoices(){
  var r=$('gk-v2-resource').value;
+ $('gk-v2-membership').hidden=r!=='hyzr';
  document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
  $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
 }
