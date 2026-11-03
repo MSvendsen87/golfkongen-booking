@@ -32,6 +32,16 @@
 #gk-booking-v2-livewidget .gk-v2-membership h3{margin:0 0 4px;color:#f3df9b}
 #gk-booking-v2-livewidget .gk-v2-membership p{margin:0;font-size:14px}
 #gk-booking-v2-livewidget .gk-v2-membership a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:8px;background:#e8cd81;color:#202316;font-weight:700;text-decoration:none}
+@media(max-width:700px){
+ #gk-booking-v2-livewidget .gk-v2-membership{flex-wrap:nowrap;gap:6px;margin:7px 0;padding:5px 8px;border-radius:8px}
+ #gk-booking-v2-livewidget .gk-v2-membership h3{font-size:13px;line-height:1.2;margin:0 0 2px}
+ #gk-booking-v2-livewidget .gk-v2-membership p{font-size:11px;line-height:1.2}
+ #gk-booking-v2-livewidget .gk-v2-membership a{flex:none;min-height:44px;padding:4px 7px;font-size:12px;background:transparent;color:#f3df9b}
+ #gk-booking-v2-livewidget .gk-v2-membership .gk-offer-full{display:none}
+}
+@media(min-width:701px){
+ #gk-booking-v2-livewidget .gk-v2-membership .gk-offer-short{display:none}
+}
 #gk-booking-v2-livewidget .gk-v2-capacity{font-size:13px;line-height:1.45;margin:12px 0 0;max-width:650px}
 #gk-booking-v2-livewidget .gk-v2-footwear{font-size:12px;margin:0 0 10px;color:#b8c9bc}
 @media(max-width:700px){
@@ -69,8 +79,8 @@
 <p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.</p>
 <aside id="gk-v2-membership" class="gk-v2-membership" aria-labelledby="gk-v2-membership-title">
 <div><h3 id="gk-v2-membership-title">Spill HYZR for 100 kr per time</h3>
-<p>Årsmedlemskap koster 399 kr og fornyes årlig.</p></div>
-<a href="https://golfkongen.no/aktiviteter/medlemskap">Se årsmedlemskapet</a>
+<p>399 kr/år · Fornyes årlig</p></div>
+<a href="https://golfkongen.no/aktiviteter/medlemskap" aria-label="Se årsmedlemskapet"><span class="gk-offer-full">Se årsmedlemskapet</span><span class="gk-offer-short">Se tilbud →</span></a>
 </aside>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
