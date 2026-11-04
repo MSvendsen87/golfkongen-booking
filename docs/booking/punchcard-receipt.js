@@ -5,7 +5,7 @@
  const key='gk_punch_receipt_v1',ttl=30*60*1000;
  function product(row){
   const item=row?.item||row||{};
-  return String(item.product_id||item.productId||item.raw_id||row?.product_id||'').replace(/^prod_/,'')==='1160'||String(item.sku||row?.sku||'')==='1160';
+  return ['1160','1161'].includes(String(item.product_id||item.productId||item.raw_id||row?.product_id||'').replace(/^prod_/,''))||['1160','1161'].includes(String(item.sku||row?.sku||''));
  }
  function save(isCard){
   try{if(isCard)localStorage.setItem(key,JSON.stringify({at:Date.now()}));else localStorage.removeItem(key)}catch(_){}

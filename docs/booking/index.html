@@ -27,6 +27,13 @@
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card:focus-visible{outline:3px solid #e4c87f;outline-offset:3px}
 #gk-booking-v2-livewidget .gk-v2-img{display:block}
 #gk-booking-v2-livewidget .gk-v2-intro{margin:5px 0 16px;font-size:15px}
+#gk-booking-v2-livewidget .gk-v2-offers{margin:10px 0;border:1px solid #74643d;border-radius:12px;background:#19281e}
+#gk-booking-v2-livewidget .gk-v2-offers[hidden]{display:none}
+#gk-booking-v2-livewidget .gk-v2-offers>summary{cursor:pointer;padding:12px;color:#f3df9b;font-weight:700;min-height:44px;box-sizing:border-box}
+#gk-booking-v2-livewidget .gk-v2-offers>summary span{display:block;font-size:12px;color:#becbbd;font-weight:400;padding-left:16px}
+#gk-booking-v2-livewidget .gk-v2-offers-body{padding:0 10px 10px}
+#gk-booking-v2-livewidget .gk-v2-offer-note,#gk-booking-v2-livewidget .gk-v2-offer-math{font-size:13px;line-height:1.5}
+#gk-booking-v2-livewidget .gk-v2-offer-math>summary{cursor:pointer;min-height:44px;padding-top:10px}
 #gk-booking-v2-livewidget .gk-v2-membership{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;padding:14px;border:1px solid #74643d;border-radius:12px;background:#262819}
 #gk-booking-v2-livewidget .gk-v2-membership[hidden]{display:none}
 #gk-booking-v2-livewidget .gk-v2-membership h3{margin:0 0 4px;color:#f3df9b}
@@ -77,12 +84,13 @@
  <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
 <p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.</p>
-<aside id="gk-v2-membership" class="gk-v2-membership" aria-labelledby="gk-v2-membership-title">
-<div><h3 id="gk-v2-membership-title">Spill HYZR for 100 kr per time</h3>
-<p>399 kr/år · Fornyes årlig</p></div>
-<a href="https://golfkongen.no/aktiviteter/medlemskap" aria-label="Se årsmedlemskapet"><span class="gk-offer-full">Se årsmedlemskapet</span><span class="gk-offer-short">Se tilbud →</span></a>
-</aside>
-<aside id="gk-v2-punch-offer" class="gk-v2-membership" aria-labelledby="gk-v2-punch-title"><div><h3 id="gk-v2-punch-title">10 timer HYZR · 1 200 kr</h3><p>120 kr/time · Gyldig i 12 måneder</p></div><a href="/aktiviteter/klippekort-disc-golf-simulator-10-timer"><span class="gk-offer-full">Se klippekortet</span><span class="gk-offer-short">Se tilbud →</span></a></aside>
+<details id="gk-v2-offers" class="gk-v2-offers"><summary>Finn din beste spillepris <span>Klippekort og medlemskap</span></summary><div class="gk-v2-offers-body">
+<aside id="gk-v2-punch-offer" class="gk-v2-membership"><div><h3>10 timer HYZR · 1 200 kr</h3><p>120 kr/time · Spar 300 kr på 10 timer</p></div><a href="/aktiviteter/klippekort-disc-golf-simulator-10-timer">Se 10 timer →</a></aside>
+<aside class="gk-v2-membership"><div><h3>20 timer HYZR · 2 000 kr</h3><p>100 kr/time · Spar 1 000 kr på 20 timer</p></div><a href="https://golfkongen.no/aktiviteter/klippekort-disc-golf-simulator-20-timer">Se 20 timer →</a></aside>
+<aside id="gk-v2-membership" class="gk-v2-membership"><div><h3>Medlemskap · 100 kr per time</h3><p>399 kr/år · Betal for spilletiden underveis</p></div><a href="https://golfkongen.no/aktiviteter/medlemskap">Se medlemskap →</a></aside>
+<p class="gk-v2-offer-note">Klippekort betales på forhånd og er gyldige i 12 måneder. 30 minutter trekker et halvt klipp. Prisen gjelder hele gruppen.</p>
+<details class="gk-v2-offer-math"><summary>Hva lønner seg for deg?</summary><p>Med dagens intropris på 150 kr/time koster 10 hele timer 1 500 kr uten avtale, eller 1 200 kr med 10-timerskort. 20 hele timer koster 3 000 kr uten avtale, eller 2 000 kr med 20-timerskort.</p><p>Medlemskapet passer deg som vil betale per besøk fremfor å forhåndsbetale et klippekort. 20-timerskortet har samme timepris uten årsavgift når alle timene brukes. Medlemskap fornyes årlig; klippekort fornyes ikke automatisk.</p></details>
+<div id="gk-v2-offer-account"></div></div></details>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
@@ -219,8 +227,7 @@ function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),o
  d.value=String(durations.includes(old)?old:(v==='venue'?240:60));}
 function syncActivityChoices(){
  var r=$('gk-v2-resource').value;
- $('gk-v2-membership').hidden=r!=='hyzr';
- $('gk-v2-punch-offer').hidden=r!=='hyzr';
+ $('gk-v2-offers').hidden=r!=='hyzr';
  document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
  $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
 }

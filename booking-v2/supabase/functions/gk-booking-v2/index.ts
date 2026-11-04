@@ -120,7 +120,7 @@ Deno.serve(async (req:Request)=>{
         if(!['order.new','order.cancelled'].includes(verified.eventType)||
            punchcard.cancelled!==(verified.eventType==='order.cancelled'))
           return err('punchcard_event_not_verified',409,origin);
-        await rpc('gk2_punchcard_purchase',{p_order:verified.orderNumber,p_email:punchcard.email,p_cancelled:punchcard.cancelled,p_qty:punchcard.quantity});
+        await rpc('gk2_punchcard_purchase',{p_order:verified.orderNumber,p_email:punchcard.email,p_cancelled:punchcard.cancelled,p_qty:punchcard.quantity,p_unit_minutes:punchcard.unitMinutes});
         return reply({ok:true,punchcard:true},200,origin);
       }
       // Club payments are recognized exclusively through authoritative Quickbutik V1 readback.

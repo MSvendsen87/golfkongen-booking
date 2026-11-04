@@ -26,20 +26,21 @@ GRANT SELECT,INSERT,UPDATE ON gk2_private.punchcard_purchases,gk2_private.punchc
 CREATE INDEX IF NOT EXISTS punchcard_email_idx ON gk2_private.punchcard_purchases(email,expires_at);
 CREATE INDEX IF NOT EXISTS punchcard_booking_email_idx ON gk2_private.punchcard_bookings(email);
 
-CREATE OR REPLACE FUNCTION public.gk2_punchcard_purchase(p_order text,p_email text,p_cancelled boolean DEFAULT false,p_qty integer DEFAULT 1)
+CREATE OR REPLACE FUNCTION public.gk2_punchcard_purchase(p_order text,p_email text,p_cancelled boolean DEFAULT false,p_qty integer DEFAULT 1,p_unit_minutes integer DEFAULT 600)
 RETURNS jsonb LANGUAGE plpgsql SET search_path=pg_catalog,gk2_private AS $$
 DECLARE card gk2_private.punchcard_purchases%ROWTYPE; booking record; spent record;
 BEGIN
  IF current_user<>'service_role' THEN RAISE EXCEPTION 'forbidden'; END IF;
+ IF p_unit_minutes IS NULL OR p_unit_minutes NOT IN (600,1200) THEN RAISE EXCEPTION 'invalid_pack'; END IF;
  IF p_qty IS NULL OR p_qty<1 OR p_qty>1000 THEN RAISE EXCEPTION 'invalid_quantity'; END IF;
  IF p_order IS NULL OR p_order !~ '^[1-9][0-9]{0,8}$' OR p_email IS NULL OR p_email !~ '^[^ @]+@[^ @]+\.[^ @]+$' THEN RAISE EXCEPTION 'invalid_purchase'; END IF;
  p_email:=lower(btrim(p_email));
  PERFORM pg_advisory_xact_lock(hashtextextended('punch:'||p_email,0));
  SELECT * INTO card FROM punchcard_purchases WHERE order_id=p_order FOR UPDATE;
- IF FOUND AND (card.email<>p_email OR card.minutes<>p_qty*600) THEN RAISE EXCEPTION 'purchase_identity_mismatch'; END IF;
+ IF FOUND AND (card.email<>p_email OR card.minutes<>p_qty*p_unit_minutes) THEN RAISE EXCEPTION 'purchase_identity_mismatch'; END IF;
  IF NOT FOUND THEN
   INSERT INTO punchcard_purchases(order_id,email,minutes,remaining,expires_at,voided)
-  VALUES(p_order,p_email,p_qty*600,p_qty*600,now()+interval '12 months',p_cancelled);
+  VALUES(p_order,p_email,p_qty*p_unit_minutes,p_qty*p_unit_minutes,now()+interval '12 months',p_cancelled);
  ELSIF p_cancelled THEN
   UPDATE punchcard_purchases SET voided=true WHERE order_id=p_order;
   -- Merchant cancellation of the purchase revokes future prepaid bookings.
@@ -128,6 +129,6 @@ BEGIN
  RETURN jsonb_build_object('ok',true,'duplicate',false);
 END;$$;
 
-REVOKE ALL ON FUNCTION public.gk2_punchcard_purchase(text,text,boolean,integer),public.gk2_punchcard_account(text),public.gk2_punchcard_book(text,uuid,date,integer,integer),public.gk2_punchcard_cancel(text,uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.gk2_punchcard_purchase(text,text,boolean,integer),public.gk2_punchcard_account(text),public.gk2_punchcard_book(text,uuid,date,integer,integer),public.gk2_punchcard_cancel(text,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.gk2_punchcard_purchase(text,text,boolean,integer,integer),public.gk2_punchcard_account(text),public.gk2_punchcard_book(text,uuid,date,integer,integer),public.gk2_punchcard_cancel(text,uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.gk2_punchcard_purchase(text,text,boolean,integer,integer),public.gk2_punchcard_account(text),public.gk2_punchcard_book(text,uuid,date,integer,integer),public.gk2_punchcard_cancel(text,uuid) TO service_role;
 COMMIT;

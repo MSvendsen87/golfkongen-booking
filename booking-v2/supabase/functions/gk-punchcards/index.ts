@@ -56,7 +56,7 @@ Deno.serve(async request=>{
   const order=await loadV1OrderRecord(orderId,{apiKey:env('GK2_QUICKBUTIK_API_KEY')});
   const card=punchcardOrder(order,orderId);
   if(!card||card.email!==email)return reply({ok:false,code:'order_not_verified'},409);
-  await rpc('gk2_punchcard_purchase',{p_order:orderId,p_email:email,p_cancelled:card.cancelled,p_qty:card.quantity});
+  await rpc('gk2_punchcard_purchase',{p_order:orderId,p_email:email,p_cancelled:card.cancelled,p_qty:card.quantity,p_unit_minutes:card.unitMinutes});
   return reply(await rpc('gk2_punchcard_account',{p_email:email}));
  }
  if(path==='/book'&&request.method==='POST'){

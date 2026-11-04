@@ -17,7 +17,7 @@
   return result;
  }
  const root=document.createElement('details');root.id='gk-punchcards';
- root.innerHTML='<summary>Mitt klippekort <span id="gk-punch-balance"></span></summary><div class="gk-punch-inner"><p>10 timer HYZR. Gyldig i 12 måneder fra kjøp. Bekreft e-postadressen fra kjøpet for å se og bruke timene dine.</p><form id="gk-punch-login"><label>E-postadresse<input type="email" autocomplete="email" required></label><button>Send engangskode</button></form><form id="gk-punch-verify" hidden><label>Engangskode<input autocomplete="one-time-code" inputmode="numeric" required></label><button>Bekreft</button></form><div id="gk-punch-account" hidden></div><p id="gk-punch-status" role="status" aria-live="polite"></p></div>';
+ root.innerHTML='<summary>Mitt klippekort <span id="gk-punch-balance"></span></summary><div class="gk-punch-inner"><p>Forhåndsbetalte HYZR-timer. Gyldig i 12 måneder fra kjøp. Bekreft e-postadressen fra kjøpet for å se og bruke timene dine.</p><form id="gk-punch-login"><label>E-postadresse<input type="email" autocomplete="email" required></label><button>Send engangskode</button></form><form id="gk-punch-verify" hidden><label>Engangskode<input autocomplete="one-time-code" inputmode="numeric" required></label><button>Bekreft</button></form><div id="gk-punch-account" hidden></div><p id="gk-punch-status" role="status" aria-live="polite"></p></div>';
  const style=document.createElement('style');style.textContent='#gk-punchcards{color:#f4f6f2;background:#15251c;border:1px solid #456047;border-radius:10px;margin:8px 0;padding:10px 12px;font-size:14px}#gk-punchcards summary{cursor:pointer;font-weight:700}#gk-punchcards input:not([type=checkbox]){display:block;width:100%;max-width:360px;background:white;color:#111;padding:9px;border-radius:6px;margin:5px 0}#gk-punchcards button,#gk-punchcards a{display:inline-flex;align-items:center;min-height:44px;padding:6px 12px;color:#fff;background:#285c3d;border:1px solid #6d8d72;border-radius:7px;margin:4px 4px 4px 0;text-decoration:none}#gk-punchcards button:disabled{opacity:.5}#gk-punchcards [hidden]{display:none!important}#gk-punchcards .gk-punch-booking{padding:8px 0;border-top:1px solid #456047}#gk-punchcards .gk-punch-inner{padding-top:8px}';document.head.appendChild(style);
  const choice=document.createElement('label');
  choice.id='gk-punch-payment-choice';choice.hidden=true;
@@ -41,7 +41,7 @@
   if(page==='/aktiviteter'){
    const form=document.getElementById('gk-v2-form');if(!form)return false;
    const continueButton=document.getElementById('gk-v2-continue');if(!continueButton)return false;
-   form.before(root);continueButton.parentElement.before(choice);
+   (document.getElementById('gk-v2-offer-account')||form).before(root);continueButton.parentElement.before(choice);
    document.getElementById('gk-v2-resource').addEventListener('change',syncPaymentChoice);
    syncPaymentChoice();return true;
   }
