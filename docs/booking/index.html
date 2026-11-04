@@ -194,6 +194,12 @@ function render(a){
 }
 function updateSummary(){
   var r=$('gk-v2-resource').value;
+  var usePunchcard=r==='hyzr'&&document.getElementById('gk-punch-use')?.checked===true;
+  $('gk-v2-continue').textContent=usePunchcard?'Book med klippekort':'Fortsett til booking';
+  if(usePunchcard){
+   $('gk-v2-summary').textContent='Klippekort: '+(Number($('gk-v2-duration').value)/60).toLocaleString('nb-NO')+' timer trekkes fra saldoen når du bekrefter.';
+   return;
+  }
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
   var amount=Number.isFinite(price)?'<strong>Pris for valgt varighet: '+price.toLocaleString('nb-NO')+' kr</strong>':'';

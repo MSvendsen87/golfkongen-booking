@@ -8,6 +8,7 @@
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const time=minutes=>String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
  let balance=null,loginEmail='',busy=false;
+ let usePreference=new URLSearchParams(location.search).get('klippekort')==='1';
  async function api(path,body){
   const {data}=await auth.auth.getSession();
   const response=await fetch(API+path,{method:body?'POST':'GET',headers:{'content-type':'application/json',...(data.session?{authorization:'Bearer '+data.session.access_token}:{})},body:body?JSON.stringify(body):undefined});
@@ -18,10 +19,31 @@
  const root=document.createElement('details');root.id='gk-punchcards';
  root.innerHTML='<summary>Mitt klippekort <span id="gk-punch-balance"></span></summary><div class="gk-punch-inner"><p>10 timer HYZR. Gyldig i 12 måneder fra kjøp. Bekreft e-postadressen fra kjøpet for å se og bruke timene dine.</p><form id="gk-punch-login"><label>E-postadresse<input type="email" autocomplete="email" required></label><button>Send engangskode</button></form><form id="gk-punch-verify" hidden><label>Engangskode<input autocomplete="one-time-code" inputmode="numeric" required></label><button>Bekreft</button></form><div id="gk-punch-account" hidden></div><p id="gk-punch-status" role="status" aria-live="polite"></p></div>';
  const style=document.createElement('style');style.textContent='#gk-punchcards{color:#f4f6f2;background:#15251c;border:1px solid #456047;border-radius:10px;margin:8px 0;padding:10px 12px;font-size:14px}#gk-punchcards summary{cursor:pointer;font-weight:700}#gk-punchcards input:not([type=checkbox]){display:block;width:100%;max-width:360px;background:white;color:#111;padding:9px;border-radius:6px;margin:5px 0}#gk-punchcards button,#gk-punchcards a{display:inline-flex;align-items:center;min-height:44px;padding:6px 12px;color:#fff;background:#285c3d;border:1px solid #6d8d72;border-radius:7px;margin:4px 4px 4px 0;text-decoration:none}#gk-punchcards button:disabled{opacity:.5}#gk-punchcards [hidden]{display:none!important}#gk-punchcards .gk-punch-booking{padding:8px 0;border-top:1px solid #456047}#gk-punchcards .gk-punch-inner{padding-top:8px}';document.head.appendChild(style);
+ const choice=document.createElement('label');
+ choice.id='gk-punch-payment-choice';choice.hidden=true;
+ choice.style.cssText='display:flex;align-items:center;gap:10px;padding:12px;margin:10px 0;border:1px solid #b39e59;border-radius:10px;background:#25371d;color:#fff;min-height:48px';
+ choice.innerHTML='<input id="gk-punch-use" type="checkbox" style="width:22px;height:22px;flex:none"><span>Bruk klippekort <small id="gk-punch-choice-balance" style="display:block"></small></span>';
+ const useCheckbox=choice.querySelector('input');
+ function syncPaymentChoice(){
+  if(page!=='/aktiviteter')return;
+  const resource=document.getElementById('gk-v2-resource');
+  const available=balance&&balance.minutes>0&&resource?.value==='hyzr';
+  choice.hidden=!available;
+  choice.style.display=available?'flex':'none';
+  useCheckbox.checked=!!available&&usePreference;
+  if(balance)choice.querySelector('small').textContent=(balance.minutes/60).toLocaleString('nb-NO')+' timer igjen · Trekkes fra saldoen';
+  const email=document.getElementById('gk-v2-email');
+  if(useCheckbox.checked&&email)email.value=balance.email;
+  document.getElementById('gk-v2-sets-qty')?.dispatchEvent(new Event('change'));
+ }
+ useCheckbox.onchange=()=>{usePreference=useCheckbox.checked;syncPaymentChoice()};
  function mount(){
   if(page==='/aktiviteter'){
    const form=document.getElementById('gk-v2-form');if(!form)return false;
-   form.before(root);return true;
+   const continueButton=document.getElementById('gk-v2-continue');if(!continueButton)return false;
+   form.before(root);continueButton.parentElement.before(choice);
+   document.getElementById('gk-v2-resource').addEventListener('change',syncPaymentChoice);
+   syncPaymentChoice();return true;
   }
   const heading=Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6')).find(h=>/siste bestillinger/i.test(h.textContent));
   if(!heading)return false;
@@ -40,10 +62,11 @@
   find('#gk-punch-login').hidden=!!balance;
   find('#gk-punch-account').hidden=!balance;
   find('#gk-punch-balance').textContent=balance?'· '+(balance.minutes/60).toLocaleString('nb-NO')+' timer igjen':'';
+  syncPaymentChoice();
   if(!balance)return;
   find('#gk-punch-verify').hidden=true;
   const bookingRows=balance.bookings.map(b=>'<div class="gk-punch-booking">'+escape(b.date)+' · '+time(b.startMin)+'–'+time(b.endMin)+' · '+(b.status==='confirmed'?'Bekreftet':'Avbestilt')+(b.status==='confirmed'&&b.date>=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Oslo'})?'<br><button type="button" data-cancel="'+escape(b.id)+'">Avbestill</button>':'')+'</div>').join('');
-  find('#gk-punch-account').innerHTML='<p><strong>'+escape(balance.email)+'</strong></p><p>Saldo '+(balance.minutes/60).toLocaleString('nb-NO')+' timer. Gyldighet vises per kjøp nedenfor.</p>'+balance.cards.map(c=>'<p>'+c.remaining/60+' timer · Utløper '+escape(new Date(c.expiresAt).toLocaleDateString('nb-NO'))+'</p>').join('')+(page==='/aktiviteter'?'<label><input id="gk-punch-use" type="checkbox"> Bruk klippekort til valgt HYZR-tid</label>':'<a href="/aktiviteter">Book HYZR</a>')+'<p>Avbestill senest 30 minutter før start for å få tiden tilbake. Utløpte timer får ikke ny gyldighet.</p>'+bookingRows+'<button type="button" id="gk-punch-refresh">Oppdater saldo</button><button type="button" id="gk-punch-logout">Bytt konto</button>';
+  find('#gk-punch-account').innerHTML='<p><strong>'+escape(balance.email)+'</strong></p><p>Saldo '+(balance.minutes/60).toLocaleString('nb-NO')+' timer. Gyldighet vises per kjøp nedenfor.</p>'+balance.cards.map(c=>'<p>'+c.remaining/60+' timer · Utløper '+escape(new Date(c.expiresAt).toLocaleDateString('nb-NO'))+'</p>').join('')+(page==='/aktiviteter'?'<p>Velg «Bruk klippekort» ved bookingknappen nedenfor.</p>':'<a href="/aktiviteter?klippekort=1">Book HYZR med klippekort</a>')+'<p>Avbestill senest 30 minutter før start for å få tiden tilbake. Utløpte timer får ikke ny gyldighet.</p>'+bookingRows+'<button type="button" id="gk-punch-refresh">Oppdater saldo</button><button type="button" id="gk-punch-logout">Bytt konto</button>';
   find('#gk-punch-refresh').onclick=refresh;
   find('#gk-punch-logout').onclick=async()=>{await auth.auth.signOut();await refresh()};
   root.querySelectorAll('[data-cancel]').forEach(button=>button.onclick=async()=>{
@@ -67,7 +90,7 @@
   }catch(_){status('Koden er feil eller utløpt. Be om en ny kode.')}finally{busy=false}
  };
  window.gkPunchcardBooking=async function(input){
-  if(!find('#gk-punch-use')?.checked)return null;
+  if(!useCheckbox.checked)return null;
   if(input.resource!=='hyzr')throw Error('Klippekortet gjelder bare HYZR.');
   if(!balance||balance.minutes<input.duration)throw Error('Du har ikke nok tid på klippekortet.');
   const identity=JSON.stringify([balance.email,input.date,input.startMin,input.duration]);
