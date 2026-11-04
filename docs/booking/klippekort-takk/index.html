@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Takk for klippekortkjøpet – GolfKongen</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101b15;color:#f5f7f1;font:17px/1.6 system-ui,sans-serif;padding:40px 18px}main{max-width:620px;margin:auto;border:1px solid #48634c;border-radius:20px;padding:30px;background:#1b2b20}header{font-size:13px;letter-spacing:2px;font-weight:800;color:#ddca83}h1{font-size:clamp(25px,5vw,34px);line-height:1.2;margin:18px 0}p{color:#d1dbd0}.offer{border:1px solid #8d7b44;background:#2c3020;border-radius:12px;padding:16px;color:#f0dfa5}.actions{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}a{color:#e9d48f}.actions a{padding:12px 18px;min-height:48px;border-radius:9px;text-decoration:none;font-weight:700;border:1px solid #75917b;background:#2b563b;color:white}.actions a:first-child{background:#e5ce86;color:#172219;border-color:#e5ce86}small{color:#b7c7b6}@media(max-width:500px){body{padding:20px 12px}main{padding:22px}.actions a{width:100%;text-align:center}}
+</style>
+</head>
+<body><main>
+<header>GOLFKONGEN</header>
+<h1>Takk for kjøpet av klippekort!</h1>
+<p id="order-reference" hidden></p>
+<div class="offer"><strong>10 timer HYZR per klippekort</strong><br>1 200 kr · Gyldig i 12 måneder</div>
+<p>Når betalingen er bekreftet, legges timene automatisk på e-postadressen du brukte ved kjøpet. Ordrebekreftelsen sendes på e-post.</p>
+<p>Åpne «Mitt klippekort» for å se saldoen. Første gang bekrefter du e-postadressen med en engangskode.</p>
+<div class="actions"><a href="https://golfkongen.no/customer/index">Se mitt klippekort</a><a href="https://golfkongen.no/aktiviteter?klippekort=1">Book HYZR med klippekort</a></div>
+<p>Velg «Bruk klippekort» ved bookingknappen. Bekreftelse og dørkode sendes når du har booket et tidspunkt.</p>
+<small>Klippekortet gjelder HYZR. Kontakt <a href="mailto:post@golfkongen.no">post@golfkongen.no</a> hvis kjøpet ikke vises.</small>
+</main>
+<script>
+const order=new URLSearchParams(location.search).get('order');
+if(/^[1-9][0-9]{0,8}$/.test(order||'')){
+ const reference=document.getElementById('order-reference');
+ reference.textContent='Ordrenummer '+order;reference.hidden=false;
+}
+</script>
+</body></html>
