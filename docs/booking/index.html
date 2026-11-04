@@ -79,7 +79,7 @@
 </style>
 <h2>Book simulator og dart i Lyngdal</h2><p class="gk-v2-intro">Velg aktivitet og finn en tid som passer.</p>
 <div class="gk-v2-row">
- <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"><span class="gk-v2-badge">Fra 1. november</span></span><span class="gk-v2-card-title">HYZR simulator</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Prisen gjelder hele gruppen, ikke per spiller.</small></button>
+ <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"></span><span class="gk-v2-card-title">HYZR simulator</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting. Prisen gjelder hele gruppen, ikke per spiller.</small></button>
  <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
  <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
@@ -170,6 +170,7 @@ function selectionStillOpen(){
  return false;
 }
 function refreshTimeCutoff(){
+ if(advanceFinishedDay(snapshot))return;
  var day=$('gk-v2-day').value,buttons=$('gk-v2-times').querySelectorAll('button[data-time]');
  buttons.forEach(b=>{if(!bookingStartOpen(day,Number(b.dataset.time))){b.disabled=true;b.classList.remove('selected')}});
  if(selected!==null&&!bookingStartOpen(day,selected))selectionStillOpen();
@@ -183,7 +184,22 @@ function draw(){
  $('gk-v2-status').textContent='Henter tilgjengelige tider …';$('gk-v2-times').textContent='';
  fetch(CONF.apiUrl+'/availability?date='+encodeURIComponent(d),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Kunne ikke hente kalender');return r.json()}).then(a=>{if(request!==availabilityRequest||d!==$('gk-v2-day').value)return;if(!a.ok||a.day!==d)throw Error('Ugyldig kalender');snapshot=a;render(a)}).catch(()=>{if(request===availabilityRequest)$('gk-v2-status').textContent='Kalenderen er midlertidig utilgjengelig.'})
 }
+// Move only today's expired calendar forward; preserve a customer's future date.
+function advanceFinishedDay(a,nowMs=Date.now()){
+ var field=$('gk-v2-day'),today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(nowMs));
+ if(!a||a.day!==field.value||a.day!==today||!a.bookingEnabled)return false;
+ var hours=a.openingHoursByResource?.[$('gk-v2-resource').value],duration=Number($('gk-v2-duration').value);
+ if(!hours||hours.to-hours.from<duration)return false;
+ var lastStart=hours.from+Math.floor((hours.to-duration-hours.from)/30)*30;
+ if(bookingStartOpen(a.day,lastStart,nowMs))return false;
+ var next=plusCalendarDays(a.day,1);
+ if(next>field.max)return false;
+ field.value=next;
+ $('gk-v2-terms').hidden=true;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;
+ draw();return true;
+}
 function render(a){
+ if(advanceFinishedDay(a))return;
  var r=$('gk-v2-resource').value,n=Number($('gk-v2-duration').value),hours=a.openingHoursByResource?.[r];
  if(r==='venue'&&n<240){$('gk-v2-status').textContent='Hele lokalet leies fra 4 timer.';return}
  if(!hours){$('gk-v2-status').textContent='Ingen godkjente åpningstider for aktiviteten ennå.';return}
