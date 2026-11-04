@@ -41,7 +41,8 @@
   if(page==='/aktiviteter'){
    const form=document.getElementById('gk-v2-form');if(!form)return false;
    const continueButton=document.getElementById('gk-v2-continue');if(!continueButton)return false;
-   (document.getElementById('gk-v2-offer-account')||form).before(root);continueButton.parentElement.before(choice);
+   (document.getElementById('gk-v2-offer-account')||form).before(root);
+   if(usePreference){const offers=document.getElementById('gk-v2-offers');if(offers)offers.open=true;root.open=true;}continueButton.parentElement.before(choice);
    document.getElementById('gk-v2-resource').addEventListener('change',syncPaymentChoice);
    syncPaymentChoice();return true;
   }
