@@ -74,7 +74,8 @@
   const cache='gk-punch-intent';let saved;try{saved=JSON.parse(sessionStorage.getItem(cache)||'null')}catch(_){}
   if(!saved||saved.identity!==identity||saved.expires<Date.now())saved={identity,key:crypto.randomUUID(),expires:Date.now()+600000};
   sessionStorage.setItem(cache,JSON.stringify(saved));
-  const result=await api('/book',{...input,key:saved.key});
+  let result;
+  try{result=await api('/book',{...input,key:saved.key})}catch(error){root.open=true;showError(error);throw error}
   if(result.status!=='confirmed')throw Error('Bestillingen er allerede avbestilt. Oppdater siden.');
   status('HYZR er booket '+input.date+' kl. '+time(input.startMin)+'–'+time(input.startMin+input.duration)+'. Bekreftelse og dørkode sendes til '+balance.email+'.');
   root.open=true;await refresh();return result;

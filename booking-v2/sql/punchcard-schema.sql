@@ -86,6 +86,7 @@ BEGIN
   IF existing.owner_email IS DISTINCT FROM p_email OR existing.slot_date IS DISTINCT FROM p_day OR existing.start_min IS DISTINCT FROM p_start OR existing.end_min-existing.start_min<>p_duration THEN RAISE EXCEPTION 'key_reuse'; END IF;
   RETURN jsonb_build_object('ok',true,'id',existing.id,'status',existing.status,'duplicate',true);
  END IF;
+ IF ((p_day::timestamp+make_interval(mins=>p_start)) AT TIME ZONE 'Europe/Oslo')<=now()+interval '20 minutes' THEN RAISE EXCEPTION 'out_of_window'; END IF;
  IF (SELECT coalesce(sum(remaining),0) FROM punchcard_purchases WHERE email=p_email AND NOT voided AND expires_at>now())<p_duration THEN RAISE EXCEPTION 'insufficient_minutes'; END IF;
  v_held:=public.gk2_hold_slot(p_key,p_day,'hyzr',p_start,p_duration,'gk-v1');
  v_id:=(v_held->>'id')::uuid;

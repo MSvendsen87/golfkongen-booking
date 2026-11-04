@@ -38,11 +38,12 @@ export function matchingNukiAuth(auths,booking,code){
  Math.abs(Date.parse(x.allowedFromDate)-(Date.parse(booking.startUtc)-leadMs))<60000)&&
  Math.abs(Date.parse(x.allowedUntilDate)-Date.parse(booking.endUtc))<60000);
 }
+const bookingReference=b=>b.paymentSource==="punchcard"?"K-"+b.bookingId.slice(0,8):b.orderId;
 export function bookedNotice(b){
  return {title:"GolfKongen – ny bekreftet booking",
  message:[b.title,b.day,b.from+"–"+b.to,
  "Kunde: "+(b.customerName||b.email),
- "Ordre: "+b.orderId,
+ "Referanse: "+bookingReference(b),
  "Pilsett: "+b.rentalSets,
  "Referanse: "+b.bookingId.slice(0,8)].join("\n")};
 }
@@ -54,7 +55,7 @@ export function accessMail(b,code){
  const shared=b.sharedCode===true,codeLabel=shared?"FELLES DØRKODE DENNE KVELDEN":"DIN PERSONLIGE DØRKODE",windowText=shared?"Koden fungerer 18:45–22:15.":"Kan brukes fra 10 minutter før bookingstart til bookingslutt.";
  const price=Number.isSafeInteger(b.paidOre)&&b.paidOre>=0?new Intl.NumberFormat("nb-NO",{style:"currency",currency:"NOK"}).format(b.paidOre/100):null;
  const rows=[["Aktivitet",b.title],["Dato",displayDate],
-  ["Tid",b.from+"–"+b.to],...(price?[["Betalt",price]]:[]),["Pilsett",b.rentalSets?String(b.rentalSets)+" stk.":"Ikke valgt"],["Ordre",b.orderId]];
+  ["Tid",b.from+"–"+b.to],...(b.paymentSource==="punchcard"?[["Betaling","Klippekort · "+((b.endMin-b.startMin)/60).toLocaleString("nb-NO")+" timer"]]:(price?[["Betalt",price]]:[])),["Pilsett",b.rentalSets?String(b.rentalSets)+" stk.":"Ikke valgt"],["Referanse",bookingReference(b)]];
  const html="<div style='margin:0;padding:30px 14px;background:#f3f5f0;font-family:Arial,sans-serif;color:#16221a'>"+
   "<div style='max-width:570px;margin:auto;background:white;border-radius:18px;overflow:hidden'>"+
   "<div style='padding:26px 30px;background:#1e3b29;color:#fff'>"+
@@ -83,7 +84,7 @@ export function accessMail(b,code){
  "Tast alle seks sifrene på Nuki Keypad ved inngangsdøren.",
  "Du trenger ikke Nuki-appen.",
  "Bruk innesko eller sokker ved dart og simulator.","",
- "Ordre: "+b.orderId,"Hilsen GolfKongen"].join("\n"),
+ "Referanse: "+bookingReference(b),"Hilsen GolfKongen"].join("\n"),
  html};
 }
 export async function encryptAccessCode(code,keyBase64){

@@ -71,6 +71,7 @@ async function complete(event,state,external=null,detail=null){
 // Identity is never derived from client-side hold details. Pushover falls back
 // to the verified booking email if the order API is temporarily unavailable.
 async function verifiedQuickbutikCustomerName(booking,details=false){
+ if(booking.paymentSource==="punchcard")return details?{name:booking.email}:booking.email;
  const apiKey=env("GK2_QUICKBUTIK_API_KEY").trim();
  if(apiKey.length<20)throw Error("quickbutik_customer_lookup_not_configured");
  if(!/^[1-9][0-9]{0,8}$/.test(String(booking.orderId||"")))
@@ -109,7 +110,7 @@ async function pushover(booking,{cancelled=false}={}){
   title:"GolfKongen – booking avbestilt",
   message:[booking.title,booking.day,booking.from+"–"+booking.to,
    "Kunde: "+customerName,
-   "Ordre: "+booking.orderId,"Referanse: "+booking.bookingId.slice(0,8)].join("\\n")
+   "Referanse: "+(booking.paymentSource==="punchcard"?"K-"+booking.bookingId.slice(0,8):booking.orderId),"Referanse: "+booking.bookingId.slice(0,8)].join("\\n")
  }:bookedNotice({...booking,customerName});
  // The existing legacy GolfKongen notification app delivers to the
  // "Golfkongen" group. Resolve/validate the same group for Booking 2.0.
@@ -152,7 +153,7 @@ async function sendPendingAccessEmail(booking){
  subject:"GolfKongen – booking bekreftet, dørkode klargjøres",
  text:["Hei!","","Betalingen er registrert og bookingen bekreftet.",
  booking.title+" – "+booking.day+" kl. "+booking.from+"–"+booking.to,
- "Ordre: "+booking.orderId,"",
+ "Referanse: "+(booking.paymentSource==="punchcard"?"K-"+booking.bookingId.slice(0,8):booking.orderId),"",
  "Vi klargjør din personlige dørkode i Nuki. Den blir sendt i en egen e-post så snart låsen har bekreftet koden.",
  "Du skal ikke bestille eller betale på nytt. Ta kontakt med GolfKongen dersom koden ikke kommer i god tid før bookingen.",
  "","Hilsen GolfKongen"].join("\n")};
