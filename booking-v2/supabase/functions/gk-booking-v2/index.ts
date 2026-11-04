@@ -1,3 +1,4 @@
+import {punchcardOrder} from "./punchcard-order.mjs";
 import {verifyClubPaidOrder} from "./club-paid-order.mjs";
 import {setupClubEngine,clubOrderLines} from "./club-engine.mjs";
 async function memberSheet(action:string,input:Record<string,unknown>={}){
@@ -114,6 +115,14 @@ Deno.serve(async (req:Request)=>{
     if(!apiKey)return err("quickbutik_key_not_configured",503,origin);
     try{
       const rawOrder=await loadV1OrderRecord(verified.orderNumber,{apiKey});
+      const punchcard=punchcardOrder(rawOrder,verified.orderNumber);
+      if(punchcard){
+        if(!['order.new','order.cancelled'].includes(verified.eventType)||
+           punchcard.cancelled!==(verified.eventType==='order.cancelled'))
+          return err('punchcard_event_not_verified',409,origin);
+        await rpc('gk2_punchcard_purchase',{p_order:verified.orderNumber,p_email:punchcard.email,p_cancelled:punchcard.cancelled,p_qty:punchcard.quantity});
+        return reply({ok:true,punchcard:true},200,origin);
+      }
       // Club payments are recognized exclusively through authoritative Quickbutik V1 readback.
       const clubLines=(Array.isArray(rawOrder.products)?rawOrder.products:[])
         .filter((x:Record<string,unknown>)=>Number(x?.product_id)===1507);

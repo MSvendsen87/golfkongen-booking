@@ -9,7 +9,7 @@ export function checkedBooking(data){
  if(!data||typeof data!=="object"||!Object.hasOwn(titles,data.resource)||
  !/^\d{4}-\d{2}-\d{2}$/.test(data.day||"")||
  !/^[a-f0-9-]{36}$/i.test(data.bookingId||"")||
- !/^[1-9][0-9]{0,8}$/.test(data.orderId||"")||
+ !(/^[1-9][0-9]{0,8}$/.test(data.orderId||"")||(data.paymentSource==="punchcard"&&data.orderId==="KLIPP-"+data.bookingId))||
  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email||"")||
  !Number.isInteger(data.startMin)||!Number.isInteger(data.endMin)||
  data.endMin<=data.startMin||data.endMin>1439||

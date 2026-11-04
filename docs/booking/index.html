@@ -82,6 +82,7 @@
 <p>399 kr/år · Fornyes årlig</p></div>
 <a href="https://golfkongen.no/aktiviteter/medlemskap" aria-label="Se årsmedlemskapet"><span class="gk-offer-full">Se årsmedlemskapet</span><span class="gk-offer-short">Se tilbud →</span></a>
 </aside>
+<aside id="gk-v2-punch-offer" class="gk-v2-membership" aria-labelledby="gk-v2-punch-title"><div><h3 id="gk-v2-punch-title">10 timer HYZR · 1 200 kr</h3><p>120 kr/time · Gyldig i 12 måneder</p></div><a href="/aktiviteter/klippekort-disc-golf-simulator-10-timer"><span class="gk-offer-full">Se klippekortet</span><span class="gk-offer-short">Se tilbud →</span></a></aside>
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
@@ -213,6 +214,7 @@ function fillDurations(){var v=$('gk-v2-resource').value,d=$('gk-v2-duration'),o
 function syncActivityChoices(){
  var r=$('gk-v2-resource').value;
  $('gk-v2-membership').hidden=r!=='hyzr';
+ $('gk-v2-punch-offer').hidden=r!=='hyzr';
  document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
  $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
 }
@@ -261,6 +263,10 @@ $('gk-v2-submit').onclick=async()=>{
  button.disabled=true;button.textContent='Reserverer tidspunkt…';
  try{
   const r=$('gk-v2-resource').value;
+  if(window.gkPunchcardBooking){
+   const punched=await window.gkPunchcardBooking({resource:r,date:$('gk-v2-day').value,startMin:selected,duration:Number($('gk-v2-duration').value),acceptedTerms:true});
+   if(punched){$('gk-v2-terms').hidden=true;selected=null;draw();return;}
+  }
   const rentalSets=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   const identity=JSON.stringify({date:$('gk-v2-day').value,resource:r,
    startMin:selected,duration:Number($('gk-v2-duration').value),
