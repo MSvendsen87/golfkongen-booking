@@ -17,11 +17,26 @@ test('all 33 durations use the same public price policies in source and storefro
 test('late availability response cannot replace the newly chosen date',async()=>{
  let resolver;
  const nodes={'gk-v2-continue':{},'gk-v2-status':{},'gk-v2-times':{},'gk-v2-day':{value:'2026-11-02',min:'2026-11-01',max:'2026-12-11'}};
- const c={availabilityRequest:0,selected:null,CONF:{apiUrl:'https://example.invalid'},$:id=>nodes[id],fetch:()=>new Promise(r=>{resolver=r}),render:()=>{throw Error('stale render')},encodeURIComponent,Error};
- const source=html.slice(html.indexOf('function draw(){'),html.indexOf('function render(a){'));
+ const c={availabilityRequest:0,snapshot:null,selected:null,updateSummary:()=>{},renderDays:()=>{},CONF:{apiUrl:'https://example.invalid'},$:id=>nodes[id],fetch:()=>new Promise(r=>{resolver=r}),render:()=>{throw Error('stale render')},encodeURIComponent,Error};
+ const source=html.slice(html.indexOf('function draw(){'),html.indexOf('function priceFor('));
  runInNewContext(source+';draw()',c);
  nodes['gk-v2-day'].value='2026-11-03';
  resolver({ok:true,json:async()=>({ok:true,day:'2026-11-02'})});
  await new Promise(r=>setImmediate(r));
  assert.equal(nodes['gk-v2-status'].textContent,'Henter tilgjengelige tider …');
+});
+
+test('time grid rejects ranges crossing a claim or venue block',()=>{
+ const source=html.slice(html.indexOf('function intervalOpen('),html.indexOf('function render(a){'));
+ const open=runInNewContext(source+';intervalOpen',{bookingStartOpen:()=>true});
+ const hours={from:600,to:1320};
+ const day={openingHoursByResource:{hyzr:hours,dart_a:hours,dart_b:hours,venue:hours},blocks:[]};
+ const occupied=new Set(['dart_a|660']);
+ assert.equal(open(day,'dart_a',600,60,occupied),true);
+ assert.equal(open(day,'dart_a',600,90,occupied),false);
+ assert.equal(open(day,'dart_b',600,90,occupied),true);
+ assert.equal(open(day,'venue',600,240,occupied),false);
+ day.blocks=[{target:'venue_only',start_min:660,end_min:690}];
+ assert.equal(open(day,'venue',600,240,new Set()),false);
+ assert.equal(open(day,'hyzr',600,90,new Set()),true);
 });
