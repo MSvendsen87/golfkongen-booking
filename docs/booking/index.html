@@ -283,7 +283,7 @@ function render(a){
    button.disabled=!marked&&!extension&&!fresh;
    button.classList.toggle('selected',marked);
    button.setAttribute('aria-pressed',String(marked));
-   var nextDuration=extension?time-selected+30:minimum;
+   const nextDuration=extension?time-selected+30:minimum;
    var price=priceFor(resource,nextDuration);
    var extra=extension?price-priceFor(resource,duration):price;
    button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+'+((nextDuration-duration)/60).toLocaleString('nb-NO'):'0,5')+' klipp':
