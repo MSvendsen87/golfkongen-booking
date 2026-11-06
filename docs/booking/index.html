@@ -268,10 +268,10 @@ function render(a){
  var body=table.createTBody(),possible=0;
  for(var t=Math.min(...hours.map(h=>h.from));t<Math.max(...hours.map(h=>h.to));t+=30){
   const time=t;
-  var row=body.insertRow(),heading=document.createElement('th');
+  const row=body.insertRow(),heading=document.createElement('th');
   heading.scope='row';heading.textContent=clockLabel(time);row.append(heading);
   for(const resource of resources){
-   var cell=row.insertCell();
+   const cell=row.insertCell();
    const marked=resource===active&&selected!==null&&time>=selected&&time<selected+duration;
    const extension=resource===active&&selected!==null&&time>=selected+minimum&&
     Number.isFinite(priceFor(resource,time-selected+30))&&intervalOpen(a,resource,selected,time-selected+30,occupied);
@@ -283,7 +283,7 @@ function render(a){
    button.disabled=!marked&&!extension&&!fresh;
    button.classList.toggle('selected',marked);
    button.setAttribute('aria-pressed',String(marked));
-   var nextDuration=extension?time-selected+30:minimum;
+   const nextDuration=extension?time-selected+30:minimum;
    var price=priceFor(resource,nextDuration);
    var extra=extension?price-priceFor(resource,duration):price;
    button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+'+((nextDuration-duration)/60).toLocaleString('nb-NO'):'0,5')+' klipp':
