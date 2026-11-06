@@ -76,6 +76,19 @@
 #gk-booking-v2-livewidget #gk-v2-summary strong{display:block;font-size:18px;color:#fff;margin-bottom:4px}
 #gk-booking-v2-livewidget #gk-v2-summary span{display:block;font-size:13px;line-height:1.5}
 @media(max-width:760px){#gk-booking-v2-livewidget .gk-v2-row .gk-v2-img{height:64px}}
+
+#gk-booking-v2-livewidget #gk-v2-times{display:block}
+#gk-v2-times table{width:100%;border-collapse:collapse;text-align:center;table-layout:fixed}
+#gk-v2-times th,#gk-v2-times td{padding:4px;border-bottom:1px solid #3e5542}
+#gk-v2-times th:first-child{width:4.5rem}
+#gk-booking-v2-livewidget #gk-v2-times button{width:100%;min-height:44px;padding:6px 3px}
+#gk-v2-days{display:flex;gap:6px;overflow-x:auto;margin:10px 0}
+#gk-booking-v2-livewidget #gk-v2-days button{flex:1 0 auto;padding:7px 9px}
+#gk-booking-v2-livewidget #gk-v2-days button[aria-pressed=true]{background:#d8b96f;color:#151912}
+@media(max-width:700px){
+ #gk-v2-selection:has(button:not(:disabled)){position:sticky;bottom:0;z-index:5;background:#15221a;padding:6px 10px max(8px,env(safe-area-inset-bottom));border:1px solid #547960;border-radius:12px}
+ #gk-v2-selection button{width:100%}
+}
 </style>
 <h2>Book simulator og dart i Lyngdal</h2><p class="gk-v2-intro">Velg aktivitet og finn en tid som passer.</p>
 <div class="gk-v2-row">
@@ -94,8 +107,9 @@
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
- <label>Varighet<select id="gk-v2-duration"><option value="30">30 min</option><option value="60" selected>1 time</option><option value="90">1,5 time</option><option value="120">2 timer</option><option value="150">2,5 timer</option><option value="180">3 timer</option><option value="210">3,5 timer</option><option value="240">4 timer</option></select></label>
+ <select id="gk-v2-duration" hidden aria-label="Valgt varighet"></select>
 </form>
+<div id="gk-v2-days" aria-label="Velg dato"></div>
 <p class="gk-v2-footwear">Kun innesko eller sokker ved HYZR og dart.</p>
 <div id="gk-v2-dartsets" class="gk-v2-note" hidden style="margin:12px 0">
   <img alt="Pilsett til leie for dart" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/69a809729c0b5.webp" width="80" height="80" style="float:left;width:80px;height:80px;object-fit:cover;border-radius:10px;margin:0 14px 8px 0">
@@ -111,8 +125,8 @@
   </select>
   <p style="margin:7px 0 0;font-size:13px">Har du ikke egne dartpiler? Lei et pilsett for 25 kr. Du kan gjerne bruke egne piler med stålspiss.</p><div style="clear:both"></div>
 </div>
-<h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-summary" class="gk-v2-note">Eventuell medlemsrabatt vises i kassen.</div>
-<div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div>
+<h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status" role="status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-selection"><div id="gk-v2-summary" aria-live="polite" class="gk-v2-note">Eventuell medlemsrabatt vises i kassen.</div>
+<div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div></div>
 <section id="gk-v2-club-evening" class="gk-v2-card" style="margin-top:20px">
 <h3>Klubbkveld – Lyngdal Dartklubb</h3>
 <p style="margin:6px 0">Torsdager kl. 19–22 · 50 kr per person · 10 plasser. Pilsett kan leies for 25 kr.</p>
@@ -171,14 +185,17 @@ function selectionStillOpen(){
 }
 function refreshTimeCutoff(){
  if(advanceFinishedDay(snapshot))return;
- var day=$('gk-v2-day').value,buttons=$('gk-v2-times').querySelectorAll('button[data-time]');
- buttons.forEach(b=>{if(!bookingStartOpen(day,Number(b.dataset.time))){b.disabled=true;b.classList.remove('selected')}});
- if(selected!==null&&!bookingStartOpen(day,selected))selectionStillOpen();
- if(snapshot?.bookingEnabled&&buttons.length)$('gk-v2-status').textContent=Array.from(buttons).filter(b=>!b.disabled).length+' tilgjengelige starttider · Bestilling stenger 20 minutter før start';
+ var day=$('gk-v2-day').value;
+ if(snapshot?.day!==day)return;
+ var expired=Array.from($('gk-v2-times').querySelectorAll('button[data-time]:not(:disabled)'))
+   .some(b=>!bookingStartOpen(day,Number(b.dataset.time)));
+ if(selected!==null&&!bookingStartOpen(day,selected)){selectionStillOpen();render(snapshot);}
+ else if(expired)render(snapshot);
 }
 function draw(){
  var request=++availabilityRequest;
- selected=null;$('gk-v2-continue').disabled=true;
+ snapshot=null;selected=null;$('gk-v2-continue').disabled=true;
+ updateSummary();renderDays();
  if(!CONF.apiUrl){$('gk-v2-status').textContent='Bestilling er midlertidig utilgjengelig.';return}
  var d=$('gk-v2-day').value;if(!d)return; if(d<$('gk-v2-day').min||d>$('gk-v2-day').max){$('gk-v2-status').textContent='Dato utenfor 45-dagersvinduet.';$('gk-v2-times').textContent='';return;} if(d<'2026-11-01'){$('gk-v2-status').textContent='Første bookbare dato er 1. november 2026.';$('gk-v2-times').textContent='';return;}
  $('gk-v2-status').textContent='Henter tilgjengelige tider …';$('gk-v2-times').textContent='';
@@ -188,45 +205,125 @@ function draw(){
 function advanceFinishedDay(a,nowMs=Date.now()){
  var field=$('gk-v2-day'),today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(nowMs));
  if(!a||a.day!==field.value||a.day!==today||!a.bookingEnabled)return false;
- var hours=a.openingHoursByResource?.[$('gk-v2-resource').value],duration=Number($('gk-v2-duration').value);
- if(!hours||hours.to-hours.from<duration)return false;
- var lastStart=hours.from+Math.floor((hours.to-duration-hours.from)/30)*30;
- if(bookingStartOpen(a.day,lastStart,nowMs))return false;
+ var resource=$('gk-v2-resource').value,duration=resource==='venue'?240:30;
+ var resources=resource.startsWith('dart_')?['dart_a','dart_b']:[resource];
+ var lastStarts=resources.map(r=>a.openingHoursByResource?.[r]).filter(h=>h&&h.to-h.from>=duration)
+  .map(h=>h.from+Math.floor((h.to-duration-h.from)/30)*30);
+ if(!lastStarts.length||bookingStartOpen(a.day,Math.max(...lastStarts),nowMs))return false;
  var next=plusCalendarDays(a.day,1);
  if(next>field.max)return false;
  field.value=next;
  $('gk-v2-terms').hidden=true;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;
  draw();return true;
 }
+function priceFor(resource,minutes){
+ return PUBLIC_PRICES.find(p=>p.resource===resource&&p.minutes===minutes)?.price;
+}
+function clockLabel(minutes){
+ return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+}
+function renderDays(){
+ var field=$('gk-v2-day'),days=$('gk-v2-days');
+ days.replaceChildren();
+ if(!field.value||!field.max)return;
+ var label=new Intl.DateTimeFormat('nb-NO',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+ var first=plusCalendarDays(field.value,6)>field.max?plusCalendarDays(field.max,-6):field.value;
+ if(first<field.min)first=field.min;
+ for(var i=0;i<7;i++){
+  const date=plusCalendarDays(first,i);
+  if(date>field.max)break;
+  var button=document.createElement('button');
+  button.type='button';button.textContent=label.format(new Date(date+'T12:00:00Z'));
+  button.setAttribute('aria-pressed',String(date===field.value));
+  button.onclick=()=>{if(field.value!==date){field.value=date;draw();}};
+  days.append(button);
+ }
+}
+function intervalOpen(a,resource,start,duration,occupied){
+ var physical=resource==='venue'?['hyzr','dart_a','dart_b']:[resource];
+ var end=start+duration;
+ return bookingStartOpen(a.day,start)&&[resource,...physical].every(r=>{
+  var hours=a.openingHoursByResource?.[r];
+  return hours&&start>=hours.from&&end<=hours.to&&(start-hours.from)%30===0;
+ })&&!(a.blocks||[]).some(b=>start<b.end_min&&end>b.start_min&&
+  (b.target==='all'||(resource==='venue'&&b.target==='venue_only')||physical.includes(b.target)))&&physical.every(r=>{
+  for(var t=start;t<end;t+=30)if(occupied.has(r+'|'+t))return false;
+  return true;
+ });
+}
 function render(a){
  if(advanceFinishedDay(a))return;
- var r=$('gk-v2-resource').value,n=Number($('gk-v2-duration').value),hours=a.openingHoursByResource?.[r];
- if(r==='venue'&&n<240){$('gk-v2-status').textContent='Hele lokalet leies fra 4 timer.';return}
- if(!hours){$('gk-v2-status').textContent='Ingen godkjente åpningstider for aktiviteten ennå.';return}
- var occupied=new Set((a.claims||[]).map(c=>c.resource+'|'+c.slot_min));var phys=r==='venue'?['hyzr','dart_a','dart_b']:[r],possible=0,html='';
- for(var t=hours.from;t+n<=hours.to;t+=30){
-  var blocked=(a.blocks||[]).some(b=>t<b.end_min&&t+n>b.start_min&&(b.target==='all'||(r==='venue'&&b.target==='venue_only')||phys.includes(b.target)));
-  var taken=phys.some(rr=>{for(var k=t;k<t+n;k+=30)if(occupied.has(rr+'|'+k))return true;return false});
-  var open=bookingStartOpen(a.day,t)&&!blocked&&!taken&&phys.every(rr=>{var p=a.openingHoursByResource?.[rr];return !!p&&t>=p.from&&t+n<=p.to;});
-  var hh=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
-  html+='<button type="button" data-time="'+t+'" '+(open?'':'disabled')+'>'+hh+'</button>';if(open)possible++;
+ var active=$('gk-v2-resource').value;
+ var resources=active.startsWith('dart_')?['dart_a','dart_b']:[active];
+ var labels={hyzr:'HYZR',dart_a:'Dartbane A',dart_b:'Dartbane B',venue:'Hele lokalet'};
+ var hours=resources.map(r=>a.openingHoursByResource?.[r]).filter(Boolean);
+ var occupied=new Set((a.claims||[]).map(c=>c.resource+'|'+c.slot_min));
+ var duration=Number($('gk-v2-duration').value),minimum=active==='venue'?240:30;
+ var punch=active==='hyzr'&&$('gk-punch-use')?.checked===true;
+ var table=document.createElement('table');
+ var header=table.createTHead().insertRow();
+ ['Tid',...resources.map(r=>labels[r])].forEach(label=>{
+  var cell=document.createElement('th');cell.scope='col';cell.textContent=label;header.append(cell);
+ });
+ var body=table.createTBody(),possible=0;
+ for(var t=Math.min(...hours.map(h=>h.from));t<Math.max(...hours.map(h=>h.to));t+=30){
+  const time=t;
+  const row=body.insertRow(),heading=document.createElement('th');
+  heading.scope='row';heading.textContent=clockLabel(time);row.append(heading);
+  for(const resource of resources){
+   const cell=row.insertCell();
+   const marked=resource===active&&selected!==null&&time>=selected&&time<selected+duration;
+   const extension=resource===active&&selected!==null&&time>=selected+minimum&&
+    Number.isFinite(priceFor(resource,time-selected+30))&&intervalOpen(a,resource,selected,time-selected+30,occupied);
+   const fresh=intervalOpen(a,resource,time,minimum,occupied);
+   if(fresh)possible++;
+   var button=document.createElement('button');
+   button.type='button';
+   if(!marked&&!extension)button.dataset.time=time;
+   button.disabled=!marked&&!extension&&!fresh;
+   button.classList.toggle('selected',marked);
+   button.setAttribute('aria-pressed',String(marked));
+   const nextDuration=extension?time-selected+30:minimum;
+   var price=priceFor(resource,nextDuration);
+   var extra=extension?price-priceFor(resource,duration):price;
+   button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+'+((nextDuration-duration)/60).toLocaleString('nb-NO'):'0,5')+' klipp':
+     active==='venue'&&extension?price+' kr totalt':(extension?'+':'')+extra+' kr';
+   button.setAttribute('aria-label',labels[resource]+' '+clockLabel(time)+' · '+button.textContent);
+   button.onclick=()=>{
+    if(!bookingStartOpen(a.day,extension||marked?selected:time)){refreshTimeCutoff();return;}
+    if(marked&&time===selected)selected=null;
+    else if(marked&&Number.isFinite(priceFor(resource,time-selected+30)))$('gk-v2-duration').value=time-selected+30;
+    else if(!marked){
+     if(!extension){$('gk-v2-resource').value=resource;selected=time;}
+     $('gk-v2-duration').value=nextDuration;
+    }
+    render(a);
+    var replacement=$('gk-v2-times').querySelectorAll('tbody tr')[row.sectionRowIndex];
+    replacement?.cells[cell.cellIndex]?.firstElementChild?.focus({preventScroll:true});
+   };
+   cell.append(button);
+  }
  }
- $('gk-v2-times').innerHTML=html;$('gk-v2-status').textContent=a.bookingEnabled?possible+' tilgjengelige starttider':'Mulige starttider – bestilling åpner snart';
- $('gk-v2-times').querySelectorAll('button:not(:disabled)').forEach(b=>b.onclick=()=>{if(!bookingStartOpen(a.day,Number(b.dataset.time))){refreshTimeCutoff();return}selected=Number(b.dataset.time);$('gk-v2-times').querySelectorAll('button').forEach(c=>c.classList.toggle('selected',c===b));$('gk-v2-continue').disabled=!(CONF.checkoutVerified&&a.bookingEnabled&&canUseQuickbutikCart())});
- refreshTimeCutoff();
+ $('gk-v2-times').replaceChildren(table);
+ $('gk-v2-status').textContent=!hours.length?'Ingen godkjente åpningstider.':!a.bookingEnabled?'Bestilling åpner snart.':
+  !possible?'Ingen ledige starttider denne dagen.':active==='venue'?'Velg starttid. Minst 4 timer, deretter hele timer.':
+  'Velg starttid og trykk på siste halvtime for å forlenge.';
+ $('gk-v2-continue').disabled=!(selected!==null&&CONF.checkoutVerified&&a.bookingEnabled&&canUseQuickbutikCart());
  updateSummary();
 }
 function updateSummary(){
   var r=$('gk-v2-resource').value;
   var usePunchcard=r==='hyzr'&&document.getElementById('gk-punch-use')?.checked===true;
   $('gk-v2-continue').textContent=usePunchcard?'Book med klippekort':'Fortsett til booking';
+  if(selected===null){$('gk-v2-summary').textContent='Velg en tid for å se totalprisen.';return;}
+  var period=clockLabel(selected)+'–'+clockLabel(selected+Number($('gk-v2-duration').value));
   if(usePunchcard){
-   $('gk-v2-summary').textContent='Klippekort: '+(Number($('gk-v2-duration').value)/60).toLocaleString('nb-NO')+' timer trekkes fra saldoen når du bekrefter.';
+   $('gk-v2-summary').textContent=period+' · Klippekort: '+(Number($('gk-v2-duration').value)/60).toLocaleString('nb-NO')+' timer trekkes fra saldoen når du bekrefter.';
    return;
   }
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
-  var minutes=Number($('gk-v2-duration').value),price=PUBLIC_PRICES.find(p=>p.resource===r&&p.minutes===minutes)?.price;
-  var amount=Number.isFinite(price)?'<strong>Pris for valgt varighet: '+price.toLocaleString('nb-NO')+' kr</strong>':'';
+  var minutes=Number($('gk-v2-duration').value),price=priceFor(r,minutes);
+  var amount=Number.isFinite(price)?'<strong>'+period+' · '+price.toLocaleString('nb-NO')+' kr</strong>':'';
   var rental=qty>0?'<span>Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr · Totalt: '+(price+qty*25).toLocaleString('nb-NO')+' kr</span>':'';
   $('gk-v2-summary').innerHTML=amount+rental+'<span>Eventuell medlemsrabatt vises i kassen.</span>';
 }
@@ -249,7 +346,8 @@ function syncActivityChoices(){
 }
 $('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivityChoices();draw()};
 document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
-syncActivityChoices();
+fillDurations();syncActivityChoices();
+document.addEventListener('change',event=>{if(event.target.id==='gk-punch-use'&&snapshot?.day===$('gk-v2-day').value)render(snapshot);});
 $('gk-v2-sets-qty').onchange=updateSummary;
 $('gk-v2-duration').onchange=()=>{activityDurations[$('gk-v2-resource').value]=Number($('gk-v2-duration').value);draw()};$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart()||!selectionStillOpen())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
