@@ -1,0 +1,13 @@
+# Kassekontroll i Booking 2.0 — 25.10.2026 (staging)
+
+**Faktisk utført:** Den eksisterende Supabase Edge-funksjonen `gk-booking-v2` (isolert prosjekt `golfkongen-minbag-staging`) fikk `GET /admin/checkout-preflight?date=YYYY-MM-DD`, tilgjengelig **kun** etter godkjent Supabase Auth + allowlist + service-role sjekk. Den henter read-only fra eksisterende `cold-shadow-36dc` Quickbutik-produktproxy for produkt 1320, 1316 og 1317, teller tidsvarianter og viser avvik. Ingen Quickbutik write, ordre, betaling eller ny Supabase-migrering. Kasse- og webhookrutene svarer fortsatt HTTP 503.
+
+**Ekte adminfrontend:** `docs/index.html` i branch `booking-v2-preview-2026-10-24` fikk fanen `Kassekontroll`, med datovelger og knapp som kaller det sikre endepunktet. GitHub Pages publiserer frontend fra `/docs` under `https://msvendsen87.github.io/golfkongen-booking/`.
+
+**Algoritme:** 30-minutters intervaller mellom 10:00 og 22:00 (24 per dag per ressurs). SKUs i format `YYYY-MM-DD-HHMM-HHMM`. For bookinger på 60/90/120 min kreves 2/3/4 tilstøtende, tilgjengelige varianter og en heldekkende reservasjon i `gk2_private`, og ordre må kobles til én booking-ID. Algoritmen har egne read-only tester; 33/33 lokale kontroller besto på kildeforløperen. Serverens modulkode `booking-v2/supabase/functions/gk-booking-v2/checkout-preflight.mjs` må fullstendig integrasjonstestes mot Quickbutiks faktiske proxyrespons før noen varer opprettes.
+
+**Provisorisk prisregel:** Modulen bruker 75 kr per 30 min HYZR og 60 kr per 30 min dart, bare som **proposjonal matematisk testforutsetning** basert på 150/120 kr per time. Dette er IKKE endelig godkjente halvtimespriser eller bekreftet for de 7 kundegruppene. Ikke publiser som kundebeløp. Quickbutik er eneste autoritative beløp i kassaflyten, med eksisterende innloggingsrabatter.
+
+**Viktig betalingsutfordring:** Dagens Quickbutik-produkter bruker 60-minuttersvarianter. For ny flervariantsbooking må vi teste at Quickbutik aksepterer flere varianter av ett produkt i samme kasse, at lager og gruppepris fungerer, og at betalt ordre blir bekreftet før eventuell sluttføring i gk2. Den eksisterende Make/Cloudflare/Pushover sender varsel per ordrelinje, så denne kan IKKE få flere halvtimesrader før den er oppgradert til ett varsel per booking. Ingen double-webhook eller ny produktvariant skal skapes nå.
+
+**Neste konkrete manuelle test:** Åpne admin, Ctrl+Shift+R, `Kassekontroll`, dato 01.11.2026, `Kontroller Quickbutik-varianter`. Resultatet forventes å vise flere eldre timesvarianter og manglende halvtimesvarianter. Det må kontrolleres mot ekte backend (ikke påstått ferdig kassetest).

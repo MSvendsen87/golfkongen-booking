@@ -1,0 +1,50 @@
+BEGIN;
+UPDATE gk2_private.booking_settings SET club_enabled=true;
+SET LOCAL ROLE service_role;
+DO $tests$
+DECLARE d date;h jsonb;h2 jsonb;x jsonb;code1 jsonb;code2 jsonb;id1 uuid;id2 uuid;key1 uuid:=gen_random_uuid();locked boolean;wk uuid:=gen_random_uuid();
+BEGIN
+ SELECT slot_date INTO d FROM gk2_private.club_checkout_variants v WHERE slot_date>(now() AT TIME ZONE 'Europe/Oslo')::date+7
+ AND NOT EXISTS(SELECT 1 FROM gk2_private.reservations r WHERE r.slot_date=v.slot_date)
+ AND NOT EXISTS(SELECT 1 FROM gk2_private.club_enrolments e WHERE e.slot_date=v.slot_date) ORDER BY slot_date LIMIT 1;
+ IF d IS NULL THEN RAISE EXCEPTION 'no_test_day';END IF;
+ h:=public.gk2_club_prepare_member(key1,d,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','club-test-one@example.invalid',1);
+ id1:=(h->>'id')::uuid;
+ PERFORM public.gk2_club_opened(id1,9999991);
+ h2:=public.gk2_club_prepare_member(key1,d,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','club-test-one@example.invalid',1);
+ IF h2->>'variantId'<>'9999991' THEN RAISE EXCEPTION 'retry_not_reusing_variant'; END IF;
+ locked:=false;
+ BEGIN PERFORM public.gk2_match_club_paid_order('76543210',h->>'sku','club-test-one@example.invalid',1,5000);
+ EXCEPTION WHEN others THEN IF SQLERRM='club_paid_amount_mismatch' THEN locked:=true;ELSE RAISE;END IF;END;
+ IF NOT locked THEN RAISE EXCEPTION 'rental_underpayment_accepted';END IF;
+ x:=public.gk2_match_club_paid_order('76543210',h->>'sku','club-test-one@example.invalid',1,7500);
+ IF x->>'matched'<>'true' THEN RAISE EXCEPTION 'paid_not_matched';END IF;
+ x:=public.gk2_match_club_paid_order('76543210',h->>'sku','club-test-one@example.invalid',1,7500);
+ IF x->>'alreadyConfirmed'<>'true' THEN RAISE EXCEPTION 'payment_not_idempotent';END IF;
+ h2:=public.gk2_club_prepare_member(gen_random_uuid(),d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','club-test-two@example.invalid',0);
+ id2:=(h2->>'id')::uuid;PERFORM public.gk2_club_opened(id2,9999992);
+ x:=public.gk2_match_club_paid_order('76543211',h2->>'sku','club-test-two@example.invalid',1,5000);
+ code1:=public.gk2_club_access_get(d,'encrypted-test-one');code2:=public.gk2_club_access_get(d,'encrypted-test-two');
+ IF code1->'access'->>'ciphertext'<>code2->'access'->>'ciphertext' OR code2->>'active'<>'2' THEN RAISE EXCEPTION 'not_shared';END IF;
+ PERFORM public.gk2_cancel_club_by_order('76543210');
+ x:=public.gk2_club_access_get(d,null);
+ IF x->>'active'<>'1' THEN RAISE EXCEPTION 'cancel_removed_other_member';END IF;
+ PERFORM public.gk2_cancel_club_by_order('76543211');
+ x:=public.gk2_club_access_get(d,null);
+ IF x->>'active'<>'0' THEN RAISE EXCEPTION 'last_cancel_still_active';END IF;
+ PERFORM public.gk2_club_closed(id1);PERFORM public.gk2_club_closed(id2);
+ h:=public.gk2_club_prepare_member(gen_random_uuid(),d,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','club-test-one@example.invalid',0);
+ id1:=(h->>'id')::uuid;PERFORM public.gk2_club_opened(id1,9999993);
+ UPDATE gk2_private.club_enrolments SET hold_expires_at=now()-interval '1 minute' WHERE id=id1;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.gk2_day_availability(d)->'blocks') b WHERE b->>'target'='hyzr') THEN RAISE EXCEPTION 'expired_open_cart_not_protected';END IF;
+ PERFORM public.gk2_club_closed(id1);
+ IF NOT (public.gk2_club_day_status(d)->>'canBook')::boolean THEN RAISE EXCEPTION 'closed_checkout_not_released';END IF;
+ IF NOT public.gk2_club_worker(wk) OR public.gk2_club_worker(gen_random_uuid()) THEN RAISE EXCEPTION 'worker_lock_failed';END IF;
+ PERFORM public.gk2_club_worker(wk,true);
+ PERFORM public.gk2_club_login_attempt(repeat('a',64),repeat('b',64));
+ PERFORM public.gk2_club_login_attempt(repeat('a',64),repeat('b',64));
+ PERFORM public.gk2_club_login_attempt(repeat('a',64),repeat('b',64));
+ IF public.gk2_club_login_attempt(repeat('a',64),repeat('b',64)) THEN RAISE EXCEPTION 'login_rate_limit_failed';END IF;
+ RAISE NOTICE 'PASS: checkout lease retries, exact paid amount including rental, idempotent order, shared date code, cancellation, expiry cleanup, worker lock, login rate limit';
+END $tests$;
+ROLLBACK;

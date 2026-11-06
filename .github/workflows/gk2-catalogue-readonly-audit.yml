@@ -1,0 +1,45 @@
+name: Booking 2.0 – Read-only 45-day catalogue audit
+on:
+  push:
+    branches: [booking-v2-preview-2026-10-24]
+    paths:
+      - '.github/workflows/gk2-catalogue-readonly-audit.yml'
+      - 'booking-v2/scripts/verify-all-45-day-variants.mjs'
+      - 'booking-v2/data/public-prices.json'
+  workflow_dispatch:
+concurrency:
+  group: booking2-catalogue-readonly-audit
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  audit-all-33-products:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify SKU completeness, all hidden/stock zero
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+        shell: bash
+        run: |
+          set -o pipefail
+          node booking-v2/scripts/verify-all-45-day-variants.mjs | tee catalogue-audit.txt
+      - name: Retain catalogue audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking2-catalogue-audit-${{ github.run_id }}
+          path: catalogue-audit.txt
+          retention-days: 14
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if test -f catalogue-audit.txt; then
+            echo '### Booking 2.0 read-only catalogue audit' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 1 catalogue-audit.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
