@@ -13,9 +13,9 @@ function scenario(minutes,now,date='2026-11-04',resource='hyzr'){
  const changed=check({day:date,bookingEnabled:true,openingHoursByResource:{[resource]:{from:600,to:1320}}},Date.parse(now));
  return {changed,nodes,draws};
 }
-test('one-hour booking advances at 20:40 Oslo, not one second earlier',()=>{
- assert.equal(scenario(60,'2026-11-04T19:39:59Z').changed,false);
- const r=scenario(60,'2026-11-04T19:40:00Z');
+test('grid keeps today while a half-hour remains, regardless of the previous selection',()=>{
+ assert.equal(scenario(60,'2026-11-04T19:40:00Z').changed,false);
+ const r=scenario(60,'2026-11-04T20:10:00Z');
  assert.equal(r.changed,true);assert.equal(r.nodes['gk-v2-day'].value,'2026-11-05');assert.equal(r.draws,1);
  assert.equal(r.nodes['gk-v2-terms'].hidden,true);assert.equal(r.nodes['gk-v2-submit'].disabled,true);
 });
