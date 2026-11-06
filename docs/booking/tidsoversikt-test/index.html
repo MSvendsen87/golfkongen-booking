@@ -78,6 +78,7 @@
 @media(max-width:760px){#gk-booking-v2-livewidget .gk-v2-row .gk-v2-img{height:64px}}
 
 #gk-booking-v2-livewidget #gk-v2-times{display:block}
+#gk-booking-v2-livewidget #gk-v2-both-option button[aria-pressed=true]{background:#d8b96f;color:#151912;font-weight:700}
 #gk-v2-times table{width:100%;border-collapse:collapse;text-align:center;table-layout:fixed}
 #gk-v2-times th,#gk-v2-times td{padding:4px;border-bottom:1px solid #3e5542}
 #gk-v2-times th:first-child{width:4.5rem}
@@ -109,7 +110,6 @@
  <label>Dato<input id="gk-v2-day" type="date" required></label>
  <select id="gk-v2-duration" hidden aria-label="Valgt varighet"></select>
 </form>
-<label id="gk-v2-both-option" hidden style="display:none;align-items:center;gap:8px"><input id="gk-v2-both" type="checkbox" style="width:auto"> Book begge dartbanene</label>
 <div id="gk-v2-days" aria-label="Velg dato"></div>
 <p class="gk-v2-footwear">Kun innesko eller sokker ved HYZR og dart.</p>
 <div id="gk-v2-dartsets" class="gk-v2-note" hidden style="margin:12px 0">
@@ -126,7 +126,11 @@
   </select>
   <p style="margin:7px 0 0;font-size:13px">Har du ikke egne dartpiler? Lei et pilsett for 25 kr. Du kan gjerne bruke egne piler med stålspiss.</p><div style="clear:both"></div>
 </div>
-<h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status" role="status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-selection"><div id="gk-v2-summary" aria-live="polite" class="gk-v2-note">Eventuell medlemsrabatt vises i kassen.</div>
+<h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status" role="status">Velg dato for å se tilgjengelige tider.</p><div id="gk-v2-both-option" hidden role="group" aria-label="Antall dartbaner" style="display:none;gap:8px;margin:10px 0">
+<button type="button" id="gk-v2-one" aria-pressed="true" style="flex:1">Én bane</button>
+<button type="button" id="gk-v2-both" aria-pressed="false" style="flex:1">Begge baner</button>
+</div>
+<div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-selection"><div id="gk-v2-summary" aria-live="polite" class="gk-v2-note">Eventuell medlemsrabatt vises i kassen.</div>
 <div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div></div>
 <section id="gk-v2-club-evening" class="gk-v2-card" style="margin-top:20px">
 <h3>Klubbkveld – Lyngdal Dartklubb</h3>
@@ -255,7 +259,7 @@ function intervalOpen(a,resource,start,duration,occupied){
   return true;
  });
 }
-function bothDart(){return $('gk-v2-resource').value.startsWith('dart_')&&$('gk-v2-both').checked;}
+function bothDart(){return $('gk-v2-resource').value.startsWith('dart_')&&$('gk-v2-both').getAttribute('aria-pressed')==='true';}
 function render(a){
  if(advanceFinishedDay(a))return;
  var active=$('gk-v2-resource').value;
@@ -350,7 +354,7 @@ function syncActivityChoices(){
  $('gk-v2-offers').hidden=r!=='hyzr';
  $('gk-v2-both-option').style.display=r.startsWith('dart_')?'flex':'none';
  $('gk-v2-both-option').hidden=!r.startsWith('dart_');
- if(!r.startsWith('dart_'))$('gk-v2-both').checked=false;
+ if(!r.startsWith('dart_'))setDartMode(false);
  document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){var active=b.dataset.resource===(r==='dart_b'?'dart_a':r);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
  $('gk-v2-capacity').textContent=r==='hyzr'?'Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.':r==='venue'?'HYZR, begge dartbaner og møtebord – hele lokalet for dere selv. Leies fra 4 timer.':'Maks 4 spillere per dartbane. Prisen gjelder per bane, ikke per spiller.';
 }
@@ -358,7 +362,18 @@ $('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivity
 document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
 fillDurations();syncActivityChoices();
 document.addEventListener('change',event=>{if(event.target.id==='gk-punch-use'&&snapshot?.day===$('gk-v2-day').value)render(snapshot);});
-$('gk-v2-both').onchange=()=>{selected=null;if(snapshot)render(snapshot);};
+function setDartMode(both){
+ $('gk-v2-one').setAttribute('aria-pressed',String(!both));
+ $('gk-v2-both').setAttribute('aria-pressed',String(both));
+}
+for(const both of [false,true]){
+ $(both?'gk-v2-both':'gk-v2-one').onclick=()=>{
+  if(both===bothDart())return;
+  setDartMode(both);
+  selected=null;
+  if(snapshot)render(snapshot);
+ };
+}
 $('gk-v2-sets-qty').onchange=updateSummary;
 $('gk-v2-duration').onchange=()=>{activityDurations[$('gk-v2-resource').value]=Number($('gk-v2-duration').value);draw()};$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart()||!selectionStillOpen())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
