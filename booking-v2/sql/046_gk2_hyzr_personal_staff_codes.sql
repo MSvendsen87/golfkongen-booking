@@ -110,8 +110,8 @@ BEGIN
  IF v_staff.locked_until IS NOT NULL AND v_staff.locked_until>now()
  THEN RETURN jsonb_build_object('ok',false,'code','staff_code_temporarily_locked');END IF;
  IF extensions.crypt(p_code,v_staff.code_hash) IS DISTINCT FROM v_staff.code_hash THEN
-   v_fails:=CASE WHEN v_staff.locked_until IS NULL OR v_staff.locked_until<=now()
-                THEN least(v_staff.failed_attempts+1,5) ELSE 1 END;
+   v_fails:=CASE WHEN v_staff.locked_until IS NOT NULL AND v_staff.locked_until<=now()
+                THEN 1 ELSE least(v_staff.failed_attempts+1,5) END;
    UPDATE gk2_private.hyzr_staff_codes
    SET failed_attempts=v_fails,locked_until=CASE WHEN v_fails>=5 THEN now()+interval '15 minutes' ELSE NULL END
    WHERE email=v_staff.email;
