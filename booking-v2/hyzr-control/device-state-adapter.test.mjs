@@ -25,3 +25,8 @@ test("QR not enabled just because preview says extensionPossible",()=>{
  const x=map({...status,extensionPossible:true,payment_url:"https://evil.example"},true);
  assert.equal(x.extension.available,false);
 });
+
+test("admin preview without server timestamp cannot be used as live device state",()=>assert.equal(
+ map({...status,checkedAt:undefined},true).status,"locked"));
+test("unsupported resource does not unlock HYZR",()=>assert.equal(
+ map({...status,resource:"dart_a"},true).status,"locked"));
