@@ -106,7 +106,7 @@ BEGIN
     'extensionPaymentReady',false
   );
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.gk2_hyzr_preview_state(timestamptz) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.gk2_hyzr_preview_state(timestamptz) TO service_role;
