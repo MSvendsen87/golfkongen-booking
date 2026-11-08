@@ -3,12 +3,14 @@ on:
   pull_request:
     paths:
       - 'booking-v2/hyzr-control/**'
+      - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
   push:
     branches:
       - 'feature/hyzr-control-safe-stage-20261108'
     paths:
       - 'booking-v2/hyzr-control/**'
+      - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
 permissions:
   contents: read
@@ -22,3 +24,4 @@ jobs:
         with:
           node-version: '22'
       - run: node --test booking-v2/hyzr-control/session-state.test.mjs
+      - run: node booking-v2/hyzr-control/check-admin-ui.mjs
