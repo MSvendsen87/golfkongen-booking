@@ -65,3 +65,13 @@ Dette er en separat modul for Booking 2.0. Den gamle Cloudflare Worker gk-bookin
 - Ansattmodus: Ingen varsler/nedtelling; likevel sperring ved neste booking eller stengetid.
 - Se `notice-policy.mjs` og `notice-policy.test.mjs`: denne visningsmodulen kan **ikke** overstyre sperretilstand.
 - Fysisk testpakke v6 viser lukkbare varsler med stillestående 10-minutters nådetid og en demo-sperre. Den styrer ikke HYZR/booking/Vipps. PC-oppfølging gjenstår.
+
+
+## Velkomst – skjermtest v7, 08.11.2026
+- Automatisk velkomst når PC-testen starter. Egentlig skal produksjonsprogrammet bruke **ny bekreftet booking-ID**, ikke bare Windows oppstart, som utløser.
+- Varighet maks åtte sekunder, kan lukkes tidligere. Den skal ikke stoppe bookingtid eller endre HYZR-prosessen.
+- Meldingen viser bare generelle spilleregler (rene disker, ingen brukte utendørsdisker, refleks på egne), ingen personnavn eller betalings-QR.
+- Hvis PC/programmet starter midt i en booking med bare fire minutter igjen eller i nådetiden, må velkomsten ikke overstyre advarselen.
+- Ved neste bekreftede booking-ID kommer en ny velkomst. Kunder uten bekreftet tilgang får ingen velkomst som kan forveksles med autorisert spilletid.
+- `welcome-policy.mjs` og `welcome-policy.test.mjs` dekker at velkomsten vises kun når betalt sesjon er gyldig og ikke gjentar seg.
+- Windows `v7` er fremdeles en separat **demo uten live Booking 2.0-tilkobling**.
