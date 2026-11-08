@@ -28,9 +28,9 @@ test("adjacent booking disallows extension",()=>{
   assert.equal(a.extension.available,false);
   assert.equal(a.lock_at,"2026-11-08T13:00:00.000Z");
 });
-test("3 minute grace",()=>{
-  assert.equal(s("2026-11-08T13:02:30Z").screen_phase,"grace");
-  assert.equal(s("2026-11-08T13:03:00Z").status,"locked");
+test("10 minute grace",()=>{
+  assert.equal(s("2026-11-08T13:09:59Z").screen_phase,"grace");
+  assert.equal(s("2026-11-08T13:10:00Z").status,"locked");
 });
 test("new customer gets the next session",()=>assert.equal(s("2026-11-08T13:00:00Z",[booking,next]).reservation_id,"b"));
 test("held booking clips grace",()=>{
@@ -49,4 +49,25 @@ test("oversized grace locks",()=>assert.equal(s("2026-11-08T12:01:00Z",[booking]
 test("longer extension that collides blocked",()=>{
  const b={...next,start_at:"2026-11-08T13:30:00Z",end_at:"2026-11-08T14:30:00Z"};
  assert.equal(s("2026-11-08T12:57:00Z",[booking,b],{...offer,minutes:60}).extension.available,false);
+});
+
+test("QR stays valid in ten-minute grace",()=>{
+ const extended={...offer,expires_at:"2026-11-08T13:10:00Z"};
+ const state=s("2026-11-08T13:09:00Z",[booking],extended);
+ assert.equal(state.screen_phase,"grace");
+ assert.equal(state.extension.available,true);
+});
+test("new reservation at end overrides grace immediately",()=>{
+ const state=s("2026-11-08T13:00:00Z",[booking,{...next,status:"held",payment_confirmed:false}]);
+ assert.equal(state.status,"locked");
+});
+test("new reservation starting during grace locks on its start",()=>{
+ const later={...next,status:"held",payment_confirmed:false,start_at:"2026-11-08T13:05:00Z",end_at:"2026-11-08T13:35:00Z"};
+ assert.equal(s("2026-11-08T13:04:59Z",[booking,later]).status,"active");
+ assert.equal(s("2026-11-08T13:05:00Z",[booking,later]).status,"locked");
+});
+test("QR cannot extend if next booking overlaps",()=>{
+ const later={...next,status:"confirmed",payment_confirmed:true,start_at:"2026-11-08T13:05:00Z",end_at:"2026-11-08T13:35:00Z"};
+ const extended={...offer,expires_at:"2026-11-08T13:10:00Z"};
+ assert.equal(s("2026-11-08T13:01:00Z",[booking,later],extended).extension.available,false);
 });
