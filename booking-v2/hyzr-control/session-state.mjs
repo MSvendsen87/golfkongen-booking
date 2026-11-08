@@ -28,7 +28,7 @@ function rowWithTimes(r) {
 function locked(reason) {
   return {version:1,status:"locked",payment_confirmed:false,reason,extension:{available:false,payment_url:""}};
 }
-export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null,maintenance=false,graceMinutes=3}={}) {
+export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null,maintenance=false,graceMinutes=10}={}) {
   const t=instant(now);
   if(!Number.isFinite(t))return locked("invalid_clock");
   if(maintenance)return {...locked("maintenance"),status:"maintenance"};
@@ -47,7 +47,7 @@ export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null
   const lockAt=Math.min(session.end+graceMinutes*MINUTE,upcoming?.start??Infinity);
   if(t>=lockAt)return locked("booking_finished");
   const e=extensionOffer??{},expires=instant(e.expires_at),mins=Number(e.minutes);
-  const canExtend=t<session.end&&e.available===true&&e.reservation_id===session.id&&Number.isFinite(expires)&&expires>t&&
+  const canExtend=t<lockAt&&e.available===true&&e.reservation_id===session.id&&Number.isFinite(expires)&&expires>t&&
     Number.isInteger(mins)&&mins>=30&&mins<=240&&mins%30===0&&safeCheckoutUrl(e.payment_url)&&
     (!upcoming||session.end+mins*MINUTE<=upcoming.start);
   return {version:1,status:"active",payment_confirmed:true,reservation_id:session.id,
