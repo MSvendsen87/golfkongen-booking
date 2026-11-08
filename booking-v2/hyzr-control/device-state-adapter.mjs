@@ -13,8 +13,10 @@ export function adaptVerifiedDeviceResponse(reply,authenticated=false){
   if(!["active","warning","grace","staff"].includes(reply.state))return fail("unsupported_backend_state");
   if(typeof reply.bookingId!=="string"||!reply.bookingId||
     typeof reply.endsAt!=="string"||typeof reply.lockAt!=="string"||
-    typeof reply.startsAt!=="string"||!Number.isFinite(Date.parse(reply.endsAt))||
-    !Number.isFinite(Date.parse(reply.lockAt))||!Number.isFinite(Date.parse(reply.startsAt)))
+    typeof reply.startsAt!=="string"||typeof reply.checkedAt!=="string"||
+    !["hyzr","venue"].includes(reply.resource)||
+    !Number.isFinite(Date.parse(reply.endsAt))||!Number.isFinite(Date.parse(reply.lockAt))||
+    !Number.isFinite(Date.parse(reply.startsAt))||!Number.isFinite(Date.parse(reply.checkedAt)))
     return fail("invalid_booking_state");
   // Do not accept arbitrary QR URLs in backend status. A separate signed
   // extension checkout offer must be issued and checked by the server.
