@@ -13,6 +13,7 @@
 import {createClient} from "npm:@supabase/supabase-js@2.95.0";
 import {normalizeServerStatus,verifyHashFormat,
         validDeviceTokenFormat,compareHexConstantTime} from "./device-status-core.mjs";
+import {collectExtensionOptions} from "./extension-options.mjs";
 
 const respond=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
  status,
@@ -31,7 +32,8 @@ Deno.serve(async(req:Request)=>{
  // No browser embedding, fake CORS preflights or unintended methods.
  if(req.method!=="GET")return respond({ok:false,error:"method_not_allowed"},405);
  const url=new URL(req.url);
- if(!url.pathname.endsWith("/gk2-hyzr-device-status"))
+ const previewOptions=url.pathname.endsWith("/gk2-hyzr-device-status/options");
+ if(!previewOptions && !url.pathname.endsWith("/gk2-hyzr-device-status"))
    return respond({ok:false,error:"not_found"},404);
  const dbUrl=Deno.env.get("SUPABASE_URL")||"";
  const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -54,6 +56,19 @@ Deno.serve(async(req:Request)=>{
    if(state.ok===false)return respond({ok:false,error:"invalid_server_status"},503);
    // The downstream device cannot control real sessions until enrollment,
    // local PC validation and payment/hand-over checks are completed.
+   if(previewOptions){
+     // Read-only. Do not create a payment, reserve a slot or accept a browser QR.
+     if(state.status!=="active"||state.resource!=="hyzr"||state.staff_mode===true)
+       return respond({ok:true,mode:"pricing_preview_only",options:[],paymentReady:false,deviceControlEnabled:false});
+     const durations=[30,60,90,120];
+     const quotes=await Promise.all(durations.map(minutes=>db.rpc("gk2_hyzr_extension_quote",{
+       p_reservation:state.reservation_id,p_extra_minutes:minutes,p_at:checkedAt
+     })));
+     if(quotes.some(q=>q.error))return respond({ok:false,error:"extension_quotes_unavailable"},503);
+     const options=collectExtensionOptions(state,quotes.map(q=>q.data));
+     return respond({ok:true,mode:"pricing_preview_only",options,
+       paymentReady:false,deviceControlEnabled:false,qrPaymentEnabled:false});
+   }
    return respond({...state,deviceControlEnabled:false,qrPaymentEnabled:false});
  }catch {
    return respond({ok:false,error:"server_state_unavailable"},503);
