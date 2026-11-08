@@ -28,7 +28,7 @@ function rowWithTimes(r) {
 function locked(reason) {
   return {version:1,status:"locked",payment_confirmed:false,reason,extension:{available:false,payment_url:""}};
 }
-export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null,maintenance=false,graceMinutes=10}={}) {
+export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null,staffOverride=null,maintenance=false,graceMinutes=10}={}) {
   const t=instant(now);
   if(!Number.isFinite(t))return locked("invalid_clock");
   if(maintenance)return {...locked("maintenance"),status:"maintenance"};
@@ -40,19 +40,31 @@ export function computeHyzrDeviceStatus({now,reservations=[],extensionOffer=null
   const live=confirmed.filter(r=>r.start<=t&&t<r.end);
   if(live.length>1)return locked("conflicting_paid_bookings");
   let session=live[0]??null;
+  // The backend must establish employee identity, booking ownership and code
+  // validity. A companion/browser-supplied "staffOverride" is never trusted.
+  const so=staffOverride??{};
+  const until=instant(so.expires_at);
+  const verifiedStaffSession=confirmed.find(r=>
+    r.id===so.reservation_id&&r.resource==="hyzr"&&so.authorized===true&&
+    so.staff_booking_verified===true&&Number.isFinite(until)&&
+    until>t&&until<=r.start+24*60*MINUTE&&t>=r.start
+  )??null;
+  if(!session&&verifiedStaffSession)session=verifiedStaffSession;
   if(!session)session=confirmed.filter(r=>r.end<=t&&t<r.end+graceMinutes*MINUTE).sort((a,b)=>b.end-a.end)[0]??null;
   if(!session)return locked("no_confirmed_paid_booking");
   if(blocks.some(r=>r.id!==session.id&&r.start<session.end&&r.end>session.start))return locked("overlapping_reservations");
   const upcoming=blocks.filter(r=>r.id!==session.id&&r.start>=session.end).sort((a,b)=>a.start-b.start)[0]??null;
-  const lockAt=Math.min(session.end+graceMinutes*MINUTE,upcoming?.start??Infinity);
+  const staffMode=Boolean(verifiedStaffSession&&verifiedStaffSession.id===session.id);
+  const lockAt=Math.min(staffMode?until:session.end+graceMinutes*MINUTE,upcoming?.start??Infinity);
   if(t>=lockAt)return locked("booking_finished");
   const e=extensionOffer??{},expires=instant(e.expires_at),mins=Number(e.minutes);
-  const canExtend=t<lockAt&&e.available===true&&e.reservation_id===session.id&&Number.isFinite(expires)&&expires>t&&
+  const canExtend=!staffMode&&t<lockAt&&e.available===true&&e.reservation_id===session.id&&Number.isFinite(expires)&&expires>t&&
     Number.isInteger(mins)&&mins>=30&&mins<=240&&mins%30===0&&safeCheckoutUrl(e.payment_url)&&
     (!upcoming||session.end+mins*MINUTE<=upcoming.start);
   return {version:1,status:"active",payment_confirmed:true,reservation_id:session.id,
     resource:session.resource,start_at:new Date(session.start).toISOString(),end_at:new Date(session.end).toISOString(),
     lock_at:new Date(lockAt).toISOString(),remaining_seconds:Math.max(0,Math.ceil((session.end-t)/1000)),
-    screen_phase:t>=session.end?"grace":session.end-t<=4*MINUTE?"warning":"active",
+    screen_phase:staffMode?"staff":t>=session.end?"grace":session.end-t<=4*MINUTE?"warning":"active",
+    staff_mode:staffMode,
     extension:{available:canExtend,payment_url:canExtend?e.payment_url:""}};
 }
