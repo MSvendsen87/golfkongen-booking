@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'booking-v2/hyzr-control/**'
+      - 'booking-v2/supabase/functions/gk2-hyzr-device-status/**'
       - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
   push:
@@ -10,6 +11,7 @@ on:
       - 'feature/hyzr-control-safe-stage-20261108'
     paths:
       - 'booking-v2/hyzr-control/**'
+      - 'booking-v2/supabase/functions/gk2-hyzr-device-status/**'
       - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
 permissions:
