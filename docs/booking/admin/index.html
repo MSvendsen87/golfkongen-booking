@@ -186,7 +186,7 @@ async function api(path,method="GET",payload){
  if(!r.ok||j.ok!==true)throw Error("Endringen ble ikke utført ("+esc(j.code||r.status)+"). Kontroller eksisterende bookinger og prøv ikke flere ganger før status er sjekket.");
  return j;
 }
-function showLogin(){approved=false;memberDirectory=[];$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
+function showLogin(){clearStaffSecret();approved=false;memberDirectory=[];$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
 function showApp(email){approved=true;$("login").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("who").textContent=email;$("backendstatus").textContent="Innlogget · Beskyttet API";}
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
@@ -259,7 +259,7 @@ $("staffcodeform").onsubmit=async e=>{
  try{
   const email=$("staffcodeemail").value.trim().toLowerCase();
   const result=await hyzrAdminApi("/staff/issue","POST",{email});
-  if(!/^\\d{8}$/.test(String(result.code||"")))throw Error("Ugyldig kode fra serveren.");
+  if(!/^\d{8}$/.test(String(result.code||"")))throw Error("Ugyldig kode fra serveren.");
   $("staffcodevalue").textContent=result.code;
   $("staffcodeonce").classList.remove("hidden");
   $("staffcodemessage").textContent="Ny kode opprettet for "+email+". Forrige kode er sperret.";
