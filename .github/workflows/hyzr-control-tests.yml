@@ -1,0 +1,24 @@
+name: HYZR control tests
+on:
+  pull_request:
+    paths:
+      - 'booking-v2/hyzr-control/**'
+      - '.github/workflows/hyzr-control-tests.yml'
+  push:
+    branches:
+      - 'feature/hyzr-control-safe-stage-20261108'
+    paths:
+      - 'booking-v2/hyzr-control/**'
+      - '.github/workflows/hyzr-control-tests.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test booking-v2/hyzr-control/session-state.test.mjs
