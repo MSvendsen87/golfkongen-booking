@@ -35,3 +35,19 @@
 ## Læring
 - Windows-agenten kommer fra de godkjente skjermtestene og er en ny fase: faktisk serverlesing fremfor simulert nedtelling.
 - Det finnes foreløpig ingen grunn til å lage flere ZIP-demoer. Bruk den samme monitoren frem til tilkobling er verifisert.
+
+## Reell Quickbutik-betaling avstemt (08.11.2026, kveldsrunde)
+- `gk2_confirm_paid_order_status` bruker verifisert Quickbutik V1 betalt-status, men setter `paid_ore=NULL` bevisst fordi nettopris ikke alltid kan avledes fra V1-gross. Dette er **ikke** en gratis booking.
+- Gammel `gk2_hyzr_preview_state` krevde `paid_ore IS NOT NULL` og ville derfor feilaktig låst ekte, bekreftede betalinger. Rettet i migration `051_gk2_hyzr_allow_verified_paid_without_amount.sql`, distribuert i Testing med kontroll på 11. november: `active` under betalt økt, `grace` etter slutt, `locked` etter 10 min.
+- Utvidelsesvalg for ukjent nettopris forblir skjult/ikke betalbart. Ikke gjett beløp eller bruk ordinær katalogpris.
+- Ordre **3774** kontrollert mot Quickbutik direkte: HYZR 11.11 kl. 14:30–16:30, status paid, Qliro, ingen rabatt/refusjon, 300 NOK, riktig kunde og SKU. `paid_ore=30000` oppdatert under full guard med booking-ID/order/slot/status og verifisert etterpå; ingen andre bookingrader endret. Forlengelse 30 min gir 75 NOK i read-only quote.
+- `quickbutik-paid-amount.mjs` og tilhørende tester bygger en streng verifier for faktisk V2-netto; ennå **ikke** koblet til automatisk avstemming av fremtidige ordrer. Krever egen servertilgang til trygg Quickbutik V2-data eller annet verifiserbart nettobeløp. Integrasjonen må IKKE forsøke å rekonstruere nettopris fra gross uten dokumentert rabatt.
+- Separat `gk2-hyzr-device-status` Edge Function **versjon 2** har en autentisert read-only `/options` som beregner 30/60/90/120-minutters prislister fra `gk2_hyzr_extension_quote`. `paymentReady=false`; ingen hold, Vipps-kall eller PC-styring. Fortsatt blokkert av manglende enhetsnøkkel på server.
+- Ingen endring i live `gk-booking-v2` edge function. Ikke publiser pris-QR før betaling og tidsreservasjon er atomisk implementert.
+
+## Avhengigheter før oppstart (fremdeles)
+1. Nøkkel-filen på simulator-PC er persistent under samme Windows-profil. Hash må hentes lokalt og lagres i Testing Secret; **ikke generer ny nøkkel**.
+2. HYZR-leverandør må dokumentere en trygg kommando/API for å avslutte forrige spill eller gå til startsiden uten å krasje sensorer, launcher eller Windows.
+3. Vipps ePayment API-salgssted og nøkler må aktiveres i rett bedrift. Ingen credentials i GitHub eller chat.
+4. Atomisk kapasitetshold under Booking 2.0s felles dato-advisory-lock og `claims`-unikhet, med verifisert Vipps capture/klippekort debit før bookingoppdatering.
+5. Server-side faktisk nettoprisavstemming for senere bookinger. Test rabattordrer, ikke bare en ordinær ordre.
