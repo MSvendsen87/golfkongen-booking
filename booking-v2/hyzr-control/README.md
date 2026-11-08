@@ -6,7 +6,7 @@ Dette er en separat modul for Booking 2.0. Den gamle Cloudflare Worker gk-bookin
 - Beregner aktiv HYZR-/hele-lokalet-økt ut fra serververifisert betalt booking.
 - Varsel ved nøyaktig fire minutter igjen.
 - QR-betalingslenke vises bare når serveren har gitt et gyldig, kortvarig tilbud for riktig booking, og det ikke overlapper neste bestilling.
-- Automatisk avslutningsstatus tre minutter etter slutt som standard – aldri inn i neste bekreftede eller midlertidig holdte booking.
+- Automatisk avslutningsstatus ti minutter etter slutt som standard – aldri inn i neste bekreftede eller midlertidig holdte booking.
 - Ubetalt, kansellert, ugyldig og overlappende tid sperres.
 - Ingen endring i PC, Quickbutik, Nuki eller database. Kjør tester med:
   node --test booking-v2/hyzr-control/session-state.test.mjs
@@ -24,3 +24,9 @@ Dette er en separat modul for Booking 2.0. Den gamle Cloudflare Worker gk-bookin
 - Statistikk i Sportskongen Admin: kapasitet, faktiske betalte beløp, forlengelser og ledige timer.
 
 **Denne grenen er bare en isolert test. Den skal ikke bygges inn i live Booking 2.0 før punktene over er gjennomgått.**
+
+## Godkjente regler 08.11.2026
+- Kunde kan fortsette/forlenge i **inntil 10 minutter etter bokført slutt**. Neste reservasjons start overstyrer alltid denne marginen.
+- QR skal være tilgjengelig også i marginen når det faktisk er plass, men bare et verifisert betalingstilbud åpner betaling.
+- Forlengelsespris: opprinnelig **faktisk betalte øre / opprinnelig varighet × nye minutter** (avrundes til hele øre); ikke bruk ordinær pris slik at rabatten forsvinner. Klippekort skal trekke klipp, ikke gi gratis tid. 0-kroners ordre uten klippekort må kontrolleres.
+- Vipps ePayment foretrekkes; dokumentasjon: https://developer.vippsmobilepay.com/docs/APIs/epayment-api/quick-start/. Krever egne sales-unit-nøkler, webhook og sikker capture/ordreavstemming; Quickbutik fallback for kundekasse.
