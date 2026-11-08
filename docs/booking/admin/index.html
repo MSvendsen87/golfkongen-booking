@@ -65,6 +65,7 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <div class="tabs" role="tablist" aria-label="Bookingadministrasjon">
 <button class="tab active" data-tab="oversikt" role="tab">Oversikt</button>
 <button class="tab" data-tab="statistikk" role="tab">Statistikk</button>
+<button class="tab" data-tab="ansattkoder" role="tab">Ansattkoder</button>
 <button class="tab" data-tab="sperringer" role="tab">Sperringer</button>
 <button class="tab" data-tab="priser" role="tab">Priser</button>
 <button class="tab" data-tab="grupper" role="tab">Rabattgrupper</button>
@@ -90,6 +91,29 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
  <p class="small">Kun forhåndsvisning. Ingen kommando sendes til PC-en. QR-betaling og automatisk avslutning er ikke aktivert.</p>
  <button type="button" class="btn outline" id="hyzrrefresh">Sjekk HYZR-status</button>
  <div id="hyzr-result" style="margin-top:12px" role="status">Ingen status hentet.</div></div>
+</section>
+
+<section data-panel="ansattkoder" class="hidden">
+ <div class="card">
+ <h2>Personlig HYZR-kode for ansatte</h2>
+ <p class="small">Ansatte kan bruke sin egen kode når de har en bekreftet, betalt HYZR-booking registrert på samme e-postadresse. Kun administratorer skal utstede koder. Sjekk at e-postadressen tilhører en ansatt før du oppretter kode.</p>
+ <p class="small">Kode gir ikke lov til å overstyre nye bookinger eller spilletid etter stengetid. Simulator-PC-en må kobles til før koden fungerer fysisk.</p>
+ <form id="staffcodeform">
+ <div class="fields"><div class="field"><label for="staffcodeemail">Ansattes e-postadresse</label><input type="email" id="staffcodeemail" autocomplete="off" required placeholder="ansatt@eksempel.no"></div></div>
+ <button type="submit" class="btn" id="staffcodeissue">Opprett / forny personlig kode</button>
+ </form>
+ <p id="staffcodemessage" role="status" class="small"></p>
+ <div id="staffcodeonce" class="notice hidden" aria-live="polite">
+  <strong>Koden vises bare nå</strong>
+  <p id="staffcodevalue" style="font:700 28px/1.4 ui-monospace,monospace;letter-spacing:.15em;user-select:all"></p>
+  <button type="button" class="btn secondary" id="staffcodecopy">Kopier koden</button>
+  <p class="small">Del koden privat med riktig ansatt. Ikke send den i offentlige meldinger.</p>
+ </div>
+ </div>
+ <div class="card"><h2>Aktive og tidligere ansattkoder</h2>
+  <button type="button" class="btn outline" id="staffrefresh">Oppdater oversikt</button>
+  <div class="tablewrap" id="stafflist" style="margin-top:12px">Henter oversikt …</div>
+ </div>
 </section>
 <section data-panel="sperringer" class="hidden">
 <div class="grid">
@@ -184,19 +208,71 @@ for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
  document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
  if(selected==="priser")Promise.all([loadPrices(),priceControls.loadAll()]);
  if(selected==="statistikk")Promise.all([loadUsage(),loadHyzrStatus()]);
+ if(selected==="ansattkoder")loadStaffCodes();
+ if(selected!=="ansattkoder")clearStaffSecret();
  if(selected==="grupper")Promise.all([loadMembers(),benefitEditor.load(),sheetMembers.load()]);
 };
 
-async function hyzrAdminApi(path){
+async function hyzrAdminApi(path,method="GET",payload){
  const {data:{session}}=await auth.auth.getSession();
  if(!session?.access_token)throw Error("Innlogging er utløpt.");
- const r=await fetch(HYZRAPI+path,{method:"GET",cache:"no-store",
-  headers:{Authorization:"Bearer "+session.access_token,apikey:KEY}});
+ const r=await fetch(HYZRAPI+path,{method,cache:"no-store",
+  headers:{Authorization:"Bearer "+session.access_token,apikey:KEY,"Content-Type":"application/json"},
+  body:payload?JSON.stringify(payload):undefined});
  let result;try{result=await r.json()}catch{throw Error("Ugyldig svar fra statusserveren.");}
  if(r.status===401||r.status===403)throw Error("Du har ikke adgang til denne funksjonen.");
  if(!r.ok||result?.ok!==true)throw Error("Kunne ikke hente data.");
  return result;
 }
+
+function clearStaffSecret(){
+ if(!$("staffcodeonce"))return;
+ $("staffcodeonce").classList.add("hidden");$("staffcodevalue").textContent="";
+}
+async function loadStaffCodes(){
+ if(!approved)return;
+ $("stafflist").textContent="Henter ansatte …";
+ try{
+  const result=await hyzrAdminApi("/staff");
+  const staff=Array.isArray(result.staff)?result.staff:[];
+  const display=staff.map(item=>'<tr><td>'+esc(item.email)+'</td><td>'+
+   (item.active?'Aktiv':'Sperret')+'</td><td>'+
+   esc(item.lastUsedAt?new Date(item.lastUsedAt).toLocaleDateString("nb-NO"):"Ikke brukt")+
+   '</td><td>'+ (item.active?'<button type="button" class="btn warning" data-staff-revoke="'+
+   esc(item.email)+'">Sperr kode</button>':'–')+'</td></tr>');
+  $("stafflist").innerHTML=table(["Ansatt","Status","Sist brukt","Handling"],display);
+  for(const b of $("stafflist").querySelectorAll("[data-staff-revoke]"))b.onclick=async()=>{
+   if(!confirm("Sperre koden for "+b.dataset.staffRevoke+"? En pågående ansattmodus avsluttes."))return;
+   b.disabled=true;
+   try{
+    await hyzrAdminApi("/staff/revoke","POST",{email:b.dataset.staffRevoke});
+    clearStaffSecret();await loadStaffCodes();
+   }catch(e){$("staffcodemessage").textContent=e.message||"Kunne ikke sperre kode";b.disabled=false;}
+  };
+ }catch(e){$("stafflist").textContent="Kunne ikke hente ansattkoder: "+(e.message||"Ukjent feil");}
+}
+$("staffrefresh").onclick=loadStaffCodes;
+$("staffcodeform").onsubmit=async e=>{
+ e.preventDefault();clearStaffSecret();
+ $("staffcodemessage").textContent="Oppretter kode …";
+ const btn=$("staffcodeissue");btn.disabled=true;
+ try{
+  const email=$("staffcodeemail").value.trim().toLowerCase();
+  const result=await hyzrAdminApi("/staff/issue","POST",{email});
+  if(!/^\\d{8}$/.test(String(result.code||"")))throw Error("Ugyldig kode fra serveren.");
+  $("staffcodevalue").textContent=result.code;
+  $("staffcodeonce").classList.remove("hidden");
+  $("staffcodemessage").textContent="Ny kode opprettet for "+email+". Forrige kode er sperret.";
+  await loadStaffCodes();
+ }catch(e){$("staffcodemessage").textContent=e.message||"Oppretting mislyktes."}
+ finally{btn.disabled=false;}
+};
+$("staffcodecopy").onclick=async()=>{
+ const code=$("staffcodevalue").textContent;
+ if(!code)return;
+ try{await navigator.clipboard.writeText(code);$("staffcodemessage").textContent="Koden er kopiert.";}
+ catch(e){$("staffcodemessage").textContent="Marker koden og kopier manuelt.";}
+};
 function fmtMinutes(m){return (Number(m||0)/60).toLocaleString("nb-NO",{maximumFractionDigits:1})+" t";}
 async function loadUsage(){
  if(!approved)return;
