@@ -55,3 +55,13 @@ Dette er en separat modul for Booking 2.0. Den gamle Cloudflare Worker gk-bookin
 - GitHub CI kjører kontroll av Booking Admin-skript, HYZR-sesjonslogikk og Vipps-betalingkontrakt.
 - I Testing er serverfunksjonene og private tabeller opprettet, med tilbakerullede prøvetransaksjoner for kodeutstedelse, utløst/låst kode, pris og reservasjonsoverlapp. Ingen aktive ansattkoder er opprettet.
 - Behold draft PR. Ikke slå på PC-styring eller betalingsflyt før fysisk test og sikker enhetsautentisering.
+
+
+## Kundevarsel, justert 08.11.2026 etter skjermtest
+- Ved **4 minutter igjen**: Vis QR-forlengelse og en knapp «Lukk varsel og fortsett å spille». Lukking må IKKE endre sluttid eller status.
+- Ved **booket slutt**: Vis én NY lukkbar melding «Spilletiden er utløpt», uten nedtelling av de ti ekstra minuttene.
+- Etter **10 minutter uten ny betalt forlengelse**: Sperr spillet stille, uten et tredje varsel. All styring skal fortsatt være autoritativ på serveren.
+- Ved neste reservasjon starter: Sperr den gamle spilløkten med én gang, uansett om advarsler er lukket eller ansattmodus aktiv. Overgang til ny betalt booking skal validere booking-ID.
+- Ansattmodus: Ingen varsler/nedtelling; likevel sperring ved neste booking eller stengetid.
+- Se `notice-policy.mjs` og `notice-policy.test.mjs`: denne visningsmodulen kan **ikke** overstyre sperretilstand.
+- Fysisk testpakke v6 viser lukkbare varsler med stillestående 10-minutters nådetid og en demo-sperre. Den styrer ikke HYZR/booking/Vipps. PC-oppfølging gjenstår.
