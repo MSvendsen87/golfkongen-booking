@@ -71,3 +71,45 @@ test("QR cannot extend if next booking overlaps",()=>{
  const extended={...offer,expires_at:"2026-11-08T13:10:00Z"};
  assert.equal(s("2026-11-08T13:01:00Z",[booking,later],extended).extension.available,false);
 });
+
+
+const staff={authorized:true,staff_booking_verified:true,reservation_id:"a",expires_at:"2026-11-08T21:00:00Z"};
+test("staff hides the four-minute warning",()=>{
+ const v=s("2026-11-08T12:57:00Z",[booking],null,{staffOverride:staff});
+ assert.equal(v.status,"active");assert.equal(v.screen_phase,"staff");assert.equal(v.staff_mode,true);
+});
+test("staff can keep playing after the ten-minute grace",()=>{
+ const v=s("2026-11-08T13:45:00Z",[booking],null,{staffOverride:staff});
+ assert.equal(v.status,"active");assert.equal(v.screen_phase,"staff");
+});
+test("staff mode ends at verified closing time",()=>{
+ const v=s("2026-11-08T21:00:00Z",[booking],null,{staffOverride:staff});
+ assert.equal(v.status,"locked");
+});
+test("staff mode never overrides a new held reservation",()=>{
+ const booked={...next,id:"next_hold",status:"held",payment_confirmed:false,start_at:"2026-11-08T14:00:00Z",end_at:"2026-11-08T15:00:00Z"};
+ const before=s("2026-11-08T13:59:59Z",[booking,booked],null,{staffOverride:staff});
+ const at=s("2026-11-08T14:00:00Z",[booking,booked],null,{staffOverride:staff});
+ assert.equal(before.screen_phase,"staff");assert.equal(before.lock_at,"2026-11-08T14:00:00.000Z");
+ assert.equal(at.status,"locked");
+});
+test("staff session changes to new customer's booking exactly at start",()=>{
+ const v=s("2026-11-08T13:00:00Z",[booking,next],null,{staffOverride:staff});
+ assert.equal(v.status,"active");assert.equal(v.reservation_id,"b");assert.equal(v.staff_mode,false);
+});
+test("staff must be tied to original reservation and employee booking",()=>{
+ assert.equal(s("2026-11-08T13:45:00Z",[booking],null,{staffOverride:{...staff,reservation_id:"other"}}).status,"locked");
+ assert.equal(s("2026-11-08T13:45:00Z",[booking],null,{staffOverride:{...staff,staff_booking_verified:false}}).status,"locked");
+});
+test("venue booking never accepts staff mode bypass",()=>{
+ assert.equal(s("2026-11-08T13:45:00Z",[{...booking,resource:"venue"}],null,{staffOverride:staff}).status,"locked");
+});
+test("staff mode hides extension payment QR",()=>{
+ const payment={...offer,expires_at:"2026-11-08T13:10:00Z"};
+ const v=s("2026-11-08T13:05:00Z",[booking],payment,{staffOverride:staff});
+ assert.equal(v.extension.available,false);
+});
+test("unpaid or cancelled booking cannot use staff mode",()=>{
+ for(const b of [{...booking,payment_confirmed:false},{...booking,status:"cancelled"}])
+  assert.equal(s("2026-11-08T13:45:00Z",[b],null,{staffOverride:staff}).status,"locked");
+});
