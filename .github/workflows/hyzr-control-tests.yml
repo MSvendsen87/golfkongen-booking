@@ -4,6 +4,9 @@ on:
     paths:
       - 'booking-v2/hyzr-control/**'
       - 'booking-v2/supabase/functions/gk2-hyzr-device-status/**'
+      - 'booking-v2/supabase/functions/gk2-hyzr-extension-payment/**'
+      - 'booking-v2/sql/05*_gk2_hyzr_*'
+      - 'booking-v2/sql/06*_gk2_hyzr_*'
       - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
   push:
@@ -12,6 +15,9 @@ on:
     paths:
       - 'booking-v2/hyzr-control/**'
       - 'booking-v2/supabase/functions/gk2-hyzr-device-status/**'
+      - 'booking-v2/supabase/functions/gk2-hyzr-extension-payment/**'
+      - 'booking-v2/sql/05*_gk2_hyzr_*'
+      - 'booking-v2/sql/06*_gk2_hyzr_*'
       - 'docs/booking/admin/index.html'
       - '.github/workflows/hyzr-control-tests.yml'
 permissions:
