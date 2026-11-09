@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://eadgdcimcmfyuicizboo.supabase.co; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://eadgdcimcmfyuicizboo.supabase.co; img-src https://*.vipps.no https://*.vippsmobilepay.com; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <title>GolfKongen – Vipps TEST</title>
 <style>
@@ -21,7 +21,7 @@ input{font:inherit;padding:12px;width:100%;min-height:45px;border-radius:8px;bor
 button{width:100%;min-height:46px;background:#226142;color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:800;margin-top:20px;cursor:pointer}
 button:disabled{opacity:.55;cursor:wait}
 .note{background:#f0f5f0;color:#47604d;border-radius:8px;margin-top:18px;padding:12px;font-size:13px;line-height:1.5}
-#out{display:none;margin-top:17px;padding:14px;border-radius:8px;white-space:pre-line;overflow-wrap:break-word}
+#out{display:none;margin-top:17px;padding:14px;border-radius:8px;white-space:pre-line;overflow-wrap:break-word}#qrbox[hidden]{display:none!important}#qrbox{margin-top:20px;border:1px solid #cbdccc;border-radius:12px;padding:18px}#qrbox h2{font-size:19px;margin:0 0 8px}#qrbox img{max-width:100%;width:270px;max-height:330px;object-fit:contain;background:white}#qrout{margin-top:12px;white-space:pre-line;font-size:14px;overflow-wrap:break-word}#qrLink{display:inline-block;margin-top:12px;color:#195d3d;font-weight:750}
 #out.success{display:block;background:#e8f5eb;color:#18522a}
 #out.error{display:block;background:#fff0ed;color:#8e302b}
 .footer{color:#758476;font-size:12px;margin-top:18px}
@@ -32,7 +32,7 @@ button:disabled{opacity:.55;cursor:wait}
 <header>GOLFKONGEN <span>/ VIPPS TEST</span></header>
 <main>
 <h1>Kontroller Vipps-tilkoblingen</h1>
-<p>Tester forbindelsen mot Vipps <strong>testmiljø 321607</strong>. Ingen betaling, reservasjon eller QR-kode opprettes.</p>
+<p>Tester forbindelsen mot Vipps <strong>testmiljø 321607</strong>. Etter godkjent tilkobling kan du frivillig opprette en separat test-QR. Ingen ekte betaling eller booking gjennomføres.</p>
 <form id="login" autocomplete="off">
 <label for="email">E-post for Booking 2.0 Admin</label>
 <input id="email" type="email" autocomplete="username" required spellcheck="false">
@@ -41,6 +41,15 @@ button:disabled{opacity:.55;cursor:wait}
 <button type="submit" id="submit">Kontroller tilkoblingen</button>
 </form>
 <div id="out" role="status" aria-live="polite"></div>
+<section id="qrbox" hidden aria-label="Vipps QR sandkasse">
+  <h2>Teste QR-betaling – kun testmiljø</h2>
+  <p>Oppretter en engangs-QR for <strong>1 kr i Vipps TEST</strong>, ikke ekte penger. Den kan testes med Vipps test-app. Ingen bestilling, reservasjon, fangst eller HYZR-forlengelse skjer.</p>
+  <button id="createqr" type="button">Opprett test-QR på 1 kr</button>
+  <div id="qrout" role="status" aria-live="polite"></div>
+  <img id="qrimg" alt="Vipps test-QR" referrerpolicy="no-referrer" hidden>
+  <div><a id="qrLink" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" hidden>Åpne test-QR hos Vipps</a></div>
+  <button id="checkqr" type="button" disabled>Sjekk testbetalingsstatus</button>
+</section>
 <div class="note">Legg kun inn Booking 2.0-administratorens innlogging. Du skal <strong>ikke</strong> legge inn Vipps-nøkler eller Supabase service-role-nøkler her.</div>
 <p class="footer">Innlogging sendes direkte til Supabase Auth over HTTPS. Passord og tilgangstoken lagres ikke av denne siden.</p>
 </main>
@@ -53,6 +62,51 @@ const form=document.getElementById("login");
 const out=document.getElementById("out");
 const button=document.getElementById("submit");
 const pw=document.getElementById("password");
+const qrSection=document.getElementById("qrbox");
+const createQR=document.getElementById("createqr");
+const checkQR=document.getElementById("checkqr");
+const qrOut=document.getElementById("qrout");
+const qrImg=document.getElementById("qrimg");
+const qrLink=document.getElementById("qrLink");
+let adminJwt=null,activeTestRef=null;
+async function sandbox(path,method="GET"){
+ if(!adminJwt)throw Error("innlogging_utlopt");
+ const r=await fetch(HOST+"/functions/v1/gk2-vipps-qr-sandbox"+path,{
+  method,headers:{"Authorization":"Bearer "+adminJwt,"apikey":PUB},
+  credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer"});
+ const j=await bodyJson(r);return {r,j};
+}
+createQR.onclick=async()=>{
+ createQR.disabled=true;qrOut.textContent="Oppretter test-QR hos Vipps ...";
+ qrImg.hidden=true;qrImg.removeAttribute("src");qrLink.hidden=true;
+ checkQR.disabled=true;activeTestRef=null;
+ try{
+  const {r,j}=await sandbox("/create","POST");
+  if(!r.ok||j.ok!==true||j.environment!=="test"||j.msn!=="321607"||j.amountOre!==100)
+   throw Error(String(j.code||"HTTP_"+r.status)+(j.vippsStatus?" (Vipps HTTP "+j.vippsStatus+")":""));
+  const u=new URL(j.qrUrl);
+  if(u.protocol!=="https:"||!(u.hostname.endsWith(".vipps.no")||
+    u.hostname==="vipps.no"||u.hostname.endsWith(".vippsmobilepay.com")))
+    throw Error("Vipps svarte med ugyldig QR-adresse.");
+  activeTestRef=j.reference;
+  qrImg.src=j.qrUrl;qrImg.hidden=false;
+  qrLink.href=j.qrUrl;qrLink.hidden=false;
+  checkQR.disabled=false;
+  qrOut.textContent="Test-QR opprettet. Bruk Vipps test-app, eller åpne lenken. Beløp: 1 kr i testmiljø. Ingen betaling er fanget eller knyttet til booking.";
+ }catch(e){qrOut.textContent="Kunne ikke opprette test-QR: "+e.message;}
+ finally{createQR.disabled=false;}
+};
+checkQR.onclick=async()=>{
+ if(!activeTestRef)return;
+ checkQR.disabled=true;qrOut.textContent="Sjekker status hos Vipps TEST ...";
+ try{
+  const {r,j}=await sandbox("/status?reference="+encodeURIComponent(activeTestRef));
+  if(!r.ok||j.ok!==true)throw Error(String(j.code||"HTTP_"+r.status));
+  const labels={CREATED:"Opprettet – venter på bekreftelse",AUTHORIZED:"Godkjent av testbruker, men IKKE fanget eller koblet til booking",ABORTED:"Avbrutt",EXPIRED:"Utløpt",TERMINATED:"Avsluttet"};
+  qrOut.textContent="Vipps-status: "+(labels[j.state]||"Ukjent")+".\nIngen HYZR-tid er lagt til.";
+ }catch(e){qrOut.textContent="Kunne ikke hente status: "+e.message;}
+ finally{checkQR.disabled=false;}
+};
 const lookup={
  "authentication_required":"Supabase avviste administratorinnloggingen.",
  "admin_only":"Denne kontoen har ikke Booking 2.0-administratortilgang.",
@@ -69,7 +123,7 @@ function result(ok,headline,details){
 }
 async function bodyJson(r){try{return await r.json()}catch{return {error:"invalid_server_response"}}}
 form.addEventListener("submit",async event=>{
- event.preventDefault();button.disabled=true;button.textContent="Kontrollerer ...";out.className="";
+ event.preventDefault();button.disabled=true;button.textContent="Kontrollerer ...";out.className="";adminJwt=null;qrSection.hidden=true;
  const email=document.getElementById("email").value.trim();
  const password=pw.value;
  pw.value="";
@@ -95,8 +149,9 @@ form.addEventListener("submit",async event=>{
   const data=await bodyJson(reply);
   if(reply.ok&&data.ok===true&&data.connected===true&&data.environment==="test"&&
      data.msn==="321607"&&data.paymentCreationEnabled===false&&data.bookingMutationEnabled===false){
+    adminJwt=login.access_token;qrSection.hidden=false;
     result(true,"Vipps TEST er tilkoblet!",
-      "Salgssted 321607 er verifisert. Ingen betaling er gjennomført.");
+      "Salgssted 321607 er verifisert. Ingen betaling er gjennomført. Du kan starte en egen QR-test nedenfor.");
   }else{
     const code=String(data.error||"HTTP_"+reply.status);
     result(false,"Tilkoblingen feilet: "+code,
