@@ -44,6 +44,12 @@ Deno.serve(async(req:Request)=>{
     return send({ok:false,error:"admin_only"},403,origin);
 
   const staffPath=new URL(req.url).pathname;
+  if(staffPath.endsWith("/health")&&req.method==="GET"){
+    const {data:health,error:healthError}=await client.rpc("gk2_hyzr_extension_health");
+    if(healthError||health?.ok!==true)
+      return send({ok:false,error:"extension_health_unavailable"},503,origin);
+    return send(health,200,origin);
+  }
   if(staffPath.endsWith("/staff")&&req.method==="GET"){
     const {data,error}=await client.rpc("gk2_hyzr_staff_list",{p_actor:email});
     if(error||!data?.ok)return send({ok:false,error:"staff_list_unavailable"},503,origin);
