@@ -54,12 +54,12 @@ export function summarizeLiveOneKrone(reference,payment){
  return {
   ok:true,reference,state:payment.state,amountOre:LIVE_ORE,
   authorized:payment.state==="AUTHORIZED"&&authorized===LIVE_ORE,
+  eligibleToCapture:payment.state==="AUTHORIZED"&&authorized===LIVE_ORE&&captured===0&&refunded===0,
   captured:fullyCaptured,
   label:fullyCaptured?"1 kr mottatt":"Ingen bekreftet betaling",
   bookingExtended:false
  };
 }
 export function captureAllowed(paymentSummary,captureStarted){
- return paymentSummary?.ok===true&&paymentSummary.authorized===true&&
-  paymentSummary.captured===false&&captureStarted===false;
+ return paymentSummary?.ok===true&&paymentSummary.eligibleToCapture===true&&captureStarted===false;
 }
