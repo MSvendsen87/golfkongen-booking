@@ -71,9 +71,10 @@ Deno.serve(async(req:Request)=>{
  const op=url.pathname===basePath+"/connection"?"connection":
           url.pathname===basePath+"/create"?"create":
           url.pathname===basePath+"/status"?"status":
-          url.pathname===basePath+"/capture"?"capture":null;
+          url.pathname===basePath+"/capture"?"capture":
+          url.pathname===basePath+"/latest"?"latest":null;
  if(!op)return json({ok:false,code:"not_found"},404,origin);
- if((["connection","status"].includes(op)&&req.method!=="GET")||
+ if((["connection","status","latest"].includes(op)&&req.method!=="GET")||
     (["create","capture"].includes(op)&&req.method!=="POST"))
   return json({ok:false,code:"method_not_allowed"},405,origin);
 
@@ -92,6 +93,19 @@ Deno.serve(async(req:Request)=>{
   const email=ud.user.email.trim().toLowerCase();
   const {data:admin,error:ae}=await db.rpc("gk2_is_admin",{p_email:email});
   if(ae||admin!==true)return json({ok:false,code:"admin_only"},403,origin);
+
+  // Recover the same one-krone payment after browser restart.
+  // This route never creates, authorizes, captures or refunds a payment.
+  if(op==="latest"){
+   const {data:recent,error:recentError}=await db.rpc("gk2_vipps_live_recent",{p_email:email});
+   if(recentError)return json({ok:false,code:"recent_payment_unavailable"},503,origin);
+   return json({ok:true,environment:"production",
+    found:recent?.ok===true,
+    reference:recent?.ok===true?recent.reference:null,
+    captureStarted:recent?.captureStarted===true,
+    captureVerified:recent?.captureVerified===true,
+    bookingMutationEnabled:false},200,origin);
+  }
 
   const c=config();
   if(!c)return json({
