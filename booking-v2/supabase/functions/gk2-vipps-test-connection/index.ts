@@ -2,7 +2,9 @@ import {createClient} from "npm:@supabase/supabase-js@2.95.0";
 import {validateTestVippsCredentials,isValidVippsTokenResponse} from "./vipps-test-core.mjs";
 /** Read-only connection probe: TEST ONLY; no payment, QR, capture, or booking changes. */
 const origins=new Set(["https://supabase.com","https://app.supabase.com",
-  "https://msvendsen87.github.io","https://golfkongen.no","https://www.golfkongen.no"]);
+  "https://msvendsen87.github.io","https://golfkongen.no","https://www.golfkongen.no",
+  // Local, self-contained admin diagnostic file. Valid signed Supabase admin JWT required.
+  "null"]);
 const json=(body:unknown,status=200,origin="")=>new Response(JSON.stringify(body),{
  status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",
  "x-content-type-options":"nosniff","referrer-policy":"no-referrer",
