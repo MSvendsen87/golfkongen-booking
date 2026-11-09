@@ -63,3 +63,11 @@
 - Betaling bekreftes ved ny server-til-Vipps GET og eksakt aggregert capturedAmount 100 øre uten refund. Ingen HYZR-booking berøres; ekte bookingforlengelser krever fortsatt separat atomisk kapasitetslås, prisquote og webhook/polling.
 - Publisert og kontrollert separat adminside: `https://msvendsen87.github.io/golfkongen-booking/vipps-live.html`.
 - GitHub CI og SQL rollback-test er godkjent; testsiden er verifisert tilgjengelig. Ingen faktisk 1-kr betaling utført før administrator legger inn produksjonsnøklene og utfører QR-testen selv.
+
+## Ekte Vipps-test FULLFØRT 09.11.2026
+- Administrator har godkjent en LIVE 1 NOK betaling via QR til salgssted 859181.
+- Supabase `gk2_private.vipps_live_qr_attempts` bekrefter **én unik betalingsforespørsel**, capture_started_at 2026-11-09 10:30:37 UTC og capture_verified_at 2026-11-09 10:30:38 UTC. Betalingskontrollen har slått opp Vipps server-til-server og sett capturedAmount = 100 NOK øre.
+- Edge Function-logg bekrefter POST /capture HTTP 200. En senere POST /capture HTTP 200 gjaldt **samme betalingsreferanse** og serveren returnerer allerede fanget betaling uten ny capture. Tabellen har én registrert innkreving.
+- Migration `055_vipps_live_trial_one_and_done.sql` er lagt i Testing: `gk2_vipps_live_reserve` nekter alle nye LIVE 1-kr-forsøk når det finnes minst én verifisert capture. Verifisert med transaksjon og rollback: `trial_already_completed`. Read-only statuskontroll fungerer fortsatt.
+- Det er **ingen kundebooking, HYZR, Nuki eller simulator-PC som ble endret av denne testen**.
+- Nå er QR -> autorisasjon -> capture -> serververifikasjon bevist. Reell bookingforlengelse er **ikke** klar før kapasitetshold/overlapp/ny slutttid er atomisk på plass og testet, rabatt-nettopris er kjent og device-koblingen er ferdig.
