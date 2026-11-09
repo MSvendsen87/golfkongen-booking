@@ -55,17 +55,29 @@ async function verifyDevice(req:Request){
  for(let i=0;i<64;i++)mismatch|=hash.charCodeAt(i)^found.charCodeAt(i);
  return mismatch===0;
 }
+// Supabase may reuse an isolated Edge runtime. Cache a Vipps production token
+// for only 15 minutes (actual production validity is up to 24 hours).
+// Never store tokens in a database, browser response or file.
+let cachedToken:{value:string;expiresAtMs:number}|null=null;
+let tokenInflight:Promise<string|null>|null=null;
 async function getVippsToken(c:{msn:string,clientId:string,clientSecret:string,subscriptionKey:string}){
- const r=await fetch(VIPPS+"/accesstoken/get",{
-  method:"POST",headers:{
-   "client_id":c.clientId,"client_secret":c.clientSecret,
-   "Ocp-Apim-Subscription-Key":c.subscriptionKey,
-   "Merchant-Serial-Number":MSN,"Content-Type":"application/json",...system
-  },body:"",signal:AbortSignal.timeout(10000)
- });
- if(!r.ok)return null;
- const j=await r.json();
- return typeof j?.access_token==="string"&&j.access_token.length>80?j.access_token:null;
+ if(cachedToken&&cachedToken.expiresAtMs>Date.now()+30000)return cachedToken.value;
+ if(tokenInflight)return await tokenInflight;
+ tokenInflight=(async()=>{
+  const r=await fetch(VIPPS+"/accesstoken/get",{
+   method:"POST",headers:{
+    "client_id":c.clientId,"client_secret":c.clientSecret,
+    "Ocp-Apim-Subscription-Key":c.subscriptionKey,
+    "Merchant-Serial-Number":MSN,"Content-Type":"application/json",...system
+   },body:"",signal:AbortSignal.timeout(10000)
+  });
+  if(!r.ok)return null;
+  const j=await r.json();
+  const token=typeof j?.access_token==="string"&&j.access_token.length>80?j.access_token:null;
+  if(token)cachedToken={value:token,expiresAtMs:Date.now()+15*60*1000};
+  return token;
+ })();
+ try{return await tokenInflight;}finally{tokenInflight=null;}
 }
 function apiHeaders(c:{subscriptionKey:string},jwt:string){
  return {
@@ -195,6 +207,18 @@ Deno.serve(async(req:Request)=>{
      return respond({ok:false,code:claim?.code||"capture_preflight_failed"},409);
   }
   // A repeated capture uses the SAME idempotency key; never charge twice.
+  // Database rate-gates captures to max four attempts, 16 seconds apart.
+  // GET polling is still permitted while a capture request settles.
+  const {data:gate,error:gateError}=await db.rpc("gk2_hyzr_extension_capture_gate",{
+    p_reference:reference
+  });
+  if(gateError)return respond({ok:false,code:"capture_gate_unavailable"},503);
+  if(gate?.ok!==true){
+    if(gate?.code==="capture_retry_wait")
+      return respond({ok:true,reference,state:"capture_pending",bookingExtended:false,
+        retryAfterSeconds:16},202);
+    return respond({ok:false,code:gate?.code||"capture_gate_refused"},503);
+  }
   // capture_started holds remain occupied until payment is reconciled.
   const captured=await fetch(VIPPS+"/epayment/v1/payments/"+
       encodeURIComponent(reference)+"/capture",{
