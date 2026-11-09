@@ -29,7 +29,7 @@ export function makeExtensionQrPayment({reference,amountOre,minutes}={}){
  return {
    reference,
    amount:{currency:"NOK",value:amountOre},
-   userFlow:"QR",qrFormat:{format:"IMAGE/SVG+XML"},
+   userFlow:"QR",qrFormat:{format:"IMAGE/PNG",size:800},
    customerInteraction:"CUSTOMER_PRESENT",
    paymentMethod:{type:"WALLET"},
    paymentDescription:"GolfKongen HYZR – forlengelse "+minutes+" min",
