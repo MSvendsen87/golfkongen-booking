@@ -64,6 +64,8 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <div class="notice">Priser i denne administrasjonen er <strong>ikke automatisk oppdatert i Quickbutik</strong>. Utkast og forespørsler merkes tydelig. En allerede betalt booking kan ikke stenges i etterkant.</div>
 <div class="tabs" role="tablist" aria-label="Bookingadministrasjon">
 <button class="tab active" data-tab="oversikt" role="tab">Oversikt</button>
+<button class="tab" data-tab="statistikk" role="tab">Statistikk</button>
+<button class="tab" data-tab="ansattkoder" role="tab">Ansattkoder</button>
 <button class="tab" data-tab="sperringer" role="tab">Sperringer</button>
 <button class="tab" data-tab="priser" role="tab">Priser</button>
 <button class="tab" data-tab="grupper" role="tab">Rabattgrupper</button>
@@ -75,7 +77,47 @@ footer{color:var(--gray);font-size:12px;text-align:center;padding:0 20px 28px}
 <div class="stats"><div class="stat"><span>Bekreftede bookinger</span><strong id="statconfirmed">–</strong></div><div class="stat"><span>Reservert / betaling pågår</span><strong id="statheld">–</strong></div><div class="stat"><span>Aktive sperringer</span><strong id="statblocks">–</strong></div><div class="stat"><span>Avbestillinger</span><strong id="statcancelled">–</strong></div></div>
 <div class="card" aria-labelledby="agenda-title"><div class="row spaced"><div><h2 id="agenda-title">Kommende bookinger · 21 dager</h2><p class="small">Bekreftede reservasjoner og aktive betalingsreservasjoner. Kode-status vises uten å vise selve koden.</p></div><span id="agendacount" class="pill">Henter …</span></div><div id="agenda" class="tablewrap"><div class="empty">Henter kommende reservasjoner …</div></div></div>
 <div class="grid"><div class="card"><div class="row spaced"><h2>Bookinger for valgt dag</h2><span class="small" id="daycaption"></span></div><div id="bookings" class="tablewrap"><div class="empty">Laster …</div></div></div>
-<div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div><div class="divider"></div><h2>Produkt- og variantkontroll</h2><div id="catalogue-audit" class="small" role="status">Henter sist gjennomførte kontroll …</div></div></div>
+<div class="card"><h2>Sperringer og drift</h2><div id="blocksummary"></div><div class="divider"></div><h2>Systemstatus</h2><div id="healthsummary" class="small"></div>
+<div class="divider"></div><h2>HYZR – betalingskontroll</h2>
+<div id="hyzrexthealth" class="small" role="status">Henter status …</div>
+<button type="button" class="btn outline" id="hyzrextrefresh">Oppdater betalingskontroll</button>
+<div class="divider"></div><h2>Produkt- og variantkontroll</h2><div id="catalogue-audit" class="small" role="status">Henter sist gjennomførte kontroll …</div></div></div>
+</section>
+
+<section data-panel="statistikk" class="hidden">
+ <div class="card"><h2>Belegg, ledige tider og faktisk betalt</h2>
+ <p class="small">Booking 2.0 er datakilden. Sperringer reduserer kapasiteten. Leie av hele lokalet opptar alle tre aktiviteter. Klubbkveld inngår i belegget, men ikke inntektene.</p>
+ <div class="fields"><div class="field"><label for="usagefrom">Fra dato</label><input id="usagefrom" type="date"></div>
+ <div class="field"><label for="usageto">Til dato</label><input id="usageto" type="date"></div></div>
+ <button type="button" class="btn" id="usagerefresh">Hent statistikk</button>
+ <div id="usage-result" class="tablewrap" style="margin-top:14px" role="status">Velg periode.</div></div>
+ <div class="card"><h2>HYZR – styring (test)</h2>
+ <p class="small">Kun forhåndsvisning. Ingen kommando sendes til PC-en. QR-betaling og automatisk avslutning er ikke aktivert.</p>
+ <button type="button" class="btn outline" id="hyzrrefresh">Sjekk HYZR-status</button>
+ <div id="hyzr-result" style="margin-top:12px" role="status">Ingen status hentet.</div></div>
+</section>
+
+<section data-panel="ansattkoder" class="hidden">
+ <div class="card">
+ <h2>Personlig HYZR-kode for ansatte</h2>
+ <p class="small">Ansatte kan bruke sin egen kode når de har en bekreftet, betalt HYZR-booking registrert på samme e-postadresse. Kun administratorer skal utstede koder. Sjekk at e-postadressen tilhører en ansatt før du oppretter kode.</p>
+ <p class="small">Kode gir ikke lov til å overstyre nye bookinger eller spilletid etter stengetid. Simulator-PC-en må kobles til før koden fungerer fysisk.</p>
+ <form id="staffcodeform">
+ <div class="fields"><div class="field"><label for="staffcodeemail">Ansattes e-postadresse</label><input type="email" id="staffcodeemail" autocomplete="off" required placeholder="ansatt@eksempel.no"></div></div>
+ <button type="submit" class="btn" id="staffcodeissue">Opprett / forny personlig kode</button>
+ </form>
+ <p id="staffcodemessage" role="status" class="small"></p>
+ <div id="staffcodeonce" class="notice hidden" aria-live="polite">
+  <strong>Koden vises bare nå</strong>
+  <p id="staffcodevalue" style="font:700 28px/1.4 ui-monospace,monospace;letter-spacing:.15em;user-select:all"></p>
+  <button type="button" class="btn secondary" id="staffcodecopy">Kopier koden</button>
+  <p class="small">Del koden privat med riktig ansatt. Ikke send den i offentlige meldinger.</p>
+ </div>
+ </div>
+ <div class="card"><h2>Aktive og tidligere ansattkoder</h2>
+  <button type="button" class="btn outline" id="staffrefresh">Oppdater oversikt</button>
+  <div class="tablewrap" id="stafflist" style="margin-top:12px">Henter oversikt …</div>
+ </div>
 </section>
 <section data-panel="sperringer" class="hidden">
 <div class="grid">
@@ -125,6 +167,7 @@ import {setupPriceControls} from "./price-controls.mjs?v=20261029-unified2";
 const SB="https://eadgdcimcmfyuicizboo.supabase.co";
 const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
 const API=SB+"/functions/v1/gk-booking-v2";
+const HYZRAPI=SB+"/functions/v1/gk2-hyzr-preview";
 const auth=createClient(SB,KEY,{auth:{autoRefreshToken:true,persistSession:true}});
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
@@ -147,12 +190,12 @@ async function api(path,method="GET",payload){
  if(!r.ok||j.ok!==true)throw Error("Endringen ble ikke utført ("+esc(j.code||r.status)+"). Kontroller eksisterende bookinger og prøv ikke flere ganger før status er sjekket.");
  return j;
 }
-function showLogin(){approved=false;memberDirectory=[];$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
+function showLogin(){clearStaffSecret();approved=false;memberDirectory=[];$("app").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");$("who").textContent="";}
 function showApp(email){approved=true;$("login").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("who").textContent=email;$("backendstatus").textContent="Innlogget · Beskyttet API";}
 async function checkAuth(){
  try{const {data:{user},error}=await auth.auth.getUser();if(error||!user?.email_confirmed_at){showLogin();return}
  const health=await api("/admin/health");if(health.email!==user.email?.toLowerCase())throw Error("Brukerkonto stemmer ikke.");
- showApp(health.email);await Promise.all([loadDay(),loadAgenda(),loadCatalogueAudit()]);}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
+ showApp(health.email);await Promise.all([loadDay(),loadAgenda(),loadCatalogueAudit(),loadExtensionHealth()]);}catch(e){showLogin();$("loginerror").textContent=e.message||"Kunne ikke bekrefte tilgang.";}
 }
 $("loginform").addEventListener("submit",async e=>{
  e.preventDefault();$("loginerror").textContent="";$("loginbutton").disabled=true;
@@ -168,8 +211,126 @@ for(const t of document.querySelectorAll("[data-tab]"))t.onclick=()=>{
  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===selected));
  document.querySelectorAll("[data-panel]").forEach(x=>x.classList.toggle("hidden",x.dataset.panel!==selected));
  if(selected==="priser")Promise.all([loadPrices(),priceControls.loadAll()]);
+ if(selected==="statistikk")Promise.all([loadUsage(),loadHyzrStatus()]);
+ if(selected==="ansattkoder")loadStaffCodes();
+ if(selected==="oversikt")loadExtensionHealth();
+ if(selected!=="ansattkoder")clearStaffSecret();
  if(selected==="grupper")Promise.all([loadMembers(),benefitEditor.load(),sheetMembers.load()]);
 };
+
+async function hyzrAdminApi(path,method="GET",payload){
+ const {data:{session}}=await auth.auth.getSession();
+ if(!session?.access_token)throw Error("Innlogging er utløpt.");
+ const r=await fetch(HYZRAPI+path,{method,cache:"no-store",
+  headers:{Authorization:"Bearer "+session.access_token,apikey:KEY,"Content-Type":"application/json"},
+  body:payload?JSON.stringify(payload):undefined});
+ let result;try{result=await r.json()}catch{throw Error("Ugyldig svar fra statusserveren.");}
+ if(r.status===401||r.status===403)throw Error("Du har ikke adgang til denne funksjonen.");
+ if(!r.ok||result?.ok!==true)throw Error("Kunne ikke hente data.");
+ return result;
+}
+
+function clearStaffSecret(){
+ if(!$("staffcodeonce"))return;
+ $("staffcodeonce").classList.add("hidden");$("staffcodevalue").textContent="";
+}
+async function loadStaffCodes(){
+ if(!approved)return;
+ $("stafflist").textContent="Henter ansatte …";
+ try{
+  const result=await hyzrAdminApi("/staff");
+  const staff=Array.isArray(result.staff)?result.staff:[];
+  const display=staff.map(item=>'<tr><td>'+esc(item.email)+'</td><td>'+
+   (item.active?'Aktiv':'Sperret')+'</td><td>'+
+   esc(item.lastUsedAt?new Date(item.lastUsedAt).toLocaleDateString("nb-NO"):"Ikke brukt")+
+   '</td><td>'+ (item.active?'<button type="button" class="btn warning" data-staff-revoke="'+
+   esc(item.email)+'">Sperr kode</button>':'–')+'</td></tr>');
+  $("stafflist").innerHTML=table(["Ansatt","Status","Sist brukt","Handling"],display);
+  for(const b of $("stafflist").querySelectorAll("[data-staff-revoke]"))b.onclick=async()=>{
+   if(!confirm("Sperre koden for "+b.dataset.staffRevoke+"? En pågående ansattmodus avsluttes."))return;
+   b.disabled=true;
+   try{
+    await hyzrAdminApi("/staff/revoke","POST",{email:b.dataset.staffRevoke});
+    clearStaffSecret();await loadStaffCodes();
+   }catch(e){$("staffcodemessage").textContent=e.message||"Kunne ikke sperre kode";b.disabled=false;}
+  };
+ }catch(e){$("stafflist").textContent="Kunne ikke hente ansattkoder: "+(e.message||"Ukjent feil");}
+}
+$("staffrefresh").onclick=loadStaffCodes;
+$("staffcodeform").onsubmit=async e=>{
+ e.preventDefault();clearStaffSecret();
+ $("staffcodemessage").textContent="Oppretter kode …";
+ const btn=$("staffcodeissue");btn.disabled=true;
+ try{
+  const email=$("staffcodeemail").value.trim().toLowerCase();
+  const result=await hyzrAdminApi("/staff/issue","POST",{email});
+  if(!/^\d{8}$/.test(String(result.code||"")))throw Error("Ugyldig kode fra serveren.");
+  $("staffcodevalue").textContent=result.code;
+  $("staffcodeonce").classList.remove("hidden");
+  $("staffcodemessage").textContent="Ny kode opprettet for "+email+". Forrige kode er sperret.";
+  await loadStaffCodes();
+ }catch(e){$("staffcodemessage").textContent=e.message||"Oppretting mislyktes."}
+ finally{btn.disabled=false;}
+};
+$("staffcodecopy").onclick=async()=>{
+ const code=$("staffcodevalue").textContent;
+ if(!code)return;
+ try{await navigator.clipboard.writeText(code);$("staffcodemessage").textContent="Koden er kopiert.";}
+ catch(e){$("staffcodemessage").textContent="Marker koden og kopier manuelt.";}
+};
+async function loadExtensionHealth(){
+ if(!approved)return;
+ const el=$("hyzrexthealth");el.textContent="Kontrollerer HYZR-betalinger …";
+ try{
+   const d=await hyzrAdminApi("/health");
+   const flagged=d.requiresAttention===true;
+   const values=[
+     ["Verifiserte bookinger som mangler nettobeløp",d.bookingsMissingVerifiedNetAmount],
+     ["Pågående forlengelsesbetalinger",d.pendingPayment],
+     ["Utløpte betalingsforsøk som må ryddes",d.pendingPaymentExpired],
+     ["Trekk under behandling",d.captureInProgress],
+     ["Trekk over fem minutter",d.captureInProgressOverFiveMinutes],
+     ["Manuell betalingskontroll",d.manualPaymentReview],
+     ["Fullførte forlengelser",d.completedExtensions]
+   ];
+   const rows=values.map(([name,value])=>"<tr><td>"+esc(name)+"</td><td>"+esc(value??0)+"</td></tr>");
+   el.innerHTML='<p><strong>'+(flagged?"Krever oppfølging":"Ingen betalingsavvik funnet")+'</strong> · '+
+      esc(new Date(d.checkedAt).toLocaleString("nb-NO",{timeZone:"Europe/Oslo"}))+'</p>'+
+      table(["Kontroll","Antall"],rows)+
+      '<p class="small">Kun lesetilgang. Ingen Vipps-betalinger, bookinger eller HYZR styring endres.</p>';
+ }catch(e){el.textContent="Kunne ikke hente HYZR-betalingskontroll: "+(e.message||"Ukjent feil");}
+}
+$("hyzrextrefresh").onclick=loadExtensionHealth;
+function fmtMinutes(m){return (Number(m||0)/60).toLocaleString("nb-NO",{maximumFractionDigits:1})+" t";}
+async function loadUsage(){
+ if(!approved)return;
+ const from=$("usagefrom"),to=$("usageto");
+ if(!from.value)from.value=localDate().slice(0,7)+"-01";
+ if(!to.value)to.value=localDate();
+ $("usage-result").textContent="Henter statistikk …";
+ try{
+  const d=(await hyzrAdminApi("/stats?from="+encodeURIComponent(from.value)+"&to="+encodeURIComponent(to.value))).data;
+  const rows=(d.physicalResources||[]).map(r=>"<tr><td>"+esc(resLabel[r.resource]||r.resource)+"</td><td>"+esc(fmtMinutes(r.occupiedMinutes))+"</td><td>"+esc(fmtMinutes(r.freeMinutes))+"</td><td>"+esc(fmtMinutes(r.heldMinutes))+"</td><td>"+esc(r.occupancyPercent)+" %</td></tr>");
+  $("usage-result").innerHTML='<div class="stats"><div class="stat"><span>Betalt bookingomsetning</span><strong>'+esc((Number(d.totalVerifiedPaidOre||0)/100).toLocaleString("nb-NO",{style:"currency",currency:"NOK"}))+'</strong></div><div class="stat"><span>Bekreftede bookinger</span><strong>'+esc(d.confirmedBookings||0)+'</strong></div></div>'+
+   table(["Aktivitet","Booket","Ledig","Midlertidig holdt","Belegg"],rows)+
+   '<p class="small">Omsetningen gjelder faktisk betalt beløp, uten klubbkveldsinntekter.</p>';
+ }catch(e){$("usage-result").textContent="Kunne ikke hente statistikk: "+(e?.message||"ukjent feil");}
+}
+async function loadHyzrStatus(){
+ if(!approved)return;
+ $("hyzr-result").textContent="Kontrollerer …";
+ try{
+  const r=(await hyzrAdminApi("")).state||{};
+  const phases={locked:"Sperret",active:"I gang",warning:"4-minuttersvarsel",grace:"Avslutningstid"};
+  $("hyzr-result").innerHTML="<strong>"+esc(phases[r.state]||r.state||"Ukjent")+"</strong>"+
+   (r.endsAt?"<p>Slutt: "+esc(new Date(r.endsAt).toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"}))+
+   " · Sperring: "+esc(new Date(r.lockAt).toLocaleTimeString("nb-NO",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"}))+"</p>":"")+
+   '<p class="small">Kun teststatus. Ingen PC-kommandoer sendes.</p>';
+ }catch(e){$("hyzr-result").textContent="Kunne ikke hente HYZR-status: "+(e?.message||"ukjent feil");}
+}
+$("usagerefresh").onclick=loadUsage;
+$("hyzrrefresh").onclick=loadHyzrStatus;
+
 function fillBlock(blocks){
  $("statblocks").textContent=blocks.length;
  $("blocksummary").innerHTML=blocks.length?blocks.map(b=>'<p><strong>'+esc(resLabel[b.target]||b.target)+'</strong> · '+esc(hh(b.start))+'–'+esc(hh(b.end))+'<br><span class="small">'+esc(b.label)+'</span></p>').join(""):'<div class="empty">Ingen aktive sperringer denne dagen</div>';
