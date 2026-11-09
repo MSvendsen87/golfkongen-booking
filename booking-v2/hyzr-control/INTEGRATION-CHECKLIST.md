@@ -51,3 +51,15 @@
 3. Vipps ePayment API-salgssted og nøkler må aktiveres i rett bedrift. Ingen credentials i GitHub eller chat.
 4. Atomisk kapasitetshold under Booking 2.0s felles dato-advisory-lock og `claims`-unikhet, med verifisert Vipps capture/klippekort debit før bookingoppdatering.
 5. Server-side faktisk nettoprisavstemming for senere bookinger. Test rabattordrer, ikke bare en ordinær ordre.
+
+## Enkelt ekte Vipps-forsøk (09.11.2026)
+- Bruker foretrakk **vanlig Vipps og en ekte betaling på 1 kr**, i stedet for å installere MT-testappen.
+- Dette er EN separat, manuelt styrt produksjonstest og skal **ikke** drive HYZR, booking eller prisforlengelser.
+- Offisiell QR-betaling: `POST https://api.vipps.no/epayment/v1/payments`, `userFlow:QR`, `customerInteraction:CUSTOMER_PRESENT`, WALLET, beløp **100 øre NOK**.
+- MSN hardkodet **859181**. Den separate Edge Function `gk2-vipps-live-onekrone` blir deaktivert til disse SEPARATE secrets er lagret: `GK2_VIPPS_LIVE_MSN=859181`, `GK2_VIPPS_LIVE_CLIENT_ID`, `GK2_VIPPS_LIVE_CLIENT_SECRET`, `GK2_VIPPS_LIVE_SUBSCRIPTION_KEY`. Aldri overskriv TEST-nøklene.
+- Auth: Kun bekreftet Supabase Auth-admin; kun POST /create, POST /capture, GET /status, GET /connection, origin GitHub Pages. Ingen klientstyrt beløp/MSN.
+- Unik referanse `GK2LQR-<uuid>`, SQL-tabell `gk2_private.vipps_live_qr_attempts` separat fra bookingsystemet, global maks 3 opprettelser/24 timer og per admin maks 2/24 timer. Ingen produksjonsbetaling er opprettet av disse kodeendringene.
+- Capture kan bare startes etter en eksplisitt ekstra bekreftelse fra administrator og autorisert Vipps-betaling på **nøyaktig 100 øre**. Serveren tar atomisk «capture claimed» i databasen før betalings-API-et kalles, og gjenbruker samme idempotency-key (unik per payment). All mulig usikker capture-status returneres som «sjekk status», aldri som gjennomført.
+- Betaling bekreftes ved ny server-til-Vipps GET og eksakt aggregert capturedAmount 100 øre uten refund. Ingen HYZR-booking berøres; ekte bookingforlengelser krever fortsatt separat atomisk kapasitetslås, prisquote og webhook/polling.
+- Publisert og kontrollert separat adminside: `https://msvendsen87.github.io/golfkongen-booking/vipps-live.html`.
+- GitHub CI og SQL rollback-test er godkjent; testsiden er verifisert tilgjengelig. Ingen faktisk 1-kr betaling utført før administrator legger inn produksjonsnøklene og utfører QR-testen selv.
