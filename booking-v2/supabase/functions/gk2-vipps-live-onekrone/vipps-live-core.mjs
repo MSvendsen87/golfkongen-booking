@@ -43,10 +43,14 @@ export function summarizeLiveOneKrone(reference,payment){
  if(!["CREATED","AUTHORIZED","ABORTED","EXPIRED","TERMINATED"].includes(payment.state)||
     n(payment.amount)!==LIVE_ORE)return deny("unexpected_payment");
  const a=payment.aggregate||{};
- const captured=n(a.capturedAmount);
- const authorized=n(a.authorizedAmount);
- const refunded=n(a.refundedAmount);
- if(captured===null||authorized===null||refunded===null)return deny("missing_payment_totals");
+ const captured=a.capturedAmount===undefined?0:n(a.capturedAmount);
+ const authorized=a.authorizedAmount===undefined?0:n(a.authorizedAmount);
+ const refunded=a.refundedAmount===undefined?0:n(a.refundedAmount);
+ // Vipps may omit aggregate amounts before the user has authorized.
+ // But incomplete totals are never sufficient to capture real money.
+ if(captured===null||authorized===null||refunded===null)return deny("invalid_payment_totals");
+ if(payment.state==="AUTHORIZED"&&(!a.authorizedAmount||!a.capturedAmount||!a.refundedAmount))
+   return deny("missing_authorized_payment_totals");
  if(captured<0||authorized<0||refunded<0||captured>LIVE_ORE||
     refunded>captured||authorized>LIVE_ORE)return deny("invalid_payment_totals");
  const fullyCaptured=payment.state==="AUTHORIZED"&&authorized===LIVE_ORE&&
