@@ -13,12 +13,25 @@ Deno.serve(async(req:Request)=>{
  if(!base||!service)return json({ok:false,error:"server_not_configured"},503);
  const auth=req.headers.get("authorization")||"";
  if(!auth.startsWith("Bearer ")||auth.length>7000)return json({ok:false,error:"authentication_required"},401);
+ // Supabase Dashboard's built-in tester can run as the service_role
+ // without displaying/copying that private token. This test endpoint is
+ // read-only and never creates, captures, or refunds a Vipps payment.
+ const token=auth.slice(7);
  const db=createClient(base,service,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:userInfo,error:userError}=await db.auth.getUser(auth.slice(7));
- const user=userInfo?.user;
- if(userError||!user?.email||!user.email_confirmed_at)return json({ok:false,error:"authentication_required"},401);
- const {data:isAdmin,error:adminError}=await db.rpc("gk2_is_admin",{p_email:user.email.trim().toLowerCase()});
- if(adminError||isAdmin!==true)return json({ok:false,error:"admin_only"},403);
+ const encode=new TextEncoder();
+ async function sha(s:string){
+   return new Uint8Array(await crypto.subtle.digest("SHA-256",encode.encode(s)));
+ }
+ const [provided,expected]=await Promise.all([sha(token),sha(service)]);
+ let diff=0;for(let i=0;i<provided.length;i++)diff|=provided[i]^expected[i];
+ const dashboardServiceRole=diff===0 && token.length===service.length;
+ if(!dashboardServiceRole){
+   const {data:userInfo,error:userError}=await db.auth.getUser(token);
+   const user=userInfo?.user;
+   if(userError||!user?.email||!user.email_confirmed_at)return json({ok:false,error:"authentication_required"},401);
+   const {data:isAdmin,error:adminError}=await db.rpc("gk2_is_admin",{p_email:user.email.trim().toLowerCase()});
+   if(adminError||isAdmin!==true)return json({ok:false,error:"admin_only"},403);
+ }
  const c={
    msn:Deno.env.get("GK2_VIPPS_TEST_MSN")||"",
    clientId:Deno.env.get("GK2_VIPPS_TEST_CLIENT_ID")||"",
