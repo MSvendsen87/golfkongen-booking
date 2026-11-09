@@ -48,7 +48,7 @@ test("wrong currency or amount denies",()=>{
 });
 test("refunded amount cannot be called captured",()=>{
  const s=status(ref,{...payment,aggregate:{...payment.aggregate,capturedAmount:money(100),refundedAmount:money(100)}});
- assert.equal(s.captured,false);assert.equal(captureAllowed(s,false),true);
+ assert.equal(s.captured,false);assert.equal(captureAllowed(s,false),false);
 });
 test("wrong owner payment reference denied",()=>assert.equal(status(ref,{...payment,reference:"bad"}).ok,false));
 test("malformed captured amount denies",()=>{
