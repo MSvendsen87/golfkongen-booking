@@ -1,0 +1,69 @@
+<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GolfKongen · Sikker integrasjonstest</title><style>
+:root{color-scheme:dark}body{margin:0;background:#151e19;color:#f4f6ef;font:16px system-ui,sans-serif}main{max-width:650px;margin:45px auto;padding:0 20px}h1{font-size:27px}p{line-height:1.55;color:#d6ded3}section{border:1px solid #496452;border-radius:14px;padding:24px;background:#1c2b23;margin:18px 0}input,button{font:inherit;border-radius:9px;padding:13px;border:1px solid #6e8a73}input{box-sizing:border-box;background:#102016;color:#fff;width:100%;margin:6px 0 16px}button{background:#d9b75c;color:#101a12;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.row{padding:13px 0;border-bottom:1px solid #415547;display:flex;justify-content:space-between;gap:20px}.ok{color:#83e0a6}.bad{color:#f0ad90}small{color:#abc2ae}a{color:#f4d87c}#report{white-space:pre-wrap}
+</style></head><body><main><p><a href="./">← Booking 2.0 admin</a></p><h1>Nuki og Pushover – sikker forbindelsestest</h1><p>Denne siden leser status på Nuki-låsen og validerer Pushover. Den sender ingen varsler, oppretter ingen koder og åpner ikke døren. Kunde-booking er fortsatt sperret.</p>
+<section id="loginPanel"><h2>Eierinnlogging</h2><form id="form"><label>E-postadresse<input type="email" id="email" autocomplete="username" required value="kristoffer.mrk@gmail.com"></label><label>Passord<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">Logg inn</button></form><p id="loginMessage" role="status"></p></section>
+<section id="testPanel" hidden><h2>Kontroller forbindelser</h2><p>Innlogget som <strong id="signedIn"></strong>.</p><button id="run" type="button">Kontroller Nuki og Pushover</button> <button id="logout" type="button">Logg ut</button><div id="report" role="status" aria-live="polite" style="margin-top:18px">Ikke kontrollert ennå.</div></section>
+<small>Resend: oppsett kan bekreftes, men faktisk e-postlevering testes senere med en kontrollert e-post til eier. Ikke skriv API-nøkler eller dørkoder på denne siden.</small></main>
+<script type="module">
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.58.0";
+const project="https://eadgdcimcmfyuicizboo.supabase.co";
+const supabase=createClient(project,"sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq",{auth:{persistSession:true,autoRefreshToken:true}});
+const el=id=>document.getElementById(id);
+async function display(){
+ const {data}=await supabase.auth.getSession();
+ const email=data?.session?.user?.email||"";
+ const yes=!!data?.session&&email.toLowerCase()==="kristoffer.mrk@gmail.com";
+ el("loginPanel").hidden=yes;el("testPanel").hidden=!yes;el("signedIn").textContent=yes?email:"";
+}
+el("form").onsubmit=async(event)=>{
+ event.preventDefault();el("loginMessage").textContent="Logger inn ...";
+ const {error}=await supabase.auth.signInWithPassword({email:el("email").value.trim(),password:el("password").value});
+ el("password").value="";el("loginMessage").textContent=error?"Innlogging mislyktes: "+error.message:"";
+ await display();
+};
+el("logout").onclick=async()=>{await supabase.auth.signOut();await display()};
+el("run").onclick=async()=>{
+ el("run").disabled=true;el("report").textContent="Kontrollerer Nuki og Pushover ...";
+ try{
+  const {data}=await supabase.auth.getSession();
+  if(!data?.session?.access_token)throw Error("Innlogging mangler");
+  const res=await fetch(project+"/functions/v1/gk-booking-notifier/internal/diagnose",{
+   method:"POST",headers:{"Authorization":"Bearer "+data.session.access_token,"Content-Type":"application/json"},
+   body:"{}",cache:"no-store"
+  });
+  const result=await res.json();
+  if(res.status===403)throw Error("Ingen adgang. Logg inn med godkjent eierkonto.");
+  if(!result||!Object.hasOwn(result,"nukiDevice"))throw Error(result.code||"Ugyldig API-svar");
+  const results=[
+   ["Nuki-lås og Keypad",result.nukiDevice],
+   ["Lesing av Nuki-koder",result.nukiAuthorizations],
+   ["Pushover mottaker",result.pushoverRecipient],
+   ["Resend-nøkkel konfigurert (ikke sendt)",result.resendKeyConfigured]
+  ];
+  el("report").replaceChildren(...results.map(([label,valid])=>{
+   const row=document.createElement("div");row.className="row";
+   const a=document.createElement("span");a.textContent=label;
+   const b=document.createElement("strong");b.className=valid?"ok":"bad";b.textContent=valid?"OK":"MÅ SJEKKES";
+   row.append(a,b);return row;
+  }));
+  if(result.pushoverRecipient!==true){
+   const hints={
+    key_format_invalid:"En av Pushover-nøklene har feil format. Sjekk at du har kopiert hele User Key og Application API Token, og ikke e-postadressen.",
+    invalid_app_token:"Application API Token er ugyldig. Sjekk at GK2_PUSHOVER_APP_TOKEN er tokenet fra GolfKongen Booking 2.0-appen.",
+    invalid_user_key:"User Key er ugyldig. Sjekk GK2_PUSHOVER_USER_KEY mot Your User Key på Pushover-hovedsiden.",
+    no_active_device:"Pushover-kontoen mangler en aktiv mottakerenhet. Åpne Pushover-appen og kontroller registrerte enheter.",
+    invalid_recipient_or_no_device:"Pushover godkjenner ikke mottakeren eller finner ingen aktiv enhet. Kontroller User Key og registrerte enheter.",
+    rate_limited:"Pushover har begrenset antall forespørsler. Vent med nye tester.",
+    provider_unavailable:"Pushover-tjenesten er midlertidig utilgjengelig.",
+    network_error:"Kunne ikke kontakte Pushover fra Supabase.",
+    provider_rejected:"Pushover avviste testen uten en kjent feilkategori."
+   };
+   const note=document.createElement("p");note.className="bad";
+   note.textContent=hints[result.pushoverReason]||"Pushover-feil kunne ikke klassifiseres. Oppdater siden og prøv igjen.";
+   el("report").append(note);
+  }
+ }catch(e){el("report").textContent="Kontrollen kunne ikke fullføres: "+e.message}
+ finally{el("run").disabled=false}
+};
+await display();
+</script></body></html>

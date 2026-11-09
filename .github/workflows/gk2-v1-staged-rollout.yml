@@ -1,0 +1,30 @@
+name: Booking 2.0 – Old-style V1 hidden variant rollout
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - booking-v2-preview-2026-10-24
+    paths:
+      - '.github/workflows/gk2-v1-staged-rollout.yml'
+permissions:
+  contents: read
+concurrency:
+  group: gk2-variants-safe-rollout
+  cancel-in-progress: false
+jobs:
+  safe-completion-slot-prewarm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Stage up to a 12000-variant cap across 33 hidden products, then hide and verify SKU
+        # Follow-up after successful 3913 hidden zero-stock writes; finish missing SKUs, never unhide.
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+          GK2_VARIANT_SYNC_WRITE: 'true'
+          GK2_MAX_VARIANTS_PER_RUN: '12000'
+          GK2_BATCH_SIZE: '10'
+        run: node booking-v2/scripts/quickbutik-rolling-sync.mjs

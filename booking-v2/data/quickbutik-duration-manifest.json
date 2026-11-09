@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Europe/Oslo",
+  "firstBookable": "2026-11-01",
+  "minDaysAhead": 45,
+  "products": [
+    {
+      "resource": "dart_a",
+      "minutes": 30,
+      "productId": 1475
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 60,
+      "productId": 1486
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 90,
+      "productId": 1484
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 120,
+      "productId": 1485
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 150,
+      "productId": 1487
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 180,
+      "productId": 1489
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 210,
+      "productId": 1488
+    },
+    {
+      "resource": "dart_a",
+      "minutes": 240,
+      "productId": 1491
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 30,
+      "productId": 1476
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 60,
+      "productId": 1490
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 90,
+      "productId": 1492
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 120,
+      "productId": 1493
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 150,
+      "productId": 1494
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 180,
+      "productId": 1495
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 210,
+      "productId": 1496
+    },
+    {
+      "resource": "dart_b",
+      "minutes": 240,
+      "productId": 1497
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 30,
+      "productId": 1474
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 60,
+      "productId": 1477
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 90,
+      "productId": 1478
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 120,
+      "productId": 1479
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 150,
+      "productId": 1480
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 180,
+      "productId": 1481
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 210,
+      "productId": 1482
+    },
+    {
+      "resource": "hyzr",
+      "minutes": 240,
+      "productId": 1483
+    },
+    {
+      "resource": "venue",
+      "minutes": 240,
+      "productId": 1498
+    },
+    {
+      "resource": "venue",
+      "minutes": 300,
+      "productId": 1499
+    },
+    {
+      "resource": "venue",
+      "minutes": 360,
+      "productId": 1500
+    },
+    {
+      "resource": "venue",
+      "minutes": 420,
+      "productId": 1501
+    },
+    {
+      "resource": "venue",
+      "minutes": 480,
+      "productId": 1502
+    },
+    {
+      "resource": "venue",
+      "minutes": 540,
+      "productId": 1503
+    },
+    {
+      "resource": "venue",
+      "minutes": 600,
+      "productId": 1504
+    },
+    {
+      "resource": "venue",
+      "minutes": 660,
+      "productId": 1505
+    },
+    {
+      "resource": "venue",
+      "minutes": 720,
+      "productId": 1506
+    }
+  ]
+}
