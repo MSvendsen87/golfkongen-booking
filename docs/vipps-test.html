@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://eadgdcimcmfyuicizboo.supabase.co; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<title>GolfKongen – Vipps TEST</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#edf4ee;color:#163323;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;padding:36px 14px}
+.wrap{max-width:510px;margin:0 auto;box-shadow:0 8px 30px #13271a11}
+header{background:#0e3022;color:#fff;padding:20px 25px;border-radius:13px 13px 0 0;font-size:15px;font-weight:850;letter-spacing:.06em}
+header span{color:#ebce8d}
+main{background:#fff;border:1px solid #dae4da;border-radius:0 0 13px 13px;padding:26px}
+h1{font-size:23px;letter-spacing:-.02em;margin:0 0 9px}
+p{font-size:14px;line-height:1.55;color:#526655;margin:0 0 13px}
+label{display:block;margin:16px 0 5px;font-size:14px;font-weight:750}
+input{font:inherit;padding:12px;width:100%;min-height:45px;border-radius:8px;border:1px solid #b9cdbb;background:#fff;color:#18291c}
+button{width:100%;min-height:46px;background:#226142;color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:800;margin-top:20px;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.note{background:#f0f5f0;color:#47604d;border-radius:8px;margin-top:18px;padding:12px;font-size:13px;line-height:1.5}
+#out{display:none;margin-top:17px;padding:14px;border-radius:8px;white-space:pre-line;overflow-wrap:break-word}
+#out.success{display:block;background:#e8f5eb;color:#18522a}
+#out.error{display:block;background:#fff0ed;color:#8e302b}
+.footer{color:#758476;font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>GOLFKONGEN <span>/ VIPPS TEST</span></header>
+<main>
+<h1>Kontroller Vipps-tilkoblingen</h1>
+<p>Tester forbindelsen mot Vipps <strong>testmiljø 321607</strong>. Ingen betaling, reservasjon eller QR-kode opprettes.</p>
+<form id="login" autocomplete="off">
+<label for="email">E-post for Booking 2.0 Admin</label>
+<input id="email" type="email" autocomplete="username" required spellcheck="false">
+<label for="password">Passord for Booking 2.0 Admin</label>
+<input id="password" type="password" autocomplete="off" required>
+<button type="submit" id="submit">Kontroller tilkoblingen</button>
+</form>
+<div id="out" role="status" aria-live="polite"></div>
+<div class="note">Legg kun inn Booking 2.0-administratorens innlogging. Du skal <strong>ikke</strong> legge inn Vipps-nøkler eller Supabase service-role-nøkler her.</div>
+<p class="footer">Innlogging sendes direkte til Supabase Auth over HTTPS. Passord og tilgangstoken lagres ikke av denne siden.</p>
+</main>
+</div>
+<script>
+"use strict";
+const HOST="https://eadgdcimcmfyuicizboo.supabase.co";
+const PUB="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
+const form=document.getElementById("login");
+const out=document.getElementById("out");
+const button=document.getElementById("submit");
+const pw=document.getElementById("password");
+const lookup={
+ "authentication_required":"Supabase avviste administratorinnloggingen.",
+ "admin_only":"Denne kontoen har ikke Booking 2.0-administratortilgang.",
+ "test_credentials_not_configured":"En eller flere Vipps-testnøkler mangler eller har feil format i Supabase Testing.",
+ "vipps_auth_failed":"Vipps avviste testnøklene eller salgsstedet 321607.",
+ "vipps_token_invalid":"Vipps svarte, men uten en gyldig tilgangskode.",
+ "vipps_unavailable":"Vipps-testserveren kunne ikke nås.",
+ "server_not_configured":"Supabase-funksjonen mangler nødvendig serverkonfigurasjon.",
+ "origin_not_allowed":"Supabase avviste nettadressens opprinnelse."
+};
+function result(ok,headline,details){
+ out.className=ok?"success":"error";
+ out.textContent=headline+(details?"\n"+details:"");
+}
+async function bodyJson(r){try{return await r.json()}catch{return {error:"invalid_server_response"}}}
+form.addEventListener("submit",async event=>{
+ event.preventDefault();button.disabled=true;button.textContent="Kontrollerer ...";out.className="";
+ const email=document.getElementById("email").value.trim();
+ const password=pw.value;
+ pw.value="";
+ try{
+  const auth=await fetch(HOST+"/auth/v1/token?grant_type=password",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","apikey":PUB},
+    body:JSON.stringify({email,password}),
+    credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer"
+  });
+  const login=await bodyJson(auth);
+  if(!auth.ok||typeof login.access_token!=="string"){
+    const code=String(login.error_code||login.code||"authentication_failed");
+    result(false,"Innlogging mislyktes ("+auth.status+")",
+      "Supabase: "+code+". Kontroller administratorens innlogging.");
+    return;
+  }
+  const reply=await fetch(HOST+"/functions/v1/gk2-vipps-test-connection",{
+    method:"GET",
+    headers:{"Authorization":"Bearer "+login.access_token,"apikey":PUB},
+    credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer"
+  });
+  const data=await bodyJson(reply);
+  if(reply.ok&&data.ok===true&&data.connected===true&&data.environment==="test"&&
+     data.msn==="321607"&&data.paymentCreationEnabled===false&&data.bookingMutationEnabled===false){
+    result(true,"Vipps TEST er tilkoblet!",
+      "Salgssted 321607 er verifisert. Ingen betaling er gjennomført.");
+  }else{
+    const code=String(data.error||"HTTP_"+reply.status);
+    result(false,"Tilkoblingen feilet: "+code,
+      lookup[code]||("HTTP "+reply.status+". Send bare feilkoden til ChatGPT."));
+  }
+ }catch(e){
+  result(false,"Kunne ikke kontakte testserveren",
+    "Nettverksfeil eller blokkert forespørsel: "+String(e?.name||"ukjent")+".");
+ }finally{button.disabled=false;button.textContent="Kontroller tilkoblingen";}
+});
+</script>
+</body>
+</html>
