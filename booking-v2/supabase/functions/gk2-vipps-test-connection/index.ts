@@ -1,0 +1,45 @@
+import {createClient} from "npm:@supabase/supabase-js@2.95.0";
+import {validateTestVippsCredentials,isValidVippsTokenResponse} from "./vipps-test-core.mjs";
+/** Read-only connection probe: TEST ONLY; no payment, QR, capture, or booking changes. */
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
+ status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",
+ "x-content-type-options":"nosniff","referrer-policy":"no-referrer"}
+});
+Deno.serve(async(req:Request)=>{
+ if(req.method!=="GET")return json({ok:false,error:"method_not_allowed"},405);
+ if(!new URL(req.url).pathname.endsWith("/gk2-vipps-test-connection"))return json({ok:false,error:"not_found"},404);
+ const base=Deno.env.get("SUPABASE_URL")||"";
+ const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+ if(!base||!service)return json({ok:false,error:"server_not_configured"},503);
+ const auth=req.headers.get("authorization")||"";
+ if(!auth.startsWith("Bearer ")||auth.length>7000)return json({ok:false,error:"authentication_required"},401);
+ const db=createClient(base,service,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {data:userInfo,error:userError}=await db.auth.getUser(auth.slice(7));
+ const user=userInfo?.user;
+ if(userError||!user?.email||!user.email_confirmed_at)return json({ok:false,error:"authentication_required"},401);
+ const {data:isAdmin,error:adminError}=await db.rpc("gk2_is_admin",{p_email:user.email.trim().toLowerCase()});
+ if(adminError||isAdmin!==true)return json({ok:false,error:"admin_only"},403);
+ const c={
+   msn:Deno.env.get("GK2_VIPPS_TEST_MSN")||"",
+   clientId:Deno.env.get("GK2_VIPPS_TEST_CLIENT_ID")||"",
+   clientSecret:Deno.env.get("GK2_VIPPS_TEST_CLIENT_SECRET")||"",
+   subscriptionKey:Deno.env.get("GK2_VIPPS_TEST_SUBSCRIPTION_KEY")||""
+ };
+ const config=validateTestVippsCredentials(c);
+ if(!config.ok)return json({ok:false,environment:"test",msn:"321607",connected:false,error:"test_credentials_not_configured"},503);
+ try {
+   const response=await fetch("https://apitest.vipps.no/accesstoken/get",{
+     method:"POST",headers:{
+      "client_id":c.clientId,"client_secret":c.clientSecret,
+      "Ocp-Apim-Subscription-Key":c.subscriptionKey,
+      "Merchant-Serial-Number":c.msn,"content-type":"application/json"
+     },body:"",signal:AbortSignal.timeout(10000)
+   });
+   if(!response.ok)return json({ok:false,environment:"test",msn:"321607",connected:false,error:"vipps_auth_failed"},502);
+   const result=await response.json();
+   if(!isValidVippsTokenResponse(result))return json({ok:false,environment:"test",msn:"321607",connected:false,error:"vipps_token_invalid"},502);
+   return json({ok:true,environment:"test",msn:"321607",connected:true,paymentCreationEnabled:false,bookingMutationEnabled:false});
+ }catch{
+   return json({ok:false,environment:"test",msn:"321607",connected:false,error:"vipps_unavailable"},503);
+ }
+});
