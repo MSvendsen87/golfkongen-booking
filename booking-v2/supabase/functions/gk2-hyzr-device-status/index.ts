@@ -33,7 +33,9 @@ Deno.serve(async(req:Request)=>{
  if(req.method!=="GET")return respond({ok:false,error:"method_not_allowed"},405);
  const url=new URL(req.url);
  const previewOptions=url.pathname.endsWith("/gk2-hyzr-device-status/options");
- if(!previewOptions && !url.pathname.endsWith("/gk2-hyzr-device-status"))
+ const authorizedControl=url.pathname.endsWith("/gk2-hyzr-device-status/control");
+ if(!previewOptions && !authorizedControl &&
+    !url.pathname.endsWith("/gk2-hyzr-device-status"))
    return respond({ok:false,error:"not_found"},404);
  const dbUrl=Deno.env.get("SUPABASE_URL")||"";
  const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -68,6 +70,23 @@ Deno.serve(async(req:Request)=>{
      const options=collectExtensionOptions(state,quotes.map(q=>q.data));
      return respond({ok:true,mode:"pricing_preview_only",options,
        paymentReady:false,deviceControlEnabled:false,qrPaymentEnabled:false});
+   }
+   if(authorizedControl){
+      // Separate authenticated, live read-only contract. The old monitor endpoint
+      // above remains unchanged (deviceControlEnabled:false).
+      // The PC must still be explicitly armed by its LOCAL installer/admin PIN.
+      const paymentReleased=Deno.env.get("GK2_HYZR_EXTENSION_WRITE_ENABLED")==="true" &&
+        Deno.env.get("GK2_VIPPS_LIVE_MSN")==="859181" &&
+        Boolean(Deno.env.get("GK2_VIPPS_LIVE_CLIENT_ID")) &&
+        Boolean(Deno.env.get("GK2_VIPPS_LIVE_CLIENT_SECRET")) &&
+        Boolean(Deno.env.get("GK2_VIPPS_LIVE_SUBSCRIPTION_KEY"));
+      const phase=(state.status==="active"&&["warning","grace"].includes(state.screen_phase));
+      return respond({...state,deviceControlEnabled:true,
+        deviceMode:"LOCAL_SOFT_GATE_ONLY",
+        qrPaymentEnabled:paymentReleased && phase && state.resource==="hyzr" &&
+          state.staff_mode!==true,
+        extensionWriteReleased:paymentReleased,
+        pcRequiresLocalArming:true});
    }
    return respond({...state,deviceControlEnabled:false,qrPaymentEnabled:false});
  }catch {
