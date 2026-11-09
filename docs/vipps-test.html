@@ -43,7 +43,18 @@ button:disabled{opacity:.55;cursor:wait}
 <div id="out" role="status" aria-live="polite"></div>
 <section id="qrbox" hidden aria-label="Vipps QR sandkasse">
   <h2>Teste QR-betaling – kun testmiljø</h2>
-  <p>Oppretter en engangs-QR for <strong>1 kr i Vipps TEST</strong>, ikke ekte penger. Den kan testes med Vipps test-app. Ingen bestilling, reservasjon, fangst eller HYZR-forlengelse skjer.</p>
+  <p>Oppretter en engangs-QR for <strong>1 kr i Vipps TEST</strong>, ikke ekte penger. Ingen bestilling, reservasjon, fangst eller HYZR-forlengelse skjer.</p>
+  <div class="note" style="margin:12px 0 20px;border-left:4px solid #d3a650">
+    <strong>Viktig: Ikke bruk ditt vanlige mobilnummer.</strong>
+    Vipps MT er et eget testmiljø, og et vanlig Vipps-nummer vil få melding om at betaling til bedriften ikke er mulig.
+    Bruk en <strong>Vipps-testbruker</strong> med eget testmobilnummer og testfødselsnummer.
+    <ol style="margin:8px 0 8px 20px;padding:0">
+      <li>Åpne <a href="https://portal.vippsmobilepay.com/" target="_blank" rel="noopener noreferrer">Vipps bedriftsportal</a> → <strong>For utviklere → Testbrukere</strong>, og opprett en testbruker hvis listen er tom.</li>
+      <li>Installer <strong>Vipps MobilePay MT</strong>, og logg inn med testbrukerens opplysninger.</li>
+      <li>Skann test-QR-koden på nytt, og godkjenn via MT-testbrukeren.</li>
+    </ol>
+    <a href="https://developer.vippsmobilepay.com/docs/knowledge-base/test-environment/" target="_blank" rel="noopener noreferrer">Vipps' offisielle veiledning for testbruker og MT-appen</a>.
+  </div>
   <button id="createqr" type="button">Opprett test-QR på 1 kr</button>
   <div id="qrout" role="status" aria-live="polite"></div>
   <img id="qrimg" alt="Vipps test-QR" referrerpolicy="no-referrer" hidden>
