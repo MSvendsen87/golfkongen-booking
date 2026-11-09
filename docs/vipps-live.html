@@ -128,8 +128,23 @@ login.onsubmit=async ev=>{
   if(!r.ok||!j.ok||j.environment!=="production"||j.msn!=="859181"||
      j.amountOre!==100||j.bookingMutationEnabled!==false)
    throw Error(err(j,r));
-  message(result,"ok","Produksjonstilkobling OK – Vipps 859181. Ingen betaling er opprettet.");
+  message(result,"ok","Produksjonstilkobling OK – Vipps 859181.");
   paySection.hidden=false;
+  // Recover a previously created payment. Do NOT start another charge.
+  try {
+    const last=await live("/latest");
+    if(last.r.ok&&last.j.ok===true&&last.j.found===true&&
+       /^GK2LQR-[A-Za-z0-9-]{12,56}$/.test(last.j.reference||"")){
+      reference=last.j.reference;
+      details.hidden=false;
+      image.hidden=true;
+      image.removeAttribute("src");
+      link.hidden=true;
+      capture.hidden=true;
+      message(status,"info",
+        "Tidligere 1-kr betaling funnet. Trykk «Sjekk om 1 kr er godkjent» nedenfor. Ikke opprett en ny QR.");
+    }
+  }catch { /* Connection success remains valid even if recovery check fails. */ }
  }catch(e){message(result,"error","Tilkoblingen feilet: "+String(e.message||"ukjent"));}
  finally{connect.disabled=false;}
 };
