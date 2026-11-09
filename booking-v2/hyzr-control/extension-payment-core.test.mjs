@@ -16,6 +16,8 @@ test("QR charge is exactly server held amount, one of four supported durations",
  const q=make({reference:ref,amountOre:7500,minutes:30});
  assert.equal(q.amount.value,7500);
  assert.equal(q.userFlow,"QR");
+ assert.equal(q.qrFormat.format,"IMAGE/PNG");
+ assert.equal(q.qrFormat.size,800);
  assert.equal(q.customerInteraction,"CUSTOMER_PRESENT");
  assert.ok(q.paymentDescription.includes("30 min"));
  assert.throws(()=>make({reference:ref,amountOre:0,minutes:30}));
