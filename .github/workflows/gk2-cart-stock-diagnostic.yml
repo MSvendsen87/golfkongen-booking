@@ -1,0 +1,26 @@
+name: Booking 2.0 – Cart stock V1 diagnostic
+on:
+  push:
+    branches:
+      - booking-v2-preview-2026-10-24
+    paths:
+      - '.github/workflows/gk2-cart-stock-diagnostic.yml'
+permissions:
+  contents: read
+concurrency:
+  group: gk2-variants-safe-rollout
+  cancel-in-progress: false
+jobs:
+  diagnostic-and-relock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test one hidden-parent variant and always relock
+        env:
+          GK2_QUICKBUTIK_API_KEY: ${{ secrets.GK2_QUICKBUTIK_API_KEY }}
+          GK2_TEST_OPEN_AND_RELOCK: 'true'
+        run: node booking-v2/scripts/pilot-v1-cart-stock-window.mjs

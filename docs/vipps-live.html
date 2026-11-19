@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://eadgdcimcmfyuicizboo.supabase.co; img-src https://*.vipps.no https://*.vippsmobilepay.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>GolfKongen – 1 kr ekte Vipps-test</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#edf4ef;color:#173526;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;padding:30px 14px}
+.wrap{max-width:530px;margin:0 auto;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px #112c1918}
+header{background:#102f23;color:#fff;padding:21px 26px;font-size:15px;font-weight:850;letter-spacing:.055em}
+header span{color:#e8d290}
+main{background:#fff;padding:27px 27px 32px}
+h1{font-size:23px;line-height:1.25;margin:0 0 10px}h2{font-size:19px;margin:0 0 9px}
+p{font-size:14px;line-height:1.55;color:#526358;margin:9px 0}
+label{font-size:13px;font-weight:750;display:block;margin:18px 0 5px}
+input[type=email],input[type=password]{width:100%;font:inherit;min-height:46px;border:1px solid #b9cabb;border-radius:9px;padding:11px;color:#1f3425;background:#fff}
+button{display:block;width:100%;min-height:48px;border:0;border-radius:9px;background:#245f41;color:white;font:inherit;font-size:14px;font-weight:800;cursor:pointer;padding:12px;margin:17px 0 0}
+button.outline{background:#f6faf7;border:1px solid #2b6947;color:#205b3a}
+button:disabled{cursor:not-allowed;opacity:.5}
+section{border:1px solid #dae4da;padding:18px;border-radius:12px;margin-top:24px}
+section[hidden],div[hidden],a[hidden],img[hidden]{display:none!important}
+.warning{background:#fff2df;color:#8a4a14;border-radius:9px;padding:14px;margin:17px 0;font-size:14px;line-height:1.55}
+.note{background:#f0f5f1;border-radius:9px;padding:14px;margin:17px 0;font-size:13px;color:#516557;line-height:1.55}
+#result,#paymentStatus{white-space:pre-line;overflow-wrap:break-word;padding:14px;border-radius:9px;margin-top:18px;display:none;font-size:14px;line-height:1.45}
+.ok{background:#e7f5ea!important;color:#18522b!important;display:block!important}
+.error{background:#fff0eb!important;color:#9b3b30!important;display:block!important}
+.info{background:#eef3f8!important;color:#274765!important;display:block!important}
+.checkbox{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.5;margin-top:18px;font-weight:650}
+.checkbox input{width:20px;height:20px;flex-shrink:0}
+#qrImage{display:block;width:min(100%,285px);max-height:340px;object-fit:contain;margin:20px auto;border:1px solid #eee;border-radius:10px}
+a{color:#165b3f;font-weight:700}
+.hint{color:#647468;font-size:12px;margin-top:17px}
+</style></head>
+<body><div class="wrap">
+<header>GOLFKONGEN <span>/ EKTE VIPPS-TEST</span></header>
+<main>
+<h1>Betal 1 kr med vanlig Vipps</h1>
+<div class="warning"><strong>Dette er PRODUKSJON – ekte penger.</strong>
+  Du kan betale nøyaktig <strong>1,00 kr</strong> til GolfKongen.no (salgssted 859181).
+  Det er ikke et kjøp av spilletid og ingen HYZR-bookinger blir endret.
+  Pengene trekkes først når du godkjenner i Vipps <em>og</em> deretter bekrefter innkreving nedenfor.</div>
+<form id="login" autocomplete="off">
+<label for="email">E-post til Booking 2.0 Admin</label>
+<input id="email" type="email" autocomplete="username" required>
+<label for="password">Passord til Booking 2.0 Admin</label>
+<input id="password" type="password" autocomplete="off" required>
+<button id="connect" type="submit">Kontroller produksjonstilkoblingen</button>
+</form>
+<div id="result" role="status" aria-live="polite"></div>
+<section id="paySection" hidden>
+<h2>1. Opprett betalings-QR</h2>
+<p>Etter at Vipps er tilkoblet, kan du opprette én QR for en ekte betaling på 1 kr.</p>
+<label class="checkbox"><input type="checkbox" id="confirmOneKr">
+  <span>Jeg bekrefter at jeg vil teste en <strong>ekte betaling på 1 kr</strong>. Ingen HYZR-tid kjøpes.</span>
+</label>
+<button id="createQR" disabled>Opprett ekte Vipps-QR på 1 kr</button>
+<div id="paymentStatus" role="status" aria-live="polite"></div>
+<div id="qrDetails" hidden>
+  <img id="qrImage" alt="Vipps betalings-QR, nøyaktig 1 kr" referrerpolicy="no-referrer">
+  <a id="qrLink" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Åpne QR-betalingen i Vipps</a>
+  <p>Bruk den vanlige Vipps-appen, ikke Vipps MT. Godkjenn 1 kr i Vipps.</p>
+  <button id="checkStatus" class="outline">Sjekk om 1 kr er godkjent</button>
+  <button id="capture" hidden>Fullfør trekk av 1 kr</button>
+</div>
+</section>
+<div class="note">API-nøkler og betalingsbeløp er låst på serveren. Siden lagrer ikke passord eller tilgangstoken og har ingen tilgang til å endre bookinger. Maks to testforsøk per administrator per 24 timer.</div>
+<p class="hint">En betaling må først godkjennes i Vipps. Deretter må du trykke «Fullfør trekk av 1 kr» for at pengene faktisk skal overføres til GolfKongen.</p>
+</main></div>
+<script>
+"use strict";
+const SB="https://eadgdcimcmfyuicizboo.supabase.co";
+const KEY="sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq";
+const $=id=>document.getElementById(id);
+let accessToken=null,reference=null;
+const login=$("login"),secret=$("password"),connect=$("connect"),result=$("result"),
+paySection=$("paySection"),checkbox=$("confirmOneKr"),create=$("createQR"),
+status=$("paymentStatus"),details=$("qrDetails"),image=$("qrImage"),
+link=$("qrLink"),check=$("checkStatus"),capture=$("capture");
+function message(el,type,text){el.className=type;el.textContent=text;}
+async function json(r){try{return await r.json()}catch{return {code:"invalid_response"}}}
+async function live(path,method="GET"){
+ if(!accessToken)throw Error("Du må logge inn på nytt.");
+ const r=await fetch(SB+"/functions/v1/gk2-vipps-live-onekrone"+path,{
+  method,headers:{"Authorization":"Bearer "+accessToken,"apikey":KEY},
+  credentials:"omit",cache:"no-store",referrerPolicy:"no-referrer"});
+ return {r,j:await json(r)};
+}
+function err(j,r){
+ const k=String(j?.code||"HTTP_"+r?.status);
+ const errors={
+  live_credentials_not_configured:"Produksjonsnøklene er ennå ikke lagret i Supabase. Ingen betaling er forsøkt.",
+  vipps_live_auth_failed:"Vipps avviste produksjonsnøklene for salgssted 859181.",
+  admin_only:"Denne kontoen er ikke administrator i Booking 2.0.",
+  authentication_required:"Administratorinnloggingen er ikke gyldig.",
+  daily_admin_limit:"Maks to ekte 1-kr-testforsøk per administrator per dag.",
+  daily_global_limit:"Sikkerhetsgrensen for ekte betalingsforsøk er nådd.",
+  payment_not_authorized:"Betalingen er ikke godkjent i Vipps ennå.",
+  capture_already_started_check_status:"Et trekk er allerede forsøkt. Sjekk status før du gjør noe mer.",
+  capture_started_check_status:"Trekket er sendt, men ikke bekreftet. Sjekk status. Ikke opprett ny betaling.",
+  capture_pending_check_status:"Trekket er ikke endelig bekreftet. Sjekk status.",
+  vipps_live_create_failed:"Vipps kunne ikke opprette denne betalingsforespørselen.",
+  vipps_live_status_unavailable:"Vipps kunne ikke hente betalingsstatus."
+ };
+ return k+": "+(errors[k]||"Send bare denne feilkoden hit. Ingen andre opplysninger er nødvendige.");
+}
+login.onsubmit=async ev=>{
+ ev.preventDefault();
+ connect.disabled=true;paySection.hidden=true;accessToken=null;
+ const email=$("email").value.trim(),pwd=secret.value;secret.value="";
+ message(result,"info","Kontrollerer administratorinnlogging og Vipps ...");
+ try{
+  const auth=await fetch(SB+"/auth/v1/token?grant_type=password",{
+   method:"POST",headers:{"Content-Type":"application/json","apikey":KEY},
+   body:JSON.stringify({email,password:pwd}),credentials:"omit",
+   cache:"no-store",referrerPolicy:"no-referrer"
+  });
+  const a=await json(auth);
+  if(!auth.ok||typeof a.access_token!=="string"){
+   message(result,"error","Supabase avviste innloggingen ("+
+     String(a.error_code||a.code||auth.status)+").");return;
+  }
+  accessToken=a.access_token;
+  const {r,j}=await live("/connection");
+  if(!r.ok||!j.ok||j.environment!=="production"||j.msn!=="859181"||
+     j.amountOre!==100||j.bookingMutationEnabled!==false)
+   throw Error(err(j,r));
+  message(result,"ok","Produksjonstilkobling OK – Vipps 859181.");
+  paySection.hidden=false;
+  // Recover a previously created payment. Do NOT start another charge.
+  try {
+    const last=await live("/latest");
+    if(last.r.ok&&last.j.ok===true&&last.j.found===true&&
+       /^GK2LQR-[A-Za-z0-9-]{12,56}$/.test(last.j.reference||"")){
+      reference=last.j.reference;
+      details.hidden=false;
+      image.hidden=true;
+      image.removeAttribute("src");
+      link.hidden=true;
+      capture.hidden=true;
+      message(status,"info",
+        "Tidligere 1-kr betaling funnet. Trykk «Sjekk om 1 kr er godkjent» nedenfor. Ikke opprett en ny QR.");
+    }
+  }catch { /* Connection success remains valid even if recovery check fails. */ }
+ }catch(e){message(result,"error","Tilkoblingen feilet: "+String(e.message||"ukjent"));}
+ finally{connect.disabled=false;}
+};
+checkbox.onchange=()=>{create.disabled=!checkbox.checked;};
+create.onclick=async()=>{
+ if(!checkbox.checked||!accessToken)return;
+ create.disabled=true;details.hidden=true;reference=null;
+ message(status,"info","Oppretter betalings-QR for 1 kr ...");
+ try{
+  const {r,j}=await live("/create","POST");
+  if(!r.ok||!j.ok||j.environment!=="production"||j.msn!=="859181"||j.amountOre!==100)
+   throw Error(err(j,r));
+  const u=new URL(j.qrUrl);
+  if(u.protocol!=="https:"||!(u.hostname==="vipps.no"||
+     u.hostname.endsWith(".vipps.no")||u.hostname==="vippsmobilepay.com"||
+     u.hostname.endsWith(".vippsmobilepay.com")))throw Error("Ugyldig Vipps QR-adresse.");
+  reference=j.reference;image.src=j.qrUrl;link.href=j.qrUrl;
+  details.hidden=false;capture.hidden=true;
+  message(status,"info","QR opprettet for nøyaktig 1 kr. Åpne i vanlig Vipps og godkjenn. Ingen penger er trukket ennå.");
+ }catch(e){message(status,"error","Kunne ikke opprette QR: "+String(e.message));}
+ finally{create.disabled=false;}
+};
+check.onclick=async()=>{
+ if(!reference)return;check.disabled=true;
+ message(status,"info","Henter betalingsstatus ...");
+ try{
+  const {r,j}=await live("/status?reference="+encodeURIComponent(reference));
+  if(!r.ok||!j.ok)throw Error(err(j,r));
+  capture.hidden=true;
+  if(j.captured===true){
+   message(status,"ok","BETALT: 1,00 kr er mottatt av GolfKongen. Integrasjonstesten er vellykket.");
+  }else if(j.authorized===true&&j.eligibleToCapture===true&&j.captureStarted!==true){
+   message(status,"info","Vipps-godkjenning OK. 1 kr er reservert, men ennå ikke trukket. Trykk «Fullfør trekk av 1 kr» nedenfor.");
+   capture.hidden=false;
+  }else{
+   const labels={CREATED:"Venter på betaling i Vipps",ABORTED:"Avbrutt av kunde",
+   EXPIRED:"Utløpt",TERMINATED:"Avsluttet"};
+   message(status,"info",labels[j.state]||"Betaling ikke bekreftet. Ingen penger er trukket.");
+  }
+ }catch(e){message(status,"error","Statusfeil: "+String(e.message));}
+ finally{check.disabled=false;}
+};
+capture.onclick=async()=>{
+ if(!reference)return;capture.hidden=true;
+ if(!confirm("Bekreft at du vil trekke nøyaktig 1,00 kr fra den godkjente Vipps-betalingen."))return;
+ message(status,"info","Fullfører ekte betaling på 1 kr ...");
+ try{
+  const {r,j}=await live("/capture?reference="+encodeURIComponent(reference),"POST");
+  if(!r.ok||!j.ok)throw Error(err(j,r));
+  if(j.captured!==true)throw Error("Vipps har ikke bekreftet innbetaling. Sjekk status.");
+  message(status,"ok","FERDIG: 1,00 kr er registrert som betalt til GolfKongen. Ingen HYZR-booking ble endret.");
+ }catch(e){message(status,"error","Trekket er ikke bekreftet: "+String(e.message)+". Sjekk status før du gjør noe mer.");}
+};
+</script>
+</body></html>

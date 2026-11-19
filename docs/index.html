@@ -1,0 +1,538 @@
+<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>GolfKongen · Booking 2.0 Admin</title>
+<style>
+:root{font-family:system-ui,Segoe UI,Arial,sans-serif;color:#edf5ed;background:#101413}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% 5%,#1c3025,#101413 50%)}.wrap{max-width:1170px;margin:auto;padding:26px 16px 80px}header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;border-bottom:1px solid #334338;padding-bottom:16px}h1{font-size:29px;margin:9px 0}h2{font-size:20px;margin:0 0 8px}h3{font-size:15px;margin:0 0 10px}p{color:#a9b8ad;line-height:1.5}small,.sub{color:#a9b8ad}.panel{background:#1a211c;border:1px solid #334337;border-radius:18px;padding:20px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}.tabs button{width:auto;background:#27382d;color:#e9f6eb}.tabs button.selected{background:#e2bf77;color:#191b17}.badge{border:1px solid #786b3c;padding:5px 10px;border-radius:20px;color:#ffe4a7;font-size:12px}label{display:grid;gap:6px;color:#bdcbc0;font-size:13px;margin:7px 0}input,select,textarea,button{font:inherit;border-radius:11px;padding:12px;background:#101711;border:1px solid #465849;color:#fff;width:100%}button{background:#d4b96d;color:#172017;font-weight:850;border:0;cursor:pointer}button.alt{background:#263a2b;color:#ecf7ee;border:1px solid #4c6a52}.item{padding:12px 0;border-bottom:1px solid #39443b;font-size:13px}.item:last-child{border:0}.dim{opacity:.65}.note{border-left:3px solid #e2c474;padding:10px;background:#2b2a1e;color:#ecd7a6}.warn{background:#4a2222;border-left-color:#ed9a97}.success{border-left:3px solid #65be88;background:#1d3927;padding:10px;color:#c5f5d0}.cal{display:grid;grid-template-columns:60px repeat(3,1fr);min-width:550px;gap:5px}.cal>*{padding:7px 5px;background:#263b2c;border-radius:8px;font-size:11px}.cal .taken{background:#77422c}.cal .closed{background:#6a2e42}.cal .draft{background:#4b4b2c;color:#ffe8a0}.calendarScroll{overflow-x:auto}.hidden{display:none!important}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #405044;padding:8px;text-align:left}td button{width:auto;padding:6px 10px}a{color:#d8bb68}.actions{display:flex;gap:10px}.actions button{width:auto}@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:15px 10px 65px}.panel{padding:14px}h1{font-size:24px}}
+</style></head><body><main class="wrap">
+<header><div><div class="badge">GOLFKONGEN · NY BOOKINGADMIN</div><h1>Booking 2.0 kontrollsenter</h1><small>Kun autoriserte kontoer · Booking 2.0 separat fra Min Bag · Kundereservasjoner er låst</small></div><button id="logout" class="alt hidden" style="width:auto">Logg ut</button></header>
+<section id="unconfigured" class="panel"><h2>Klart for sikker tilkobling</h2><div class="note">Ny Booking 2.0-admin koblet til det isolerte test-API-et. Ekte booking og Quickbutik-synk er deaktivert.</div></section>
+<section id="loginPanel" class="panel hidden" style="max-width:470px"><h2>Administratortilgang</h2><p>Innlogging er bare mulig for de to godkjente kontoene. Sikker tilgang kontrolleres også av serveren.</p><form id="loginForm"><label>E-post<input id="email" type="email" autocomplete="username" required></label><label>Passord<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Logg inn</button></form><p id="loginMsg" role="status"></p></section>
+<section id="app" class="hidden">
+<section class="panel" id="ownerDoorTestPanel" style="border-color:#b89b59">
+ <h2>Test Booking 2.0 → Nuki på døren</h2>
+ <p>Kun eier: oppretter en faktisk 30-minutters testreservasjon i dag, lager en unik Nuki-kode og sender den til e-posten du er innlogget med. <strong>Dette er en gratis teknisk test uten Quickbutik-betaling.</strong></p>
+ <div class="row"><label style="min-width:160px">Aktivitet<select id="ownerTestResource"><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="hyzr">HYZR</option></select></label>
+ <button id="ownerDoorTestStart" type="button" style="width:auto;background:#e2bf77">Opprett testbooking og Nuki-kode</button></div>
+ <p id="ownerDoorTestResult" role="status">Testen starter på neste halvtime med minst 15 minutter til start. Nuki aktiverer koden 15 minutter før, og kunden får beskjed om 10 minutter før start.</p>
+</section>
+ <div class="tabs" id="nav"><button data-tab="calendar" class="selected">Kalender</button><button data-tab="blocks">Steng/åpne</button><button data-tab="hours">Åpningstider</button><button data-tab="prices">Priser</button><button data-tab="checkout">Kassekontroll</button><button data-tab="members">Medlemmer</button><button data-tab="tournaments">Turneringer</button><a href="./booking/" target="_blank" rel="noopener" style="padding:10px;border:1px solid #637961;border-radius:9px;color:#d7bf78;font-weight:800;text-decoration:none">Se kundesiden (test)</a></div>
+ <div id="checkout" class="panel hidden"><h2>Kassekontroll – 30-minuttersvarianter</h2><p>Sjekker eksisterende Quickbutik-produkter for HYZR, Dart A og Dart B. <strong>Dette oppretter ingen produkter eller ordre og åpner ikke booking.</strong></p><div class="row"><label>Dato <input type="date" id="checkDay"></label><button id="checkVariants" class="alt" style="width:auto">Kontroller Quickbutik-varianter</button></div><div id="checkResult" class="note" role="status">Velg en dato og trykk «Kontroller». Status for kunderabatter og Pushover må testes separat.</div>
+<h3 style="margin-top:20px">Rullerende 45-dagersbooking og betalingsstatus</h3>
+<p>Nye datoer dukker automatisk opp ved norsk midnatt. Den daglige Quickbutik-variantenjobben er installert, men oppretter ingenting før riktig API-hemmelighet og skriveaktivering er satt opp. Nye varianter forblir usynlige med lager 0 under klargjøringen.</p>
+<button id="checkIntegrations" class="alt" type="button" style="width:auto">Kontroller automatikk og betalingsklarhet</button>
+<div id="integrationCheckResult" class="note" role="status">Hent status for kalender, kundegrupper, automatisk variantpåfyll og betaling.</div>
+<p><a href="https://github.com/MSvendsen87/golfkongen-booking/actions/workflows/gk2-rolling-variants.yml" target="_blank" rel="noopener noreferrer">Se planlagt variantjobb i GitHub Actions</a></p>
+<h3 style="margin-top:20px">Ny betalingsmodell – én vare per varighet</h3>
+<p>Varighet og kundegruppepris skal være knyttet til samme salgsprodukt. Tidsrommet låses samlet i Booking 2.0. Dagens tre skjulte testprodukter (1474–1476) skal ikke åpnes for salg.</p>
+<button id="checkDesign" class="alt" type="button" style="width:auto">Kontroller betalingsoppsett</button>
+<div id="checkoutDesignResult" class="note" role="status" style="margin-top:10px">33 skjulte Quickbutik-produkter er koblet opp. Ingen er åpne for kjøp.</div>
+<h3 style="margin-top:22px">Test prisberegning mot serveren</h3>
+<div class="row">
+<label>Aktivitet<select id="quoteResource"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
+<label>Kundegruppe<select id="quoteGroup"><option value="public">Ordinær</option><option value="ansatte">Ansatte</option><option value="betalt_medlem">Betalt medlem + dartklubb</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee + Dart</option><option value="ambassador">Ambassadører</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="dartklubb">Dartklubber</option></select></label>
+<label>Varighet<select id="quoteDuration"></select></label>
+<button id="checkQuote" class="alt" type="button" style="width:auto">Hent sikker pris</button>
+</div>
+<div id="quoteResult" class="note" role="status">Dette er kun en admin-forhåndsvisning. Kundens reelle gruppe skal kontrolleres mot Quickbutik før kjøp.</div>
+<h3 style="margin-top:22px">Verifiser Quickbutik-ordre (kun lesing)</h3>
+<p>Kontrollen krever eierinnlogging. Den endrer ikke ordre, kalender, betaling eller Pushover.</p>
+<div class="row"><label>Ordrenummer<input id="qbAuditOrder" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9" placeholder="3706" autocomplete="off"></label>
+<button id="qbAuditButton" class="alt" type="button" style="width:auto">Les ordrestatus</button></div>
+<div id="qbAuditResult" class="note" role="status">Kun kontroll – ingen booking bekreftes.</div>
+</div>
+ <div id="calendar" class="panel"><h2>Kalender for HYZR, dart A og dart B</h2><div id="rollingDaysStatus" class="note" role="status">Henter 45-dagers bookingvindu ...</div><label>Dato <input type="date" id="day"></label><button id="refresh" class="alt" style="width:auto">Oppdater</button><div id="calendarStatus" class="note" role="status" style="margin:11px 0"></div><div class="calendarScroll"><div id="calendarGrid" class="cal"></div></div><div class="note">Dette er Booking 2.0-kalenderen i separat databaseområde. Den eldre bookingen 31. oktober er importert. Øvrige fremtidige bookinger og regler må kvalitetssikres før åpning.</div></div>
+ <div id="blocks" class="panel hidden"><h2>Sperr tider eller åpne igjen</h2><div class="grid"><form id="blockForm"><label>Ressurs<select name="target"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue_only">Kun leie hele lokalet</option><option value="all">Steng alle ressurser</option></select></label><label>Fra dato<input name="dateFrom" type="date" required></label><label>Til dato<input name="dateTo" type="date" required></label><label>Fra kl.<input name="startTime" type="time" step="1800" value="10:00" required></label><label>Til kl.<input name="endTime" type="time" step="1800" value="11:00" required></label><label>Årsak<input name="label" maxlength="140" required></label><button type="submit">Lagre sperring</button></form><div><h3>Gjeldende sperringer for datoen</h3><div id="blockList"></div></div></div></div>
+ <div id="hours" class="panel hidden"><h2>Åpningstider</h2><div class="note">Åpningstider lagres for hver ressurs. Endringer på denne siden påvirker foreløpig bare Booking 2.0.</div><form id="hoursForm" class="grid"><label>Ressurs<select name="resource"><option value="hyzr">HYZR</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label><label>Ukedag<select name="weekday"><option value="1">Mandag</option><option value="2">Tirsdag</option><option value="3">Onsdag</option><option value="4">Torsdag</option><option value="5">Fredag</option><option value="6">Lørdag</option><option value="7">Søndag</option></select></label><label>Åpner<input type="time" step="1800" name="opensTime" value="10:00"></label><label>Stenger<input type="time" step="1800" name="closesTime" value="22:00"></label><label>Aktiv<select name="active"><option value="true">Ja</option><option value="false">Stengt</option></select></label><button type="submit">Oppdater åpningstid</button></form><div id="hoursList"></div></div>
+ <div id="prices" class="panel hidden">
+<h2>Priser og kundegrupper</h2>
+<div class="note"><strong>Booking 2.0-prisliste – kan redigeres her.</strong> Alle beløp lagres kun i Booking 2.0, ikke i Quickbutik. Kassebetaling og Pushover er fortsatt sperret. Ordrebekreftelse skal bruke serververifisert kundegruppe og pris.</div>
+<h3>Prissammenligning mellom kundegrupper</h3>
+<div class="calendarScroll"><div id="tariffSummary">Laster priser ...</div></div><button id="exportTariffs" type="button" class="alt" style="width:auto;margin-top:10px">Last ned Quickbutik-gruppepriser (CSV)</button><p class="note">Kun oversikt for kontroll og manuell overføring. Eksport synkroniserer ikke priser automatisk til Quickbutik.</p>
+<section id="groupPriceChecklist" style="margin-top:20px">
+<h3>Quickbutik – spesialpriser som faktisk må legges inn</h3>
+<div class="note">Quickbutik lar kundegrupper overstyre produktpriser. Her vises bare priser som avviker fra ordinær pris. <b>«Lagt inn» betyr registrert av deg, ikke kassetestet.</b> Ingen knapp her endrer Quickbutik.</div>
+<div id="specialPriceSummary" class="note" role="status">Laster kontrolliste ...</div>
+<div class="row">
+<label>Kundegruppe<select id="specialPriceGroup"><option value="all">Alle grupper</option><option value="ansatte">Ansatte</option><option value="betalt_medlem">Betalt medlem + dartklubb</option><option value="teamgolfkongen">Team GolfKongen</option><option value="frisbee_dart">Frisbee + Dart</option><option value="ambassador">Ambassadører</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="dartklubb">Dartklubber</option></select></label>
+<label>Status<select id="specialPriceStatus"><option value="open">Gjenstående</option><option value="all">Alle</option><option value="entered_reported">Lagt inn</option><option value="checkout_verified">Testet i kassen</option></select></label>
+<button id="refreshSpecialPrice" class="alt" type="button" style="width:auto">Oppdater oversikten</button><button id="exportPendingGroupPrices" type="button" class="alt" style="width:auto">Last ned 120 gjenstående (CSV)</button>
+</div>
+<div class="calendarScroll"><div id="specialPriceTable">Laster priser ...</div></div>
+</section>
+<h3 style="margin-top:20px">Endre en pris</h3>
+<form id="priceForm" class="grid">
+ <label>Aktivitet<select name="resource" id="tariffResource"><option value="hyzr">HYZR (én simulator)</option><option value="dart_a">Dart A</option><option value="dart_b">Dart B</option><option value="venue">Hele lokalet</option></select></label>
+ <label>Kundegruppe<select name="group" id="tariffGroup">
+  <option value="public">Ordinær</option>
+  <option value="betalt_medlem">Betalt disc-medlemskap + dartklubb</option>
+  <option value="teamgolfkongen">Team GolfKongen</option>
+  <option value="frisbee_dart">Frisbee + Dart</option>
+  <option value="ansatte">Ansatte</option>
+  <option value="ambassador">Ambassadører</option>
+  <option value="frisbeeklubb">Frisbeeklubber</option>
+  <option value="dartklubb">Dartklubber</option>
+ </select></label>
+ <label>Varighet<select name="minutes" id="tariffDuration"></select></label>
+ <label>Pris i kroner<input type="number" name="nok" id="tariffAmount" min="0" max="100000" step="0.01" required></label>
+ <label class="full">Notat (valgfritt)<input name="note" maxlength="400"></label>
+ <button type="submit">Lagre / oppdater pris</button>
+</form>
+<div id="tariffSaveStatus" role="status" class="note">Velg gruppe, aktivitet og varighet. Beløpet oppdateres fra den lagrede prislisten.</div>
+<div id="selectedQuickbutikStatus" class="note" role="status">Henter Quickbutik-status for valgt pris ...</div>
+<div class="row" style="margin:10px 0 20px">
+ <button id="copySelectedQBPrice" type="button" class="alt" style="width:auto">Kopier produkt-ID og pris</button>
+ <button id="confirmSelectedQBPrice" type="button" class="alt" style="width:auto">Bekreft at prisen er lagt inn i Quickbutik</button>
+ <button id="checkSelectedQBRegular" type="button" class="alt" style="width:auto">Sjekk ordinærpris i Quickbutik</button>
+ <button id="openQBAdmin" type="button" class="alt" style="width:auto">Åpne Quickbutik</button>
+</div>
+<h3 style="margin-top:18px">Alle varigheter for valgt aktivitet og kundegruppe</h3>
+<div id="priceList">Laster ...</div>
+<div class="note">90 minutter og lengre er foreløpige kombinasjonspriser (hele timer + eventuell halvtime). De kan endres enkeltvis her. Hele lokalet kan bookes i hele timer fra 4 til 12 timer. Skjult/åpen status for produkter styres separat.</div>
+</div>
+<div id="members" class="panel hidden"><h2>Medlemmer og fordeler</h2><p>Medlemsregisteret finnes allerede i Google Sheets. De sju kundegruppene og kundens reelle rabatter ligger i Quickbutik.</p><div class="note">Endringer legges i en kontrollkø. Gruppen er ikke aktiv før synk mot både medlemsregister og Quickbutik er bekreftet.</div><form id="memberForm" class="grid"><label>E-post<input type="email" name="email" required></label><label>Kundegruppe<select name="group"><option value="ansatte">Ansatte</option><option value="teamgolfkongen">Team GolfKongen</option><option value="ambassador">Ambassadører</option><option value="dartklubb">Dartklubber</option><option value="frisbeeklubb">Frisbeeklubber</option><option value="medlemmer">Betalt medlemskap</option></select></label><label>Handling<select name="action"><option value="add">Legg til</option><option value="remove">Fjern</option><option value="suspend">Deaktiver</option></select></label><button type="submit">Send endring til kontroll</button></form><p><span>Medlemsoversikten krever autentisert tilgang.</span></p><div id="memberList"></div><section class="panel" aria-label="Klubbkveldtilgang"><h3>Tilgang til klubbkveld (Booking 2.0)</h3><p>Her styrer du hvilke verifiserte kunde-ID-er som har tilgang til klubbkveld. Dette endrer ikke Quickbutik-kundegruppe eller medlemsarket.</p><form id="clubAccessForm" class="grid"><label>Supabase Auth bruker-ID (UUID)<input name="customerId" required minlength="36" maxlength="36" autocomplete="off" pattern="[0-9a-fA-F-]{36}"></label><label>Tilgang<select name="active"><option value="true">Gi tilgang</option><option value="false">Fjern tilgang</option></select></label><button type="submit">Lagre klubbtilgang</button><button type="button" class="alt" id="clubAccessReload">Oppdater oversikt</button></form><p id="clubAccessStatus" role="status">Ikke hentet ennå.</p><div id="clubAccessEntries"></div></section></div>
+ <div id="tournaments" class="panel hidden"><h2>Turneringer</h2><p>Dag/helg eller sesong. Ubegrenset antall forsøk og de tre beste rundene kan brukes ved senere poengregistrering.</p><div class="note">Turneringer lagres først som utkast og påvirker ikke bookingkalenderen eller HYZR. Resultatimport og godkjenning gjenstår.</div><form id="tournamentForm" class="grid"><label>Navn<input type="text" name="name" required minlength="3" maxlength="150"></label><label>Format<select name="format"><option value="single_day">Én dag</option><option value="weekend">Helg</option><option value="season">Sesong</option></select></label><label>Fra<input name="from" type="date" required></label><label>Til<input name="to" type="date" required></label><label>Bane (valgfritt)<input name="course" maxlength="120"></label><button type="submit">Opprett turneringsutkast</button></form><div id="tournamentList"></div></div>
+ <div id="message" role="status" class="note" style="margin-top:18px">Ingen endringer gjort.</div>
+</section>
+</main>
+<script>
+// Supply only public SUPABASE_URL and anon/publishable key here after staging is ready.
+// NEVER put service_role, Quickbutik API tokens, Sheets credentials or Pushover tokens here.
+window.GK2_ADMIN_CONFIG = {supabaseUrl:'https://eadgdcimcmfyuicizboo.supabase.co',supabasePublicKey:'sb_publishable_XkYEuhPUH1lLmu8EVJM5Nw_ptPirbYq',apiUrl:'https://eadgdcimcmfyuicizboo.supabase.co/functions/v1/gk-booking-v2'};
+</script>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+const C=window.GK2_ADMIN_CONFIG||{},$=id=>document.getElementById(id);
+const allow=null;
+const html=s=>String(s??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const client= C.supabaseUrl&&C.supabasePublicKey&&C.apiUrl?createClient(C.supabaseUrl,C.supabasePublicKey):null;
+let day=new Date().toISOString().slice(0,10),session=null,snapshot=null;
+$('day').value=day;$('checkDay').value=day;
+
+// Exact amounts in database drafts. No customer checkout is enabled.
+const tariffGroups=[
+ ['public','Ordinær'],['betalt_medlem','Betalt medlem + dartklubb'],
+ ['teamgolfkongen','Team GolfKongen'],['frisbee_dart','Frisbee + Dart'],
+ ['ansatte','Ansatte'],['ambassador','Ambassadører'],
+ ['frisbeeklubb','Frisbeeklubber'],['dartklubb','Dartklubber']
+];
+let tariffRecords=[];
+let checkoutPlans=[];
+let selectedPriceCheckMessage='';
+const currentPriceSelection=()=>({
+ resource:$('tariffResource').value,group:$('tariffGroup').value,minutes:Number($('tariffDuration').value)
+});
+const currentPlan=()=>checkoutPlans.find(p=>p.resource===$('tariffResource').value&&p.minutes===Number($('tariffDuration').value));
+const currentSpecialQueueRow=()=>groupPriceQueue.find(p=>p.resource===$('tariffResource').value&&p.group===$('tariffGroup').value&&p.minutes===Number($('tariffDuration').value));
+function drawSelectedQuickbutik(){
+ const {resource,group,minutes}=currentPriceSelection();
+ const plan=currentPlan(),tariff=tariffFind(resource,group,minutes),qbId=plan?.quickbutikProductId;
+ const special=currentSpecialQueueRow(),groupName=Object.fromEntries(tariffGroups)[group]||group;
+ const p=priceText(tariff?.priceOre);
+ let info='Ingen tilknyttet vare eller pris funnet.';
+ if(qbId&&tariff){
+  if(group==='public'){
+   info='Ordinærpris: '+p+' for produkt '+qbId+'. Lagres i Booking 2.0. Trykk «Sjekk ordinærpris» for å sammenligne med Quickbutik. Endringer sendes ikke automatisk.';
+  }else if(special?.stage==='remove_override'){
+   info='VIKTIG: Produkt '+qbId+' skal nå bruke ordinærpris '+p+'. En tidligere spesialpris er registrert i Quickbutik og må fjernes der. Bekreft slettingen her etterpå.';
+  }else if(special){
+   const names={pending:'Gjenstår å oppdatere Quickbutik',entered_reported:'Oppgitt som lagt inn – ikke kassetestet',checkout_verified:'Tidligere manuelt kassetestet',stale_price:'Quickbutik må oppdateres: beløpet er endret'};
+   info='Kundegruppe '+groupName+' / produkt '+qbId+' / '+minutes+' min: '+p+'. Status: '+(names[special.stage]||special.stage)+'.';
+  }else{
+   info='Gruppe '+groupName+' har samme pris som ordinær ('+p+') for produkt '+qbId+'. Ingen egen produktpris skal registreres.';
+  }
+ }
+ $('selectedQuickbutikStatus').textContent=selectedPriceCheckMessage?info+' '+selectedPriceCheckMessage:info;
+ $('confirmSelectedQBPrice').disabled=!tariff||!qbId||group==='public'||!special;
+ $('confirmSelectedQBPrice').textContent=special?.stage==='remove_override'?'Bekreft at gammel spesialpris er fjernet':'Bekreft at prisen er lagt inn i Quickbutik';
+ $('checkSelectedQBRegular').disabled=!tariff||!qbId||group!=='public';
+ $('copySelectedQBPrice').disabled=!tariff||!qbId;
+}
+async function loadCheckoutPlanIds(){
+ if(checkoutPlans.length)return;
+ try{const info=await api('/admin/checkout-design');checkoutPlans=info.plans||[];}
+ catch(e){checkoutPlans=[];$('selectedQuickbutikStatus').textContent='Kunne ikke lese Quickbutik-produkt-IDer: '+e.message;}
+ drawSelectedQuickbutik();
+}
+const priceText=ore=>Number.isInteger(ore)?(ore/100).toLocaleString('nb-NO',{minimumFractionDigits:0,maximumFractionDigits:2})+' kr':'–';
+const tariffFind=(resource,group,min)=>tariffRecords.find(p=>p.resource===resource&&p.group===group&&p.minutes===min);
+function fillTariffDuration(){
+ const resource=$('tariffResource').value, sel=$('tariffDuration'),old=Number(sel.value);
+ const durations=resource==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
+ sel.innerHTML=durations.map(m=>'<option value="'+m+'">'+(m>=60?Number(m/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' t':m+' min')+'</option>').join('');
+ if(durations.includes(old))sel.value=String(old);else sel.value=String(resource==='venue'?240:30);
+}
+function fillTariffAmount(){
+ const p=tariffFind($('tariffResource').value,$('tariffGroup').value,Number($('tariffDuration').value));
+ const amt=$('tariffAmount');
+ amt.value=p?(p.priceOre/100).toFixed(2):'';
+ selectedPriceCheckMessage='';
+ drawSelectedQuickbutik();
+ $('tariffSaveStatus').textContent=p?'Lagret utkast: '+priceText(p.priceOre)+' — kun Booking 2.0. Ingen endring i Quickbutik.':'Ingen prisregel funnet for dette valget.';
+}
+function redrawTariffDetails(){
+ const resource=$('tariffResource').value, group=$('tariffGroup').value;
+ const recs=tariffRecords.filter(p=>p.resource===resource&&p.group===group).sort((a,b)=>a.minutes-b.minutes);
+ const title=r=>r.minutes>=60?Number(r.minutes/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' timer':r.minutes+' min';
+ $('priceList').innerHTML=recs.length?'<div class="calendarScroll"><table><thead><tr><th>Varighet</th><th>Pris</th><th>Handling</th></tr></thead><tbody>'+
+ recs.map(p=>'<tr><td>'+html(title(p))+'</td><td>'+html(priceText(p.priceOre))+'</td><td><button class="alt" type="button" data-select-duration="'+p.minutes+'" style="width:auto">Endre</button></td></tr>').join('')+
+ '</tbody></table></div>':'Ingen priser registrert for valgt aktivitet og gruppe.';
+ document.querySelectorAll('[data-select-duration]').forEach(btn=>btn.onclick=()=>{
+   $('tariffDuration').value=btn.dataset.selectDuration;
+   fillTariffAmount();
+   $('priceForm').scrollIntoView({behavior:'smooth',block:'center'});
+ });
+}
+function renderTariffPricing(list){
+ tariffRecords=Array.isArray(list)?list:[];
+ const money=(resource,group,dur)=>priceText(tariffFind(resource,group,dur)?.priceOre);
+ const headers=['Kundegruppe','HYZR 30 min','HYZR 60 min','Dart A 30 min','Dart A 60 min','Hele lokalet 4 t','Hele lokalet 5 t'];
+ const table='<table><thead><tr>'+headers.map(v=>'<th>'+html(v)+'</th>').join('')+'</tr></thead><tbody>'+
+ tariffGroups.map(([group,name])=>'<tr><td><b>'+html(name)+'</b></td>'+
+ ['hyzr:30','hyzr:60','dart_a:30','dart_a:60','venue:240','venue:300'].map(spec=>{
+   const parts=spec.split(':');return '<td>'+html(money(parts[0],group,Number(parts[1])))+'</td>';
+ }).join('')+'</tr>').join('')+'</tbody></table>';
+ $('tariffSummary').innerHTML=table;
+ fillTariffDuration();fillTariffAmount();redrawTariffDetails();
+}
+
+function fillQuoteDurations(){
+ const r=$('quoteResource').value,sel=$('quoteDuration'),old=Number(sel.value);
+ const all=r==='venue'?Array.from({length:9},(_,i)=>240+i*60):Array.from({length:8},(_,i)=>30+i*30);
+ sel.innerHTML=all.map(n=>'<option value="'+n+'">'+(n>=60?(n/60).toLocaleString('nb-NO',{maximumFractionDigits:1})+' t':n+' min')+'</option>').join('');
+ sel.value=String(all.includes(old)?old:all[0]);
+}
+$('quoteResource').onchange=fillQuoteDurations;
+fillQuoteDurations();
+$('checkIntegrations').onclick=async()=>{
+ const area=$('integrationCheckResult');
+ area.textContent='Kontrollerer tilgang, skjulte varer, kundepriser og betalingskobling ...';
+ try{
+  const r=await api('/admin/integration-readiness');
+  const bool=(x)=>x?'JA':'NEI';
+  area.innerHTML=
+   '<div class="item"><b>Rullerende booking:</b> '+html(r.daysAhead)+' dager, fra '+html(r.firstBookable)+' til '+html(r.lastBookable)+'.</div>'+
+   '<div class="item"><b>Quickbutik-produkter:</b> '+html(r.mappedProducts)+' koblet, '+html(r.readyProducts)+' åpne.</div>'+
+   '<div class="item"><b>Kundegruppepriser:</b> '+html(r.specialPriceReported)+' av '+html(r.specialPriceRequired)+' registrert, '+html(r.specialPriceVerified)+' kassetestet.</div>'+
+   '<div class="item"><b>Quickbutik API-nøkkel på Supabase:</b> '+bool(r.quickbutikOrderReadKeyConfigured)+'. <b>Betalt ordre-webhook:</b> '+bool(r.webhookPaidVerificationDeployed)+'.</div>'+
+   '<div class="item"><b>Eksisterende fremtidige bookinger fullstendig kontrollert:</b> '+bool(r.legacyBookingsFullyReconciled)+'. <b>Pushover E2E:</b> '+bool(r.pushoverPaidFlowValidated)+'.</div>'+
+   '<p><b>Kundebetaling:</b> '+(r.publicCheckoutEnabled?'Aktiv':'SPERRET')+'. Automatisk Quickbutik-variantjobb bruker egen GitHub-hemmelighet, ikke Supabase API-nøkkelen.</p>';
+ }catch(e){area.textContent='Kontrollen mislyktes: '+e.message+'. Betaling må fortsatt være sperret.';}
+};
+$('checkDesign').onclick=async()=>{
+ const el=$('checkoutDesignResult');
+ el.textContent='Henter verifisert produktoversikt fra Booking 2.0 ...';
+ try{
+  const info=await api('/admin/checkout-design');
+  const plans=info.plans||[];
+  const ready=plans.filter(p=>p.isReady&&p.publishEnabled).length;
+  const grouped=['hyzr','dart_a','dart_b','venue'].map(resource=>{
+   const rows=plans.filter(x=>x.resource===resource);
+   return '<div class="item"><b>'+html({hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B',venue:'Hele lokalet'}[resource])+'</b>: '+rows.length+' separate varighetsprodukter, '+rows.filter(x=>x.quickbutikProductId).length+' opprettet / '+rows.length+' planlagt, '+rows.filter(x=>x.publishEnabled).length+' aktive.</div>';
+  }).join('');
+  el.innerHTML='<strong>Betaling fortsatt sperret: '+ready+' / '+plans.length+' klare og publiserte varighetsprodukter</strong>'+grouped+
+   '<div class="note">Før salg må alle gruppepriser kontrolleres i Quickbutik, varianter for dato og starttid settes opp, betalt ordre knyttes til én booking og eksisterende Pushover tilpasses.</div>';
+ }catch(e){el.textContent='Kontroll feilet: '+e.message+'. Ingen endringer utført.';}
+};
+$('qbAuditButton').onclick=async()=>{
+ const out=$('qbAuditResult'),order=String($('qbAuditOrder').value||'').trim();
+ if(!/^[1-9][0-9]{0,8}$/.test(order)){out.textContent='Skriv inn kun ordrenummer, for eksempel 3706.';return;}
+ out.textContent='Leser Quickbutik-ordre '+order+' direkte fra serveren ...';
+ try{
+  const r=await api('/admin/order-audit?order='+encodeURIComponent(order));
+  const probe=r.fieldProbe||{};
+  const required=[['Sum (total_amount)',probe.hasTotalAmount],
+    ['Sum betalt (total_pay_amount)',probe.hasTotalPayAmount],
+    ['Frakt (shipping_amount)',probe.hasShippingAmount],
+    ['Valuta',probe.hasCurrency],
+    ['Kunde-e-post',probe.hasCustomerEmail],
+    ['Variant/SKU',probe.hasVariantSkus]];
+  const format=required.map(([label,exists])=>label+': '+(exists?'JA':'NEI')).join(' · ');
+  out.textContent='Ordre '+r.orderNumber+' · status: '+(r.orderState||r.legacyStatus)+
+   ' · varelinjer: '+r.products.map(p=>p.productId+' ('+p.sku+')').join(', ')+
+   '. Quickbutik ordrefelt: '+format+
+   '. Rå total_amount: '+(r.totalAmount??'mangler')+
+   ' NOK · discount_amount: '+(r.discountAmount??'mangler')+
+   ' · total_pay_amount: '+(r.explicitPaidAmount??'mangler')+
+   '. Merk: V1-total er IKKE bevist betalt beløp.'+
+   ' Kun feltkontroll, ingen bookingbekreftelse, Pushover eller Nuki.';
+ }catch(e){out.textContent='Ordrekontroll feilet: '+e.message+
+  '. Kontroller under «automatikk og betalingsklarhet» om Quickbutik API-nøkkel finnes på staging. Ingen booking er endret.';}
+};
+$('checkQuote').onclick=async()=>{
+ const el=$('quoteResult');el.textContent='Henter pris direkte fra Booking 2.0 ...';
+ try{
+  const resource=$('quoteResource').value,group=$('quoteGroup').value,minutes=Number($('quoteDuration').value);
+  const q=await api('/admin/quote-preview?resource='+encodeURIComponent(resource)+'&group='+encodeURIComponent(group)+'&minutes='+minutes);
+  el.textContent='Serverpris for valgt gruppe og varighet: '+priceText(q.priceOre)+'. KASSE STENGT: dette er ikke en kundeprisbekreftelse. Ingen Quickbutik-ordre opprettet.';
+ }catch(e){el.textContent='Priskontroll mislyktes: '+e.message;}
+};
+
+
+let groupPriceQueue=[];
+const resourceNames={hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B',venue:'Hele lokalet'};
+function paintGroupPrices(){
+ const data=groupPriceQueue;
+ const counts={
+  pending:data.filter(x=>x.stage==='pending').length,
+  entered:data.filter(x=>x.stage==='entered_reported').length,
+  verified:data.filter(x=>x.stage==='checkout_verified').length,
+  stale:data.filter(x=>x.stage==='stale_price').length,
+  remove:data.filter(x=>x.stage==='remove_override').length
+ };
+ $('specialPriceSummary').textContent=data.length+' nødvendige spesialpriser: '+counts.pending+
+  ' gjenstår, '+counts.entered+' registrert som lagt inn, '+counts.verified+
+  ' kassetestet, '+counts.stale+' må oppdateres, '+counts.remove+' gamle gruppepriser må fjernes. Ingen Quickbutik-endringer er gjort fra denne siden.';
+ const group=$('specialPriceGroup').value,status=$('specialPriceStatus').value;
+ const filtered=data.filter(x=>(group==='all'||x.group===group)&&(
+  status==='all'||(status==='open'?['pending','stale_price','remove_override'].includes(x.stage):x.stage===status)));
+ const groupName=Object.fromEntries(tariffGroups);
+ $('specialPriceTable').innerHTML='<table><thead><tr><th>Gruppe</th><th>Aktivitet</th><th>Tid</th><th>Produkt-ID</th><th>Ordinær</th><th>Gruppepris</th><th>Status / handling</th></tr></thead><tbody>'+
+ filtered.map(x=>'<tr><td>'+html(groupName[x.group]||x.group)+'</td><td>'+html(resourceNames[x.resource])+'</td><td>'+html(x.minutes)+' min</td><td><strong>'+html(x.quickbutikProductId)+'</strong></td>'+
+ '<td>'+html(priceText(x.regularOre))+'</td><td><b>'+html(priceText(x.expectedOre))+'</b></td>'+
+ '<td>'+html({pending:'Mangler',entered_reported:'Lagt inn (ikke testet)',checkout_verified:'Kassetestet',stale_price:'Pris endret – må kontrolleres på nytt',remove_override:'Fjern tidligere spesialpris i Quickbutik'}[x.stage]||x.stage)+
+ '<div style="margin-top:6px"><button type="button" class="alt" style="width:auto" data-qb-report="'+html(x.quickbutikProductId)+'" data-qb-resource="'+html(x.resource)+'" data-qb-minutes="'+html(x.minutes)+'" data-qb-group="'+html(x.group)+'">'+(x.stage==='remove_override'?'Bekreft fjernet':x.stage==='entered_reported'?'Oppdater rapport':'Merk lagt inn')+'</button>'+
+ (x.stage!=='pending'?'<button type="button" class="alt" style="width:auto;margin-left:5px" data-qb-reset="'+html(x.quickbutikProductId)+'" data-qb-resource="'+html(x.resource)+'" data-qb-minutes="'+html(x.minutes)+'" data-qb-group="'+html(x.group)+'">Tilbakestill</button>':'')+'</div></td></tr>').join('')+'</tbody></table>'+
+ (filtered.length?'':'Ingen priser i denne kategorien.');
+ document.querySelectorAll('[data-qb-report],[data-qb-reset]').forEach(button=>button.onclick=async()=>{
+  const id=Number(button.dataset.qbReport||button.dataset.qbReset),row=groupPriceQueue.find(x=>
+   x.quickbutikProductId===id && x.group===button.dataset.qbGroup &&
+   x.resource===button.dataset.qbResource && x.minutes===Number(button.dataset.qbMinutes));
+  if(!row){message('Velg en bestemt kundegruppe før du registrerer en pris.',true);return;}
+  const stage=button.hasAttribute('data-qb-reset')||row.stage==='remove_override'?'pending':'entered_reported';
+  if(!confirm(row.stage==='remove_override'?'Bekrefter du at den GAMLE spesialprisen er fjernet i Quickbutik for produkt '+id+' og gruppe '+(groupName[row.group]||row.group)+'?':stage==='pending'?'Tilbakestille registreringsstatus?':'Bekrefter du at '+(groupName[row.group]||row.group)+' på Quickbutik-produkt '+id+' er lagret til '+priceText(row.expectedOre)+'? Dette tester IKKE kassen.'))return;
+  try{
+   await api('/admin/group-price-stage',{resource:row.resource,minutes:row.minutes,group:row.group,stage,note:stage==='entered_reported'?'Manuelt bekreftet i admin':'Tilbakestilt'});
+   await loadGroupPriceQueue();
+   message('Registrert i Booking 2.0. Kassebetaling er fortsatt deaktivert.');
+  }catch(e){message('Kunne ikke registrere: '+e.message,true)}
+ });
+}
+async function loadGroupPriceQueue(){
+ try{const data=await api('/admin/group-price-queue');groupPriceQueue=data.queue||[];paintGroupPrices();drawSelectedQuickbutik();}
+ catch(e){$('specialPriceSummary').textContent='Kunne ikke hente kundegruppepriser: '+e.message;}
+}
+$('specialPriceGroup').onchange=paintGroupPrices;
+$('specialPriceStatus').onchange=paintGroupPrices;
+$('refreshSpecialPrice').onclick=loadGroupPriceQueue;
+$('exportPendingGroupPrices').onclick=async()=>{
+ try {
+  await loadGroupPriceQueue();
+  const outstanding=groupPriceQueue.filter(x=>['pending','stale_price','remove_override'].includes(x.stage));
+  const names=Object.fromEntries(tariffGroups);
+  const columns=['Kundegruppe','Kundegruppekode','Quickbutik-produkt-ID','Aktivitet','Minutter','Ordinær pris NOK','Spesifikk pris NOK','Status','Merknad'];
+  const rows=outstanding.map(x=>[
+   names[x.group]||x.group,x.group,x.quickbutikProductId,resourceNames[x.resource],x.minutes,
+   (x.regularOre/100).toFixed(2),x.stage==='remove_override'?'FJERN SPESIALPRIS':(x.expectedOre/100).toFixed(2),x.stage,
+   x.stage==='remove_override'?'Fjern tidligere spesifikk produktpris, slik at ordinær pris gjelder. Ikke endre synlighet eller lager.':'Legg inn som spesifikk produktpris for kundegruppen i Quickbutik. Ikke endre ordinær pris, synlighet eller lager.'
+  ]);
+  const esc=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+  const csv='\uFEFF'+[columns,...rows].map(row=>row.map(esc).join(';')).join('\r\n');
+  const objectUrl=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const el=document.createElement('a');el.href=objectUrl;el.download='GolfKongen_Booking2_kundegruppepriser_gjenstaende.csv';
+  document.body.appendChild(el);el.click();el.remove();URL.revokeObjectURL(objectUrl);
+  message('Eksportert '+rows.length+' gjenstående spesialpriser – ingen Quickbutik-endringer.');
+ }catch(e){message('Eksport av gjenstående priser feilet: '+e.message,true);}
+};
+
+
+const message=(txt,error=false)=>{$('message').className=error?'note warn':'success';$('message').textContent=txt};
+const minutes=s=>{const [h,m]=s.split(':').map(Number);return h*60+m},HH=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+const form=f=>Object.fromEntries(new FormData(f).entries());
+if(client){$('unconfigured').classList.add('hidden');$('loginPanel').classList.remove('hidden');}
+const api=async(path,data)=>{
+ if(!session?.access_token)throw Error('Innlogging mangler');
+ const resp=await fetch(C.apiUrl+path,{method:data===undefined?'GET':'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
+ const parsed=await resp.json();if(!resp.ok)throw Error(parsed.code||'HTTP '+resp.status);return parsed;
+};
+async function refresh(){day=$('day').value||day;const a=await api('/admin/snapshot?date='+encodeURIComponent(day));const c=await api('/availability?date='+encodeURIComponent(day));snapshot=a;render(a,c);await updateWindowBanner();await loadCheckoutPlanIds();await loadGroupPriceQueue();}
+async function updateWindowBanner(){
+ try{
+  const data=await api('/window');
+  const pretty=d=>new Intl.DateTimeFormat('nb-NO',{dateStyle:'long',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z'));
+  $('rollingDaysStatus').textContent='Rullerende bookingvindu: '+pretty(data.firstBookable)+' til '+pretty(data.lastBookable)+'. Minst '+data.daysAhead+' dager frem. Nye datoer kommer automatisk ved norsk midnatt. '+(data.bookingEnabled?'Booking-gatene godkjent.':'Betaling og booking er fortsatt låst.');
+ }catch(e){$('rollingDaysStatus').textContent='Kunne ikke kontrollere datoene: '+e.message;}
+}
+function render(a,c){
+ $('calendarStatus').textContent=c.bookingEnabled===true?'Kundebooking kan åpnes etter full betalingskontroll.':'KUN INTERN KALENDER: Kundebooking er fortsatt deaktivert. Ledige tidsrom er ikke åpne for kjøp.';
+ $('blockList').innerHTML=a.blocks.length?a.blocks.map(b=>`<div class="item"><b>${html(b.label)}</b><br>${html(b.target)} · ${HH(b.start)}–${HH(b.end)}<br><button class="alt" data-unblock="${html(b.id)}">Åpne igjen</button></div>`).join(''):'Ingen aktive sperringer på denne datoen.';
+ document.querySelectorAll('[data-unblock]').forEach(btn=>btn.onclick=async()=>{if(!confirm('Åpne igjen denne sperringen?'))return;try{await api('/admin/unblock',{id:btn.dataset.unblock});message('Sperringen er deaktivert.');await refresh()}catch(e){message(e.message,true)}});
+ renderTariffPricing(a.prices||[]);
+ $('memberList').innerHTML=a.membershipRequests.map(m=>`<div class="item">${html(m.email)} · ${html(m.action)} ${html(m.group)} — ${html(m.state)}</div>`).join('')||'Ingen ventende medlemsendringer.';
+ $('tournamentList').innerHTML=a.tournaments.map(t=>`<div class="item">${html(t.name)} · ${html(t.format)} · ${html(t.starts)}–${html(t.ends)} · ${html(t.status)}</div>`).join('')||'Ingen turneringsutkast.';
+ $('hoursList').innerHTML=a.openingHours.map(h=>`<div class="item">${html(h.resource)} · dag ${html(h.weekday)} · ${HH(h.opens)}–${HH(h.closes)} · ${h.active?'Åpen':'Stengt'}</div>`).join('')||'Ingen åpningstider satt.';
+ const claims=new Set((c.claims||[]).map(x=>x.resource+'|'+x.slot_min));const bl=c.blocks||[];const ar=['hyzr','dart_a','dart_b'];
+ let out='<div>Kl.</div>'+['HYZR','Dart A','Dart B'].map(x=>'<div>'+x+'</div>').join('');
+ for(let t=600;t<1320;t+=30){out+='<div>'+HH(t)+'</div>';for(const r of ar){const blocked=bl.some(b=>t<b.end_min&&t+30>b.start_min&&(b.target==='all'||b.target===r)); const unavailable=claims.has(r+'|'+t),h=c.openingHoursByResource?.[r];const outside=!h||t<h.from||t+30>h.to;const isLive=c.bookingEnabled===true;const label=unavailable?'Booket':blocked?'Stengt':outside?'Lukket':isLive?'Ledig':'Klar (låst)';const cls=unavailable?'taken':blocked||outside?'closed':isLive?'':'draft';out+=`<div class="${cls}">${label}</div>`;}}
+ $('calendarGrid').innerHTML=out;
+}
+$('loginForm').onsubmit=async e=>{e.preventDefault();try{const email=$('email').value.trim().toLowerCase();if(!email.includes('@'))throw Error('Ugyldig e-post');const {data,error}=await client.auth.signInWithPassword({email,password:$('password').value});if(error)throw error; session=data.session;const h=await api('/admin/health');if(!h.ok)throw Error('Ingen tilgang');$('loginPanel').classList.add('hidden');$('app').classList.remove('hidden');$('logout').classList.remove('hidden');await refresh();}catch(err){$('loginMsg').textContent='Innlogging mislyktes: '+err.message;await client.auth.signOut();session=null;}};
+$('logout').onclick=async()=>{if(client)await client.auth.signOut();session=null;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logout').classList.add('hidden')};
+$('checkVariants').onclick=async()=>{
+ const el=$('checkResult');
+ el.textContent='Kontrollerer eksisterende Quickbutik-produkter – ingen endringer gjøres ...';
+ try{
+  const d=$('checkDay').value;
+  const info=await api('/admin/checkout-preflight?date='+encodeURIComponent(d));
+  const labels={hyzr:'HYZR',dart_a:'Dart A',dart_b:'Dart B'};
+  const rows=info.resources.map(r=>'<div class="item"><b>'+html(labels[r.resource])+'</b> — '+html(r.readyHalfhours)+' / '+html(r.expectedHalfhours)+' gyldige halvtimesvarianter · '+html(r.legacyHourVariants)+' eldre timesvarianter'+(r.samples.length?'<div class="sub">Eksempel på avvik: '+r.samples.map(s=>html(s.sku)+' ('+html(s.state)+')').join(', ')+'</div>':'')+'</div>').join('');
+  const staging=(info.stagingProducts||[]).map(x=>'<div class="item"><b>'+html(labels[x.resource])+'</b> – nytt skjult produkt '+html(x.productId)+': '+html(x.totalVariants)+' testvarianter, '+html(x.readyHalfhours)+' salgbare halvtimer.'+(x.sampleTestVariantExists?' <strong>Trygg, sperret testvariant bekreftet.</strong>':' Testvariant ikke tilgjengelig for valgt dag.')+'</div>').join('');
+
+  el.innerHTML='<strong>'+(info.catalogReady?'Gamle varianter kan testes videre.':'Gamle timeprodukter er ikke klare for halvtimer.')+'</strong>'+rows+
+  '<h3 style="margin-top:16px">Nye Booking 2.0-produkter – skjulte</h3>'+staging+
+  '<h3 style="margin-top:17px">Prisadministrasjon</h3><p>Alle nye prisregler administreres i fanen <strong>Priser</strong>. Kassekontrollen endrer ikke prisene.</p>'+
+  '<p><b>Betaling: IKKE aktivert.</b> Kunderabatter, gavekort, flervariant-kasse og Pushover må testes før produktene blir synlige.</p>';
+ }catch(e){el.textContent='Kontrollen kunne ikke fullføres: '+e.message+'. Ingenting er endret.';}
+ };
+ $('refresh').onclick=async()=>{try{await refresh();message('Kalender oppdatert')}catch(e){message(e.message,true)}};
+$('day').onchange=async()=>{try{await refresh()}catch(e){message(e.message,true)}};
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('selected',x===b));['calendar','blocks','hours','prices','checkout','members','tournaments'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='members')loadClubAccess()});
+const bind=(id,route,transform)=>(()=>{$(id).onsubmit=async e=>{e.preventDefault();try{const d=transform(form(e.target));const result=await api(route,d);message('Lagret i staging. Status: '+(result.status||'registrert'));await refresh();}catch(er){message('Kunne ikke lagre: '+er.message,true)}}})();
+bind('blockForm','/admin/block',b=>({...b,start:minutes(b.startTime),end:minutes(b.endTime)}));
+bind('hoursForm','/admin/hours',b=>({resource:b.resource,weekday:Number(b.weekday),opens:minutes(b.opensTime),closes:minutes(b.closesTime),active:b.active==='true'}));
+$('exportTariffs').onclick=async()=>{
+ try{
+  const plans=(await api('/admin/checkout-design')).plans||[];
+  const byKey=new Map(plans.map(x=>[x.resource+'|'+x.minutes,x.quickbutikProductId]));
+  const labels=Object.fromEntries(tariffGroups);
+  const head=['Kundegruppekode','Kundegruppe','Aktivitet','Varighet minutter','Quickbutik produkt-ID','Pris kroner','Pristype','Godkjent i Quickbutik'];
+  const all=tariffRecords.map(p=>[p.group,labels[p.group]||p.group,p.resource,p.minutes,byKey.get(p.resource+'|'+p.minutes)||'',(p.priceOre/100).toFixed(2).replace('.',','),'Spesifikk produktpris','NEI']);
+  const quote=x=>'"'+String(x).replace(/"/g,'""')+'"';
+  const csv='sep=;\r\n'+[head,...all].map(r=>r.map(quote).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='golfkongen-booking2-quickbutik-gruppepriser.csv';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  message('CSV med '+all.length+' prisrader lastet ned. Ingen Quickbutik-priser ble endret.');
+ }catch(e){message('CSV kunne ikke opprettes: '+e.message,true);}
+};
+$('copySelectedQBPrice').onclick=async()=>{
+ const {resource,group,minutes}=currentPriceSelection(),p=tariffFind(resource,group,minutes),plan=currentPlan();
+ if(!p||!plan?.quickbutikProductId)return;
+ const label=Object.fromEntries(tariffGroups)[group]||group;
+ const message='GolfKongen Booking 2.0 | Quickbutik produkt '+plan.quickbutikProductId+' | '+resource+' | '+minutes+' min | '+label+' | '+priceText(p.priceOre);
+ try{await navigator.clipboard.writeText(message);$('selectedQuickbutikStatus').textContent='Kopiert: '+message;}
+ catch(e){selectedPriceCheckMessage='Kunne ikke kopiere automatisk. Produktnummer: '+plan.quickbutikProductId+' og pris '+priceText(p.priceOre);drawSelectedQuickbutik();}
+};
+$('checkSelectedQBRegular').onclick=async()=>{
+ const {resource,group,minutes}=currentPriceSelection();
+ if(group!=='public')return;
+ $('selectedQuickbutikStatus').textContent='Kontrollerer ordinærpris i Quickbutik ...';
+ try{
+  const v=await api('/admin/price-sync-check?resource='+encodeURIComponent(resource)+'&group=public&minutes='+minutes);
+  selectedPriceCheckMessage=v.quickbutikRegularPriceOre==null?'Quickbutiks ordinærpris kunne ikke leses. Ingen synkronisering utført.':
+   v.regularPriceMatches?'Quickbutik bekrefter SAMME ordinærpris '+priceText(v.quickbutikRegularPriceOre)+' (kun lest, ikke skrevet).':
+   'AVVIK: Quickbutik har '+priceText(v.quickbutikRegularPriceOre)+' mens Booking 2.0 har '+priceText(v.booking2PriceOre)+'. Oppdater produkt '+v.quickbutikProductId+' manuelt.';
+ }catch(e){selectedPriceCheckMessage='Kontrollen feilet: '+e.message+'. Ingen endringer utført.';}
+ drawSelectedQuickbutik();
+};
+$('confirmSelectedQBPrice').onclick=async()=>{
+ const {resource,group,minutes}=currentPriceSelection(),row=currentSpecialQueueRow();
+ if(!row||group==='public')return;
+ const isRemove=row.stage==='remove_override';
+ const prompt=isRemove?'Har du FJERNET tidligere spesialpris for produkt '+row.quickbutikProductId+' i Quickbutik?':
+ 'Har du LAGRET '+priceText(row.expectedOre)+' for kundegruppen '+(Object.fromEntries(tariffGroups)[group]||group)+' på produkt '+row.quickbutikProductId+' i Quickbutik?';
+ if(!confirm(prompt+' Dette kontrollerer ikke betalingen.'))return;
+ try{
+  const stage=isRemove?'pending':'entered_reported';
+  await api('/admin/group-price-stage',{resource,group,minutes,stage,note:isRemove?'Eier bekreftet at gammel spesialpris er fjernet':'Eier bekreftet lagring av spesifikk produktpris'});
+  selectedPriceCheckMessage=isRemove?'Fjerning er registrert.':'Lagring i Quickbutik er rapportert. Kassen er fortsatt IKKE kontrollert.';
+  await loadGroupPriceQueue();drawSelectedQuickbutik();
+  message('Oppdatert status i Booking 2.0. Ingen endringer er sendt til Quickbutik.');
+ }catch(e){message('Kunne ikke oppdatere status: '+e.message,true);}
+};
+$('openQBAdmin').onclick=()=>window.open('https://platform.quickbutik.com/','_blank','noopener');
+$('tariffResource').onchange=()=>{fillTariffDuration();fillTariffAmount();redrawTariffDetails();};
+$('tariffGroup').onchange=()=>{fillTariffAmount();redrawTariffDetails();};
+$('tariffDuration').onchange=fillTariffAmount;
+$('priceForm').onsubmit=async e=>{
+ e.preventDefault();
+ const b=form(e.target), amount=Number(b.nok),ore=Math.round(amount*100);
+ if(!Number.isFinite(amount)||amount<0||Math.abs(ore/100-amount)>0.00001){
+  $('tariffSaveStatus').textContent='Ugyldig beløp. Bruk inntil to desimaler.';return;
+ }
+ try{
+  const result=await api('/admin/price-save',{resource:b.resource,group:b.group,minutes:Number(b.minutes),ore,note:b.note||''});
+  if(result.quickbutikUpdated!==false)throw Error('Usikker status for Quickbutik – kontroller før videre bruk.');
+  await refresh();
+  $('tariffSaveStatus').textContent='PRIS LAGRET i Booking 2.0: '+priceText(ore)+'. Quickbutik er IKKE oppdatert. Følg status under før åpning.';
+  drawSelectedQuickbutik();
+  message('Pris lagret i Booking 2.0. Kassen er fortsatt sperret.');
+ }catch(e){
+  $('tariffSaveStatus').textContent='Kunne ikke lagre: '+e.message;
+  message('Pris ble ikke lagret: '+e.message,true);
+ }
+};
+async function loadClubAccess(){
+ const host=$('clubAccessEntries'),status=$('clubAccessStatus');
+ status.textContent='Henter klubbtilganger…';host.replaceChildren();
+ try{
+  const data=await api('/admin/club-access');
+  if(!Array.isArray(data.members))throw Error('Ugyldig serverrespons');
+  status.textContent=data.members.length+' oppføringer (kun Booking 2.0)';
+  if(!data.members.length){const p=document.createElement('p');p.textContent='Ingen klubbtilganger er registrert ennå.';host.appendChild(p);return;}
+  for(const m of data.members){
+   const div=document.createElement('div');div.className='item row';
+   const name=document.createElement('span');name.textContent=String(m.customerId)+' – '+(m.active?'Aktiv':'Deaktivert');
+   const btn=document.createElement('button');btn.type='button';btn.className='alt';
+   btn.textContent=m.active?'Deaktiver':'Aktiver';btn.style.width='auto';
+   btn.addEventListener('click',async()=>{if(!confirm('Endre klubbtilgang for '+String(m.customerId)+'?'))return;
+    btn.disabled=true;
+    try{await api('/admin/club-access',{customerId:String(m.customerId),active:!m.active});await loadClubAccess();}
+    catch(e){status.textContent='Feil: '+e.message;btn.disabled=false;}
+   });
+   div.append(name,btn);host.appendChild(div);
+  }
+ }catch(e){status.textContent='Kunne ikke lese klubbtilganger: '+e.message;}
+}
+$('clubAccessReload').addEventListener('click',loadClubAccess);
+$('clubAccessForm').addEventListener('submit',async e=>{
+ e.preventDefault();const f=new FormData(e.currentTarget);
+ const customerId=String(f.get('customerId')||'').trim(),active=f.get('active')==='true';
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(customerId)){ $('clubAccessStatus').textContent='Bruk bekreftet Supabase bruker-ID (UUID).';return; }
+ $('clubAccessStatus').textContent='Lagrer…';
+ try{await api('/admin/club-access',{customerId,active});e.currentTarget.reset();await loadClubAccess();}
+ catch(err){$('clubAccessStatus').textContent='Lagring feilet: '+err.message;}
+});
+let ownerTestRunning=false;
+$('ownerDoorTestStart').addEventListener('click',async()=>{
+ if(ownerTestRunning)return;
+ if(!session?.access_token){$('ownerDoorTestResult').textContent='Logg inn som eier først.';return;}
+ const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ const parts=Object.fromEntries(fmt.formatToParts(new Date()).filter(x=>x.type==='hour'||x.type==='minute').map(x=>[x.type,Number(x.value)]));
+ let start=Math.ceil((parts.hour*60+parts.minute+15)/30)*30;
+ const resource=$('ownerTestResource').value;
+ const osloDay=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const prefix='gk2_owner_door_test_'+osloDay+'_'+resource+'_';
+ const nowMinutes=parts.hour*60+parts.minute;
+ const existingKeys=Object.keys(sessionStorage).filter(k=>k.startsWith(prefix)).map(k=>({k,minute:Number(k.slice(prefix.length))}))
+  .filter(x=>Number.isInteger(x.minute)&&x.minute>=nowMinutes-30&&x.minute<=nowMinutes+90)
+  .sort((a,b)=>a.minute-b.minute);
+ const reuse=existingKeys.length>0;
+ if(reuse)start=existingKeys[0].minute;
+ if(start>1290){$('ownerDoorTestResult').textContent='Dagens testvindu er stengt.';return;}
+ const cacheName=prefix+start;
+ let key=sessionStorage.getItem(cacheName);
+ if(!key){key=crypto.randomUUID();sessionStorage.setItem(cacheName,key);}
+ if(!confirm((reuse?'Fortsette eksisterende testbooking':'Opprette gratis eiertest')+' av '+resource+' kl. '+String(Math.floor(start/60)).padStart(2,'0')+':'+String(start%60).padStart(2,'0')+' og kontrollere Nuki-koden?'))return;
+ ownerTestRunning=true;
+ $('ownerDoorTestStart').disabled=true;
+ const endpoint=C.apiUrl.replace('/gk-booking-v2','/gk-booking-notifier')+'/owner/door-test';
+ let last='';
+ try{
+  for(let attempt=0;attempt<10;attempt++){
+   $('ownerDoorTestResult').textContent=attempt===0?'Reserverer og kontakter Nuki …':'Venter på Nuki-synkronisering, kontrollerer kode … ('+(attempt+1)+'/10)';
+   const res=await fetch(endpoint,{method:'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+    cache:'no-store',body:JSON.stringify({idempotencyKey:key,startMin:start,resource,confirmOwnerDoorTest:true})});
+   const result=await res.json();
+   if(!res.ok||result.ok!==true){last=result.code||'Kunne ikke fullføre testen';throw Error(last);}
+   if(result.emailSent===true){
+    $('ownerDoorTestResult').textContent='Booking opprettet! Nuki-kode er sendt til din innloggede e-post. '+result.day+' '+result.from+'–'+result.to+'. Test koden på Keypad fra ti minutter før start.';
+    return;
+   }
+   await new Promise(resolve=>setTimeout(resolve,4000));
+  }
+  $('ownerDoorTestResult').textContent='Testbooking er reservert, men Nuki har ikke bekreftet koden ennå. Trykk knappen på nytt for sikker kontroll; ingen ny kode opprettes.';
+ }catch(e){$('ownerDoorTestResult').textContent='Testen ble ikke fullført: '+(e?.message||last)+'. Ikke prøv en kode før e-post er mottatt.';}
+ finally{ownerTestRunning=false;$('ownerDoorTestStart').disabled=false;}
+});
+bind('memberForm','/admin/member-request',b=>b);
+bind('tournamentForm','/admin/tournament-draft',b=>b);
+</script></body></html>

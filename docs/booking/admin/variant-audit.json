@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "checkedDate": "2026-10-28",
+  "checkedBy": "GolfKongen Booking 2.0 read-only catalogue audit",
+  "scope": "Quickbutik 33 produkter (1474–1506), varianter og gk2_private checkout leases",
+  "counts": {
+    "products": 33,
+    "variants": 25213,
+    "validSlotSkus": 25212,
+    "legacyTestSkus": 1,
+    "wrongVariantPrices": 0,
+    "invalidSlotDurations": 0,
+    "duplicateSkusWithinProduct": 0
+  },
+  "byResource": {
+    "hyzr": {
+      "products": 8,
+      "variants": 7217
+    },
+    "dart_a": {
+      "products": 8,
+      "variants": 7216
+    },
+    "dart_b": {
+      "products": 8,
+      "variants": 7216
+    },
+    "venue": {
+      "products": 9,
+      "variants": 3564
+    }
+  },
+  "bookingMechanism": "Variants deliberately remain hidden/stock=0 until server verifies and opens an atomic checkout hold, then recloses.",
+  "remediation": {
+    "cancelledTestLease": "Closed via verified Quickbutik stock=0 hidden=true readback and gk2_finish_cart_variant_relock.",
+    "openLeasesAfterCleanup": 0,
+    "confirmedBookingsPreserved": 2
+  },
+  "limitations": {
+    "customerGroupCheckoutVerified": false,
+    "paidEndToEndCheckoutVerified": false,
+    "liveStockAccuracyAfterAudit": "Not measured; this is a dated snapshot.",
+    "legacyTestVariantNotDeleted": true
+  }
+}
