@@ -111,7 +111,7 @@
 <form id="gk-v2-form" class="gk-v2-form">
  <label>Aktivitet<select id="gk-v2-resource"><option value="hyzr">HYZR simulator</option><option value="dart_a">Dartbane A</option><option value="dart_b">Dartbane B</option><option value="venue">Hele lokalet</option></select></label>
  <label>Dato<input id="gk-v2-day" type="date" required></label>
- <select id="gk-v2-duration" hidden aria-label="Valgt varighet"></select>
+ <label>Varighet<select id="gk-v2-duration"></select></label>
 </form>
 <div id="gk-v2-days" aria-label="Velg dato"></div>
 <p class="gk-v2-footwear">Kun innesko eller sokker ved HYZR og dart.</p>
@@ -130,7 +130,7 @@
   <p style="margin:7px 0 0;font-size:13px">Har du ikke egne dartpiler? Lei et pilsett for 25 kr. Du kan gjerne bruke egne piler med stålspiss.</p><div style="clear:both"></div>
 </div>
 <h3>Tilgjengelige tider</h3><p id="gk-v2-window-label" style="font-size:13px;color:#c1d8bc">Velg en dato for å se tilgjengelige tider.</p><p id="gk-v2-status" role="status">Velg dato for å se tilgjengelige tider.</p><div class="gk-v2-times" id="gk-v2-times"></div><div id="gk-v2-selection"><div id="gk-v2-summary" aria-live="polite" class="gk-v2-note">Eventuell medlemsrabatt vises i kassen.</div>
-<div class="gk-v2-actions"><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div></div>
+<div class="gk-v2-actions"><button id="gk-v2-shorten" type="button" hidden>Kort ned 30 min</button><button id="gk-v2-continue" type="button" disabled>Fortsett til booking</button><span id="gk-v2-checkout-note" style="font-weight:700;color:#f8d28f">Henter bookingstatus …</span></div></div>
 <section id="gk-v2-club-evening" class="gk-v2-card" style="margin-top:20px">
 <h3>Klubbkveld – Lyngdal Dartklubb</h3>
 <p style="margin:6px 0">Torsdager kl. 19–22 · 50 kr per person · 10 plasser. Pilsett kan leies for 25 kr.</p>
@@ -185,7 +185,9 @@ function bookingStartOpen(day,startMin,nowMs=Date.now()){
 function selectionStillOpen(){
  if(selected!==null&&bookingStartOpen($('gk-v2-day').value,selected))return true;
  selected=null;$('gk-v2-continue').disabled=true;$('gk-v2-submit').disabled=true;
- $('gk-v2-status').textContent='Påmeldingen stenger 20 minutter før start. Velg et senere tidspunkt.';
+ $('gk-v2-terms').hidden=true;$('gk-v2-accept').checked=false;
+ if(snapshot)render(snapshot);
+ $('gk-v2-status').textContent='Bookingfristen for valgt tid har passert. Velg et senere tidspunkt.';
  return false;
 }
 function refreshTimeCutoff(){
@@ -193,10 +195,9 @@ function refreshTimeCutoff(){
  if(advanceFinishedDay(snapshot))return;
  var day=$('gk-v2-day').value;
  if(snapshot?.day!==day){if(pricesChanged)updateSummary();return;}
- var expired=Array.from($('gk-v2-times').querySelectorAll('button[data-time]:not(:disabled)'))
-   .some(b=>!bookingStartOpen(day,Number(b.dataset.time)));
- if(selected!==null&&!bookingStartOpen(day,selected)){selectionStillOpen();render(snapshot);}
- else if(expired||pricesChanged)render(snapshot);
+ var firstRow=$('gk-v2-times').querySelector('tbody tr[data-time]');
+ if(selected!==null&&!selectionStillOpen())return;
+ if(pricesChanged||(firstRow&&!bookingStartOpen(day,Number(firstRow.dataset.time))))render(snapshot);
 }
 function draw(){
  var request=++availabilityRequest;
@@ -266,10 +267,10 @@ function renderDays(){
   days.append(button);
  }
 }
-function intervalOpen(a,resource,start,duration,occupied){
+function availableFor(a,resource,start,duration,occupied){
  var physical=resource==='venue'?['hyzr','dart_a','dart_b']:[resource];
  var end=start+duration;
- return bookingStartOpen(a.day,start)&&[resource,...physical].every(r=>{
+ return [resource,...physical].every(r=>{
   var hours=a.openingHoursByResource?.[r];
   return hours&&start>=hours.from&&end<=hours.to&&(start-hours.from)%30===0;
  })&&!(a.blocks||[]).some(b=>start<b.end_min&&end>b.start_min&&
@@ -285,7 +286,7 @@ function render(a){
  var labels={hyzr:'HYZR',dart_a:'Dartbane A',dart_b:'Dartbane B',venue:'Hele lokalet'};
  var hours=resources.map(r=>a.openingHoursByResource?.[r]).filter(Boolean);
  var occupied=new Set((a.claims||[]).map(c=>c.resource+'|'+c.slot_min));
- var duration=Number($('gk-v2-duration').value),minimum=active==='venue'?240:30;
+ var duration=Number($('gk-v2-duration').value);
  var punch=active==='hyzr'&&$('gk-punch-use')?.checked===true;
  var offer=blackWeekActive(active);
  var table=document.createElement('table');
@@ -293,29 +294,30 @@ function render(a){
  ['Tid',...resources.map(r=>labels[r])].forEach(label=>{
   var cell=document.createElement('th');cell.scope='col';cell.textContent=label;header.append(cell);
  });
- var body=table.createTBody(),possible=0;
+ var body=table.createTBody(),possible=0,now=Date.now();
  for(var t=Math.min(...hours.map(h=>h.from));t<Math.max(...hours.map(h=>h.to));t+=30){
   const time=t;
+  if(!bookingStartOpen(a.day,time,now))continue;
   var row=body.insertRow(),heading=document.createElement('th');
+  row.dataset.time=time;
   heading.scope='row';heading.textContent=clockLabel(time);row.append(heading);
   for(const resource of resources){
    var cell=row.insertCell();
    const marked=resource===active&&selected!==null&&time>=selected&&time<selected+duration;
-   const extension=resource===active&&selected!==null&&time>=selected+minimum&&
-    Number.isFinite(priceFor(resource,time-selected+30))&&intervalOpen(a,resource,selected,time-selected+30,occupied);
-   const fresh=intervalOpen(a,resource,time,minimum,occupied);
+   const extension=resource===active&&selected!==null&&time>=selected+duration&&
+    Number.isFinite(priceFor(resource,time-selected+30))&&availableFor(a,resource,selected,time-selected+30,occupied);
+   const fresh=availableFor(a,resource,time,duration,occupied);
    if(fresh)possible++;
    var button=document.createElement('button');
    button.type='button';
-   if(!marked&&!extension)button.dataset.time=time;
    button.disabled=!marked&&!extension&&!fresh;
    button.classList.toggle('selected',marked);
    button.setAttribute('aria-pressed',String(marked));
-   const nextDuration=extension?time-selected+30:minimum;
+   const nextDuration=extension?time-selected+30:duration;
    var price=priceFor(resource,nextDuration);
    var displayed=displayBookingPrice(price,offer);
    var extra=extension?displayed-displayBookingPrice(priceFor(resource,duration),offer):displayed;
-   button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+'+((nextDuration-duration)/60).toLocaleString('nb-NO'):'0,5')+' klipp':
+   button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+':'')+((extension?nextDuration-duration:duration)/60).toLocaleString('nb-NO')+' klipp':
      active==='venue'&&extension?kroner(price)+' totalt':(extension?'+':'')+kroner(extra);
    button.setAttribute('aria-label',labels[resource]+' '+clockLabel(time)+' · '+button.textContent);
    button.onclick=()=>{
@@ -333,27 +335,29 @@ function render(a){
    cell.append(button);
   }
  }
- $('gk-v2-times').replaceChildren(table);
+ var times=$('gk-v2-times');
+ if(body.rows.length)times.replaceChildren(table);else times.replaceChildren();
  $('gk-v2-status').textContent=!hours.length?'Ingen godkjente åpningstider.':!a.bookingEnabled?'Bestilling åpner snart.':
-  !possible?'Ingen ledige starttider denne dagen.':active==='venue'?'Velg starttid. Minst 4 timer, deretter hele timer.':
-  'Velg starttid og trykk på siste halvtime for å forlenge.';
+  !possible?(active!=='venue'&&duration>30?'Ingen ledige tider for valgt varighet. Prøv en kortere økt eller en annen dato.':'Ingen ledige starttider denne dagen.'):'Velg starttid.';
  $('gk-v2-continue').disabled=!(selected!==null&&CONF.checkoutVerified&&a.bookingEnabled&&canUseQuickbutikCart());
  updateSummary();
 }
 function updateSummary(){
   var r=$('gk-v2-resource').value;
+  var minutes=Number($('gk-v2-duration').value);
+  $('gk-v2-shorten').hidden=selected===null||r==='venue'||minutes<=30;
   var usePunchcard=r==='hyzr'&&document.getElementById('gk-punch-use')?.checked===true;
   var termsPrice=$('gk-v2-terms-campaign-price');
   termsPrice.hidden=true;
   $('gk-v2-continue').textContent=usePunchcard?'Book med klippekort':'Fortsett til booking';
   if(selected===null){$('gk-v2-summary').textContent='Velg en tid for å se totalprisen.';return;}
-  var period=clockLabel(selected)+'–'+clockLabel(selected+Number($('gk-v2-duration').value));
+  var period=clockLabel(selected)+'–'+clockLabel(selected+minutes);
   if(usePunchcard){
-   $('gk-v2-summary').textContent=period+' · Klippekort: '+(Number($('gk-v2-duration').value)/60).toLocaleString('nb-NO')+' timer trekkes fra saldoen når du bekrefter.';
+   $('gk-v2-summary').textContent=period+' · Klippekort: '+(minutes/60).toLocaleString('nb-NO')+' timer trekkes fra saldoen når du bekrefter.';
    return;
   }
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
-  var minutes=Number($('gk-v2-duration').value),price=priceFor(r,minutes);
+  var price=priceFor(r,minutes);
   if(!Number.isFinite(price))return;
   var offer=blackWeekActive(r);
   var bookingPrice=displayBookingPrice(price,offer),total=kroner(bookingPrice+qty*25);
@@ -391,7 +395,21 @@ refreshBookingRates();
 fillDurations();syncActivityChoices();
 document.addEventListener('change',event=>{if(event.target.id==='gk-punch-use'&&snapshot?.day===$('gk-v2-day').value)render(snapshot);});
 $('gk-v2-sets-qty').onchange=updateSummary;
-$('gk-v2-duration').onchange=()=>{activityDurations[$('gk-v2-resource').value]=Number($('gk-v2-duration').value);draw()};$('gk-v2-day').onchange=draw;
+function changeDuration(){
+ var resource=$('gk-v2-resource').value,minutes=Number($('gk-v2-duration').value);
+ activityDurations[resource]=minutes;
+ if(!snapshot)return;
+ var occupied=new Set((snapshot.claims||[]).map(c=>c.resource+'|'+c.slot_min));
+ if(selected!==null&&(!bookingStartOpen(snapshot.day,selected)||!availableFor(snapshot,resource,selected,minutes,occupied)))selected=null;
+ render(snapshot);
+}
+$('gk-v2-duration').onchange=changeDuration;
+$('gk-v2-shorten').onclick=()=>{
+ var field=$('gk-v2-duration');
+ field.value=String(Number(field.value)-30);changeDuration();
+ if($('gk-v2-shorten').hidden)$('gk-v2-continue').focus({preventScroll:true});
+};
+$('gk-v2-day').onchange=draw;
 $('gk-v2-continue').onclick=()=>{if(selected===null||!CONF.checkoutVerified||!canUseQuickbutikCart()||!selectionStillOpen())return;$('gk-v2-accept').checked=false;$('gk-v2-submit').disabled=true;$('gk-v2-terms').hidden=false};
 $('gk-v2-accept').onchange=()=>{$('gk-v2-submit').disabled=!$('gk-v2-accept').checked};
 $('gk-v2-cancel').onclick=()=>{$('gk-v2-terms').hidden=true};
@@ -430,15 +448,16 @@ $('gk-v2-submit').onclick=async()=>{
  }
  const button=$('gk-v2-submit');
  button.disabled=true;button.textContent='Reserverer tidspunkt…';
+ const r=$('gk-v2-resource').value;
+ const booking={resource:r,date:$('gk-v2-day').value,startMin:selected,duration:Number($('gk-v2-duration').value)};
+ const rentalSets=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
  try{
-  const r=$('gk-v2-resource').value;
   if(window.gkPunchcardBooking){
-   const punched=await window.gkPunchcardBooking({resource:r,date:$('gk-v2-day').value,startMin:selected,duration:Number($('gk-v2-duration').value),acceptedTerms:true});
+   const punched=await window.gkPunchcardBooking({...booking,acceptedTerms:true});
    if(punched){$('gk-v2-terms').hidden=true;selected=null;draw();return;}
   }
-  const rentalSets=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
-  const identity=JSON.stringify({date:$('gk-v2-day').value,resource:r,
-   startMin:selected,duration:Number($('gk-v2-duration').value),
+  const identity=JSON.stringify({date:booking.date,resource:booking.resource,
+   startMin:booking.startMin,duration:booking.duration,
    email:email.toLowerCase(),rentalSets});
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(identity));
   const cacheId='gk2_checkout_intent_'+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
@@ -450,9 +469,7 @@ $('gk-v2-submit').onclick=async()=>{
   if(!sameHold)sessionStorage.setItem(cacheId,JSON.stringify({
     idempotencyKey,expiresAt:new Date(Date.now()+9*60000).toISOString()
   }));
-  const body={idempotencyKey,date:$('gk-v2-day').value,
-   resource:r,startMin:selected,duration:Number($('gk-v2-duration').value),
-   email,rentalSets,acceptedTerms:true};
+  const body={idempotencyKey,...booking,email,rentalSets,acceptedTerms:true};
   const response=await fetch(CONF.apiUrl+'/hold',{method:'POST',
    headers:{'Content-Type':'application/json'},body:JSON.stringify(body),
    cache:'no-store',redirect:'error'});
