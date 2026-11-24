@@ -23,6 +23,8 @@
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-img img{object-fit:contain;object-position:center}
 
 #gk-booking-v2-livewidget .gk-v2-hyzr-rate{display:block;color:#f8d28f;font-size:clamp(12px,2.5vw,15px);line-height:1.3;margin-bottom:5px}
+#gk-booking-v2-livewidget .gk-v2-hyzr-rate del{color:#cad6cc;font-size:.9em}
+#gk-booking-v2-livewidget .gk-v2-campaign{margin:0 0 12px;padding:8px 12px;border:1px solid #806935;border-radius:9px;color:#fff2cc;background:#241f16;font-size:13px}
 #gk-booking-v2-livewidget .gk-v2-card-title{display:block;font-size:17px;font-weight:750;margin:0 0 5px}
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card{text-align:left;width:100%;min-width:0;font-size:14px;line-height:1.45}
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card:focus-visible{outline:3px solid #e4c87f;outline-offset:3px}
@@ -92,9 +94,10 @@
 }
 </style>
 <h2>Book simulator og dart i Lyngdal</h2><p class="gk-v2-intro">Velg aktivitet og finn en tid som passer.</p>
+<p id="gk-v2-black-week" class="gk-v2-campaign" hidden><strong>Black Week · 50 % på simulator og dart</strong><br>Gjelder ordinær booking til søndag 29. november kl. 23.59. Rabatten trekkes automatisk i kassen.</p>
 <div class="gk-v2-row">
- <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"></span><span class="gk-v2-card-title">HYZR simulator</span><span class="gk-v2-hyzr-rate"><strong>150 kr/t</strong> for hele gruppen</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting.</small></button>
- <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
+ <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"></span><span class="gk-v2-card-title">HYZR simulator</span><span class="gk-v2-hyzr-rate"><span id="gk-v2-hyzr-rate"></span> for hele gruppen</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting.</small></button>
+ <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><span class="gk-v2-hyzr-rate"><span id="gk-v2-dart-rate"></span> per bane</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
  <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
 <p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.</p>
@@ -158,6 +161,7 @@
 <section><h3>5. Tilgang, tekniske feil og kamera</h3><p>Adgangsinformasjon sendes til e-postadressen knyttet til den bekreftede bookingen. Deler av lokalet er kameraovervåket for sikkerhet, med skilting på stedet. Dersom en vesentlig teknisk feil hindrer bruken, tilbyr GolfKongen ombooking eller forholdsmessig refusjon for berørt tid.</p></section>
 </div>
 <label class="gk-v2-booking-email">E-postadresse for bookingbekreftelse<input id="gk-v2-email" type="email" autocomplete="email" inputmode="email" required placeholder="deg@eksempel.no" style="width:100%"></label>
+<p id="gk-v2-terms-campaign-price" class="gk-v2-booking-price-note" hidden></p>
 <p class="gk-v2-booking-price-note"><strong>Har du medlemspris?</strong> Kontroller riktig pris i kassen før du betaler. Hvis prisen er feil, kontakt GolfKongen.</p>
 <label class="gk-v2-checkbox"><input id="gk-v2-accept" type="checkbox"> Jeg har lest og godtar bookingvilkårene ovenfor.</label>
 <p class="gk-v2-terms-reference">Se også <a href="https://golfkongen.no/sider/terms-and-conditions" target="_blank" rel="noopener noreferrer">fullstendige vilkår, punkt 15</a>.</p>
@@ -185,13 +189,14 @@ function selectionStillOpen(){
  return false;
 }
 function refreshTimeCutoff(){
+ var pricesChanged=refreshBookingRates();
  if(advanceFinishedDay(snapshot))return;
  var day=$('gk-v2-day').value;
- if(snapshot?.day!==day)return;
+ if(snapshot?.day!==day){if(pricesChanged)updateSummary();return;}
  var expired=Array.from($('gk-v2-times').querySelectorAll('button[data-time]:not(:disabled)'))
    .some(b=>!bookingStartOpen(day,Number(b.dataset.time)));
  if(selected!==null&&!bookingStartOpen(day,selected)){selectionStillOpen();render(snapshot);}
- else if(expired)render(snapshot);
+ else if(expired||pricesChanged)render(snapshot);
 }
 function draw(){
  var request=++availabilityRequest;
@@ -219,6 +224,27 @@ function advanceFinishedDay(a,nowMs=Date.now()){
 }
 function priceFor(resource,minutes){
  return PUBLIC_PRICES.find(p=>p.resource===resource&&p.minutes===minutes)?.price;
+}
+var blackWeekStart=Date.parse('2026-11-22T00:00:00+01:00');
+var blackWeekEnd=Date.parse('2026-11-29T23:59:00+01:00');
+var showBlackWeek=null;
+function blackWeekActive(resource,now=Date.now()){
+ return ['hyzr','dart_a','dart_b'].includes(resource)&&canUseQuickbutikCart()&&
+  now>=blackWeekStart&&now<blackWeekEnd;
+}
+function displayBookingPrice(price,offer){return offer?Math.round(price*50)/100:price;}
+function kroner(price){return Number(price.toFixed(2)).toLocaleString('nb-NO')+' kr';}
+function refreshBookingRates(){
+ var offer=blackWeekActive('hyzr');
+ if(showBlackWeek===offer)return false;
+ showBlackWeek=offer;
+ $('gk-v2-black-week').hidden=!offer;
+ [['gk-v2-hyzr-rate','hyzr'],['gk-v2-dart-rate','dart_a']].forEach(([id,resource])=>{
+  var price=priceFor(resource,60);
+  $(id).innerHTML='<strong>'+kroner(displayBookingPrice(price,offer))+'/t</strong>'+
+   (offer?' <del>'+kroner(price)+'/t</del>':'');
+ });
+ return true;
 }
 function clockLabel(minutes){
  return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
@@ -261,6 +287,7 @@ function render(a){
  var occupied=new Set((a.claims||[]).map(c=>c.resource+'|'+c.slot_min));
  var duration=Number($('gk-v2-duration').value),minimum=active==='venue'?240:30;
  var punch=active==='hyzr'&&$('gk-punch-use')?.checked===true;
+ var offer=blackWeekActive(active);
  var table=document.createElement('table');
  var header=table.createTHead().insertRow();
  ['Tid',...resources.map(r=>labels[r])].forEach(label=>{
@@ -286,9 +313,10 @@ function render(a){
    button.setAttribute('aria-pressed',String(marked));
    const nextDuration=extension?time-selected+30:minimum;
    var price=priceFor(resource,nextDuration);
-   var extra=extension?price-priceFor(resource,duration):price;
+   var displayed=displayBookingPrice(price,offer);
+   var extra=extension?displayed-displayBookingPrice(priceFor(resource,duration),offer):displayed;
    button.textContent=marked?'Valgt':button.disabled?'—':punch?(extension?'+'+((nextDuration-duration)/60).toLocaleString('nb-NO'):'0,5')+' klipp':
-     active==='venue'&&extension?price+' kr totalt':(extension?'+':'')+extra+' kr';
+     active==='venue'&&extension?kroner(price)+' totalt':(extension?'+':'')+kroner(extra);
    button.setAttribute('aria-label',labels[resource]+' '+clockLabel(time)+' · '+button.textContent);
    button.onclick=()=>{
     if(!bookingStartOpen(a.day,extension||marked?selected:time)){refreshTimeCutoff();return;}
@@ -315,6 +343,8 @@ function render(a){
 function updateSummary(){
   var r=$('gk-v2-resource').value;
   var usePunchcard=r==='hyzr'&&document.getElementById('gk-punch-use')?.checked===true;
+  var termsPrice=$('gk-v2-terms-campaign-price');
+  termsPrice.hidden=true;
   $('gk-v2-continue').textContent=usePunchcard?'Book med klippekort':'Fortsett til booking';
   if(selected===null){$('gk-v2-summary').textContent='Velg en tid for å se totalprisen.';return;}
   var period=clockLabel(selected)+'–'+clockLabel(selected+Number($('gk-v2-duration').value));
@@ -324,9 +354,18 @@ function updateSummary(){
   }
   var qty=r==='hyzr'?0:Number($('gk-v2-sets-qty').value);
   var minutes=Number($('gk-v2-duration').value),price=priceFor(r,minutes);
-  var amount=Number.isFinite(price)?'<strong>'+period+' · '+price.toLocaleString('nb-NO')+' kr</strong>':'';
-  var rental=qty>0?'<span>Pilsett: '+qty+' × 25 kr = '+(qty*25)+' kr · Totalt: '+(price+qty*25).toLocaleString('nb-NO')+' kr</span>':'';
-  $('gk-v2-summary').innerHTML=amount+rental+'<span>Eventuell medlemsrabatt vises i kassen.</span>';
+  if(!Number.isFinite(price))return;
+  var offer=blackWeekActive(r);
+  var bookingPrice=displayBookingPrice(price,offer),total=kroner(bookingPrice+qty*25);
+  var amount='<strong>'+period+' · '+total+'</strong>';
+  var rental=qty>0?'<span>Booking '+kroner(bookingPrice)+' + '+qty+' pilsett à 25 kr</span>':'';
+  var details=offer?'<span>Black Week · ordinær bookingpris <del>'+kroner(price)+'</del>. Rabatten trekkes i kassen.</span>':
+   '<span>Eventuell medlemsrabatt vises i kassen.</span>';
+  $('gk-v2-summary').innerHTML=amount+rental+details;
+  if(offer){
+   termsPrice.textContent='Black Week · '+period+' · '+total+(qty>0?' inkludert pilsett':'');
+   termsPrice.hidden=false;
+  }
 }
 function refreshDartSets(){
   var show=$('gk-v2-resource').value!=='hyzr';
@@ -347,6 +386,8 @@ function syncActivityChoices(){
 }
 $('gk-v2-resource').onchange=()=>{fillDurations();refreshDartSets();syncActivityChoices();draw()};
 document.querySelectorAll('#gk-booking-v2-livewidget .gk-v2-row [data-resource]').forEach(function(b){b.addEventListener('click',function(){var r=$('gk-v2-resource');if(b.dataset.resource==='dart_a'&&r.value==='dart_b')return;r.value=b.dataset.resource;r.dispatchEvent(new Event('change',{bubbles:true}));});});
+if(new URLSearchParams(location.search).get('aktivitet')==='dart')$('gk-v2-resource').value='dart_a';
+refreshBookingRates();
 fillDurations();syncActivityChoices();
 document.addEventListener('change',event=>{if(event.target.id==='gk-punch-use'&&snapshot?.day===$('gk-v2-day').value)render(snapshot);});
 $('gk-v2-sets-qty').onchange=updateSummary;

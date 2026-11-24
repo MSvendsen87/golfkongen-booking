@@ -12,7 +12,10 @@
   var oldRoute = String(location.pathname || '').replace(/\/+$/, '');
   if (['/sider/dart-booking','/sider/disc-booking',
        '/sider/leie-hele-lokalet'].indexOf(oldRoute) !== -1) {
-    location.replace('https://golfkongen.no/aktiviteter#gk2-booking-anchor');
+    var calendar = new URL('https://golfkongen.no/aktiviteter#gk2-booking-anchor');
+    calendar.search = location.search;
+    if (oldRoute === '/sider/dart-booking') calendar.searchParams.set('aktivitet', 'dart');
+    location.replace(calendar.href);
     return;
   }
 

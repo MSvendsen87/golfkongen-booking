@@ -46,6 +46,8 @@ const output=`// Generated from docs/booking/index.html. Rebuild with build-stor
 body.gk2-activities-ready h1[data-qb-element="list_show_cattitle"]{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
 body.gk2-activities-ready .main-content [data-qb-area="category"],body.gk2-activities-ready .collection-header,body.gk2-activities-ready .hero-content{padding-top:0!important;padding-bottom:0!important}
 body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section{padding:0!important;border:0!important;background:none!important}
+body.gk2-activities-ready #gk-black-week-booking-note{display:none!important}
+body.gk2-activities-ready .gka-booking-section:has(#gk-v2-black-week:not([hidden]))>.gka-hyzr-intro{display:none!important}
 body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section>.gka-booking-label,body.gk2-activities-ready #gk-aktiviteter>.gka-booking-section>.gka-booking-kicker{display:none!important}
 body.gk2-activities-ready #gk-aktiviteter .gka-private{margin:18px 0 12px}
 body.gk2-activities-ready #gk-aktiviteter .gka-intro{margin:16px 0}
