@@ -174,16 +174,17 @@ var PUBLIC_PRICES=[{"resource":"hyzr","minutes":30,"productId":1474,"price":90},
 var canUseQuickbutikCart=()=>['golfkongen.no','www.golfkongen.no'].includes(location.hostname);
 var $=id=>document.getElementById(id),selected=null,snapshot=null,currentDayOslo='',availabilityRequest=0;
 
-// Compare Oslo wall-clock dates, including the 20-minute cutoff across midnight.
-function bookingStartOpen(day,startMin,nowMs=Date.now()){
+// Compare Oslo wall-clock dates with the lead time for the selected resource.
+function bookingStartOpen(day,startMin,nowMs=Date.now(),resource){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isInteger(startMin))return false;
- var parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(nowMs+20*60000));
+ var leadMinutes=resource==='venue'?20:10;
+ var parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(nowMs+leadMinutes*60000));
  var clock=Object.fromEntries(parts.map(p=>[p.type,p.value]));
  var cutoffDay=clock.year+'-'+clock.month+'-'+clock.day;
  return day>cutoffDay||(day===cutoffDay&&startMin>Number(clock.hour)*60+Number(clock.minute)+Number(clock.second)/60);
 }
 function selectionStillOpen(){
- if(selected!==null&&bookingStartOpen($('gk-v2-day').value,selected))return true;
+ if(selected!==null&&bookingStartOpen($('gk-v2-day').value,selected,Date.now(),$('gk-v2-resource').value))return true;
  selected=null;$('gk-v2-continue').disabled=true;$('gk-v2-submit').disabled=true;
  $('gk-v2-terms').hidden=true;$('gk-v2-accept').checked=false;
  if(snapshot)render(snapshot);
@@ -197,7 +198,7 @@ function refreshTimeCutoff(){
  if(snapshot?.day!==day){if(pricesChanged)updateSummary();return;}
  var firstRow=$('gk-v2-times').querySelector('tbody tr[data-time]');
  if(selected!==null&&!selectionStillOpen())return;
- if(pricesChanged||(firstRow&&!bookingStartOpen(day,Number(firstRow.dataset.time))))render(snapshot);
+ if(pricesChanged||(firstRow&&!bookingStartOpen(day,Number(firstRow.dataset.time),Date.now(),$('gk-v2-resource').value)))render(snapshot);
 }
 function draw(){
  var request=++availabilityRequest;
@@ -216,7 +217,7 @@ function advanceFinishedDay(a,nowMs=Date.now()){
  var resources=resource.startsWith('dart_')?['dart_a','dart_b']:[resource];
  var lastStarts=resources.map(r=>a.openingHoursByResource?.[r]).filter(h=>h&&h.to-h.from>=duration)
   .map(h=>h.from+Math.floor((h.to-duration-h.from)/30)*30);
- if(!lastStarts.length||bookingStartOpen(a.day,Math.max(...lastStarts),nowMs))return false;
+ if(!lastStarts.length||bookingStartOpen(a.day,Math.max(...lastStarts),nowMs,resource))return false;
  var next=plusCalendarDays(a.day,1);
  if(next>field.max)return false;
  field.value=next;
@@ -297,7 +298,7 @@ function render(a){
  var body=table.createTBody(),possible=0,now=Date.now();
  for(var t=Math.min(...hours.map(h=>h.from));t<Math.max(...hours.map(h=>h.to));t+=30){
   const time=t;
-  if(!bookingStartOpen(a.day,time,now))continue;
+  if(!bookingStartOpen(a.day,time,now,active))continue;
   var row=body.insertRow(),heading=document.createElement('th');
   row.dataset.time=time;
   heading.scope='row';heading.textContent=clockLabel(time);row.append(heading);
@@ -321,7 +322,7 @@ function render(a){
      active==='venue'&&extension?kroner(price)+' totalt':(extension?'+':'')+kroner(extra);
    button.setAttribute('aria-label',labels[resource]+' '+clockLabel(time)+' · '+button.textContent);
    button.onclick=()=>{
-    if(!bookingStartOpen(a.day,extension||marked?selected:time)){refreshTimeCutoff();return;}
+    if(!bookingStartOpen(a.day,extension||marked?selected:time,Date.now(),resource)){refreshTimeCutoff();return;}
     if(marked&&time===selected)selected=null;
     else if(marked&&Number.isFinite(priceFor(resource,time-selected+30)))$('gk-v2-duration').value=time-selected+30;
     else if(!marked){
@@ -400,7 +401,7 @@ function changeDuration(){
  activityDurations[resource]=minutes;
  if(!snapshot)return;
  var occupied=new Set((snapshot.claims||[]).map(c=>c.resource+'|'+c.slot_min));
- if(selected!==null&&(!bookingStartOpen(snapshot.day,selected)||!availableFor(snapshot,resource,selected,minutes,occupied)))selected=null;
+ if(selected!==null&&(!bookingStartOpen(snapshot.day,selected,Date.now(),resource)||!availableFor(snapshot,resource,selected,minutes,occupied)))selected=null;
  render(snapshot);
 }
 $('gk-v2-duration').onchange=changeDuration;

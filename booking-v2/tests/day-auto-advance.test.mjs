@@ -14,15 +14,15 @@ function scenario(minutes,now,date='2026-11-04',resource='hyzr'){
  return {changed,nodes,draws};
 }
 test('the one-hour default keeps today available while a half-hour can still be booked',()=>{
- assert.equal(scenario(60,'2026-11-04T19:40:00Z').changed,false);
- assert.equal(scenario(60,'2026-11-04T20:09:59Z').changed,false);
- const r=scenario(60,'2026-11-04T20:10:00Z');
+ assert.equal(scenario(60,'2026-11-04T19:50:00Z').changed,false);
+ assert.equal(scenario(60,'2026-11-04T20:19:59Z').changed,false);
+ const r=scenario(60,'2026-11-04T20:20:00Z');
  assert.equal(r.changed,true);assert.equal(r.nodes['gk-v2-day'].value,'2026-11-05');assert.equal(r.draws,1);
  assert.equal(r.nodes['gk-v2-terms'].hidden,true);assert.equal(r.nodes['gk-v2-submit'].disabled,true);
 });
-test('30-minute bookings stay on today until 21:10 Oslo; venue closes at 17:40',()=>{
- assert.equal(scenario(30,'2026-11-04T20:09:59Z').changed,false);
- assert.equal(scenario(30,'2026-11-04T20:10:00Z').changed,true);
+test('30-minute bookings stay on today until 21:20 Oslo; venue closes at 17:40',()=>{
+ assert.equal(scenario(30,'2026-11-04T20:19:59Z').changed,false);
+ assert.equal(scenario(30,'2026-11-04T20:20:00Z').changed,true);
  assert.equal(scenario(240,'2026-11-04T16:40:00Z','2026-11-04','venue').changed,true);
 });
 test('late-night page shows tomorrow and preserves deliberately selected future dates',()=>{

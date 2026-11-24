@@ -92,7 +92,7 @@ class CalendarElement {
 test('one click selects an hour, shortening keeps the start, and expired rows disappear',()=>{
  const script=html.slice(html.indexOf('// Compare Oslo wall-clock dates'),html.indexOf('function validateQuickbutikCartAdd('));
  for(const [resource,hourPrice,halfHourPrice] of [['hyzr',75,45],['dart_a',60,40],['dart_b',60,40]]){
-  let now=Date.parse('2026-11-24T16:39:59Z');
+  let now=Date.parse('2026-11-24T16:49:59Z');
   const nodes=new Map(),$=id=>{
    if(!nodes.has(id))nodes.set(id,new CalendarElement());
    return nodes.get(id);
