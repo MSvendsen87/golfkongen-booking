@@ -35,7 +35,7 @@ for(const p of manifest.products){
  }
  let expected=0,found=0,missing=0,firstMissing="";
  for(const day of dates){
-  for(let start=600;start+p.minutes<=1320;start+=30){
+  for(let start=480;start+p.minutes<=1380;start+=30){
    const sku=day+"-"+fmt(start)+"-"+fmt(start+p.minutes);
    expected++;
    if(map.has(sku))found++;

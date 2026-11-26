@@ -85,7 +85,7 @@ function planVariants(product,dates,duration,limit){
  const known=new Set(Array.isArray(product.variants)?product.variants.map(v=>v.sku):[]);
  const missing=[];
  for(const day of dates){
-  for(let start=600;start+duration<=1320;start+=30){
+  for(let start=480;start+duration<=1380;start+=30){
    const end=start+duration,sku=day+"-"+hhmm(start)+"-"+hhmm(end);
    if(known.has(sku))continue;
    missing.push({

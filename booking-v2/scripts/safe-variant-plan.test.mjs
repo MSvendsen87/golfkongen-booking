@@ -31,7 +31,7 @@ test("planner never recreates an existing slot and always stages with zero stock
  const items=safeVariantPlan({
   product,resource:"hyzr",minutes:30,dates:["2026-11-01"],limit:40
  });
- assert.equal(items.length,23);
+ assert.equal(items.length,29);
  assert.equal(items.some(v=>v.sku==="2026-11-01-1000-1030"),false);
  assert.ok(items.every(v=>v.qty===0&&v.preorder===0&&v.price===90));
  assert.equal(new Set(items.map(x=>x.sku)).size,items.length);
@@ -42,8 +42,8 @@ test("newest day gets priority and cap applies to actual absent variants",()=>{
   dates:["2026-11-02","2026-11-01"],limit:2
  });
  assert.equal(a.length,2);
- assert.equal(a[0].sku,"2026-11-02-1000-1030");
- assert.equal(a[1].sku,"2026-11-02-1030-1100");
+ assert.equal(a[0].sku,"2026-11-02-0800-0830");
+ assert.equal(a[1].sku,"2026-11-02-0830-0900");
  assert.deepEqual(safeVariantPlan({product,resource:"hyzr",minutes:30,dates:["2026-11-02"],limit:0}),[]);
 });
 test("rejects unknown parent visibility, even if other fields look correct",()=>{

@@ -27,7 +27,7 @@ export function expectedSku(day,start,minutes){
 }
 export function safeVariantPlan({
  product,resource,minutes,dates,limit=2000,
- from=600,to=1320,step=30
+ from=480,to=1380,step=30
 }={}){
  if(!product||typeof product!=="object"||Array.isArray(product)
   ||!String(product.title||"").startsWith("Booking 2.0")
