@@ -26,7 +26,7 @@
 #gk-booking-v2-livewidget .gk-v2-hyzr-rate del{color:#cad6cc;font-size:.9em}
 #gk-booking-v2-livewidget .gk-v2-campaign{margin:0 0 12px;padding:8px 12px;border:1px solid #806935;border-radius:9px;color:#fff2cc;background:#241f16;font-size:13px}
 #gk-booking-v2-livewidget .gk-v2-card-title{display:block;font-size:17px;font-weight:750;margin:0 0 5px}
-#gk-booking-v2-livewidget .gk-v2-row .gk-v2-card{text-align:left;width:100%;min-width:0;font-size:14px;line-height:1.45}
+#gk-booking-v2-livewidget .gk-v2-row .gk-v2-card{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;width:100%;min-width:0;font-size:14px;line-height:1.45}
 #gk-booking-v2-livewidget .gk-v2-row .gk-v2-card:focus-visible{outline:3px solid #e4c87f;outline-offset:3px}
 #gk-booking-v2-livewidget .gk-v2-img{display:block}
 #gk-booking-v2-livewidget .gk-v2-intro{margin:5px 0 16px;font-size:15px}
@@ -98,7 +98,7 @@
 <div class="gk-v2-row">
  <button type="button" class="gk-v2-card active" data-resource="hyzr" aria-pressed="true"><span class="gk-v2-img"><img alt="HYZR discgolf-simulator hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/6ae24e3f0606a.png?auto=format"></span><span class="gk-v2-card-title">HYZR simulator</span><span class="gk-v2-hyzr-rate"><span id="gk-v2-hyzr-rate"></span> for hele gruppen</span><small>Maks 6 spillere om gangen. Vi anbefaler 2–4 spillere for behagelig spill uten for mye venting.</small></button>
  <button type="button" class="gk-v2-card" data-resource="dart_a" aria-pressed="false"><span class="gk-v2-img"><img alt="Dartbaner hos GolfKongen" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/9829c55d-f12c-4295-9afe-c03ff97b699d.jpg"></span><span class="gk-v2-card-title">Dart</span><span class="gk-v2-hyzr-rate"><span id="gk-v2-dart-rate"></span> per bane</span><small>Maks 4 spillere per dartbane. Automatisk registrering med tellering ved tavla. Prisen gjelder per bane, ikke per spiller.</small></button>
- <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><small>HYZR, begge dartbaner og møtebord.</small></button>
+ <button type="button" class="gk-v2-card" data-resource="venue" aria-pressed="false"><span class="gk-v2-img"><img alt="Lokalet hos GolfKongen i Lyngdal" loading="lazy" src="https://cdn.quickbutik.com/images/52923d/products/eca61df4-cdaa-444d-9c5c-a130f0b5b7f5.png"></span><span class="gk-v2-card-title">Hele lokalet</span><span class="gk-v2-hyzr-rate"><strong>Fra 800,-</strong></span><small>HYZR, begge dartbaner og møtebord.</small></button>
 </div>
 <p id="gk-v2-capacity" class="gk-v2-capacity" aria-live="polite">Maks 6 spillere. Anbefalt 2–4 for behagelig spill uten for mye venting. Pris for hele gruppen.</p>
 <details id="gk-v2-offers" class="gk-v2-offers"><summary>Finn din beste spillepris <span>Klippekort og medlemskap</span></summary><div class="gk-v2-offers-body">
