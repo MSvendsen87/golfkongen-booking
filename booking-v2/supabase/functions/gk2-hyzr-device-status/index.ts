@@ -81,9 +81,13 @@ Deno.serve(async(req:Request)=>{
         Boolean(Deno.env.get("GK2_VIPPS_LIVE_CLIENT_SECRET")) &&
         Boolean(Deno.env.get("GK2_VIPPS_LIVE_SUBSCRIPTION_KEY"));
       const phase=(state.status==="active"&&["warning","grace"].includes(state.screen_phase));
+      // With no grace after the paid end, a following booking, a block or
+      // closing time rules out any extension. The Windows UI uses this flag to
+      // decide whether to show its Vipps button.
+      const canExtendPastEnd=phase&&Date.parse(state.lock_at)>Date.parse(state.end_at);
       return respond({...state,deviceControlEnabled:true,
         deviceMode:"LOCAL_SOFT_GATE_ONLY",
-        qrPaymentEnabled:paymentReleased && phase && state.resource==="hyzr" &&
+        qrPaymentEnabled:paymentReleased && canExtendPastEnd && state.resource==="hyzr" &&
           state.staff_mode!==true,
         extensionWriteReleased:paymentReleased,
         pcRequiresLocalArming:true});
