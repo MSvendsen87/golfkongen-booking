@@ -1,0 +1,23 @@
+<!-- GolfKongen Booking 2.0 – add to Quickbutik receipt/thank-you custom scripts.
+     Keep existing analytics scripts and append this snippet.
+     Only Booking 2.0 products with genuine date/time SKUs may redirect. -->
+<script>
+(function () {
+  'use strict';
+  var isBooking2 = false;
+  {{#order.items}}
+  if (Number('{{product_id}}') >= 1474 &&
+      Number('{{product_id}}') <= 1506 &&
+      /^20\d{2}-\d{2}-\d{2}-\d{4}-\d{4}$/.test('{{sku}}')) {
+    isBooking2 = true;
+  }
+  {{/order.items}}
+  if (!isBooking2) return;
+  var match = /^\/success\/([1-9][0-9]{0,8})(?=\/|-|$)/.exec(location.pathname);
+  if (!match) return;
+  location.replace(
+    'https://msvendsen87.github.io/golfkongen-booking/booking/takk/?order=' +
+    encodeURIComponent(match[1])
+  );
+})();
+</script>
